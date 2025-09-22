@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:personalmedai/screens/chat_screen.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/symptom_checker_screen.dart';
@@ -45,6 +46,7 @@ class PersonalMedAIApp extends StatelessWidget {
           '/home': (context) => const HomeScreen(),
           '/symptoms': (context) => const SymptomCheckerScreen(),
           '/medications': (context) => const MedicationWarningScreen(),
+          '/chat': (context) => const ChatScreen(),
         },
         debugShowCheckedModeBanner: false,
       ),

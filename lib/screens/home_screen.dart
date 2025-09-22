@@ -260,10 +260,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      /*floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _startAIConsultation(context),
         icon: const Icon(Icons.psychology),
         label: const Text('Ask PersonalMedAI'),
+        elevation: 4,
+      ),*/
+
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () =>
+            Navigator.pushNamed(context, '/chat'), // Change this line
+        icon: const Icon(Icons.chat),
+        label: const Text('AI Chat'),
         elevation: 4,
       ),
     );

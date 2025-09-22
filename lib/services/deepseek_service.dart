@@ -40,14 +40,22 @@ class DeepSeekService {
     return _safeApiCall(prompt, 'Error checking medication interactions');
   }
 
-  Future<String> getHealthInsights(Map<String, dynamic> healthData) async {
-    final prompt = _buildHealthInsightsPrompt(healthData);
-    return _safeApiCall(prompt, 'Error getting health insights');
+  // Add this new method for chat conversations
+  Future<String> sendChatMessage(
+      List<Map<String, String>> conversationHistory) async {
+    final prompt = _buildChatPrompt(conversationHistory);
+    return _safeApiCall(prompt, 'Error in chat conversation', isChat: true);
   }
 
-  Future<String> _safeApiCall(String prompt, String contextMessage) async {
+// Update the _safeApiCall method to handle chat context
+  Future<String> _safeApiCall(String prompt, String contextMessage,
+      {bool isChat = false}) async {
     try {
-      return await _makeApiCallWithRetry(prompt);
+      if (isChat) {
+        return await _makeChatApiCall(prompt);
+      } else {
+        return await _makeApiCallWithRetry(prompt);
+      }
     } on TimeoutException {
       print('⏳ $contextMessage: Request timed out.');
       return 'The request took too long. Please try again later.';
@@ -55,6 +63,86 @@ class DeepSeekService {
       print('⚠️ $contextMessage: $e');
       return 'Unable to complete this request right now. Please try again later.';
     }
+  }
+
+// Add new method for chat API calls with conversation history
+  Future<String> _makeChatApiCall(String conversationHistoryJson) async {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $_apiKey',
+    };
+
+    // Parse the conversation history from JSON
+    final List<dynamic> messages = jsonDecode(conversationHistoryJson);
+
+    // Add system message at the beginning if not present
+    if (messages.isEmpty || messages.first['role'] != 'system') {
+      messages.insert(0, {
+        'role': 'system',
+        'content':
+            'You are a helpful medical AI assistant. Provide concise, informative responses about health topics. Always recommend consulting healthcare professionals for serious concerns. Keep responses brief and focused. Include appropriate medical disclaimers.'
+      });
+    }
+
+    final body = jsonEncode({
+      'model': 'deepseek-chat',
+      'messages': messages,
+      'max_tokens': 400,
+      'temperature': 0.5,
+      'stream': false,
+    });
+
+    final response = await http
+        .post(Uri.parse('$_baseUrl/chat/completions'),
+            headers: headers, body: body)
+        .timeout(_timeout);
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final choices = data['choices'];
+      if (choices != null && choices.isNotEmpty) {
+        String content = choices[0]['message']['content']?.trim() ??
+            'No response received from AI service.';
+        content = _removeWordCountAnnotations(content);
+        return content;
+      } else {
+        throw Exception('Invalid response format from API');
+      }
+    } else {
+      throw Exception('API request failed with status: ${response.statusCode}');
+    }
+  }
+
+// Add helper method to build chat prompt from conversation history
+  String _buildChatPrompt(List<Map<String, String>> conversationHistory) {
+    // Convert conversation history to the format expected by the API
+    final messages = conversationHistory
+        .map((message) => {
+              'role': message['isUser'] == 'true' ? 'user' : 'assistant',
+              'content': message['text'] ?? '',
+            })
+        .toList();
+
+    return jsonEncode(messages);
+  }
+
+// Update the getHealthInsights method to handle both single queries and chat format
+  Future<String> getHealthInsights(dynamic healthData) async {
+    // If healthData is a string, treat it as a single chat message
+    if (healthData is String) {
+      final conversationHistory = [
+        {'isUser': 'true', 'text': healthData}
+      ];
+      return sendChatMessage(conversationHistory);
+    }
+
+    // Otherwise, use the existing health insights logic
+    if (healthData is Map<String, dynamic>) {
+      final prompt = _buildHealthInsightsPrompt(healthData);
+      return _safeApiCall(prompt, 'Error getting health insights');
+    }
+
+    throw ArgumentError('Invalid healthData format');
   }
 
   Future<String> _makeApiCallWithRetry(String prompt) async {
