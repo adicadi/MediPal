@@ -13,8 +13,31 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  List<ChatMessage> _messages = [];
+  final List<ChatMessage> _messages = [];
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeChat();
+  }
+
+  void _initializeChat() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final userName =
+          appState.userName.isNotEmpty ? appState.userName : 'there';
+
+      setState(() {
+        _messages.add(ChatMessage(
+          text:
+              '👋 Hello $userName! I\'m PersonalMedAI, your personal health assistant. I\'m here to help you with health questions, symptom analysis, medication information, and wellness tips.\n\nHow can I assist you today?',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,27 +51,21 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
-          // Messages List
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
+              itemCount: _messages.length + (_isLoading ? 1 : 0),
               itemBuilder: (context, index) {
+                if (index == _messages.length && _isLoading) {
+                  return const TypingIndicator(showIndicator: true);
+                }
+
                 final message = _messages[index];
                 return ChatBubble(message: message);
               },
             ),
           ),
-
-          // Loading indicator
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: CircularProgressIndicator(),
-            ),
-
-          // Message Input
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -74,6 +91,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     maxLines: null,
                     textCapitalization: TextCapitalization.sentences,
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -94,7 +112,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    // Add user message
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true));
       _isLoading = true;
@@ -103,10 +120,22 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.clear();
     _scrollToBottom();
 
+    await Future.delayed(const Duration(milliseconds: 500));
+
     try {
       final deepSeekService =
           Provider.of<DeepSeekService>(context, listen: false);
-      final response = await deepSeekService.getHealthInsights(text);
+
+      // Convert ChatMessage list to the format expected by your service
+      final conversationHistory = _messages
+          .map((message) => {
+                'isUser': message.isUser.toString(),
+                'text': message.text,
+              })
+          .toList();
+
+      final response =
+          await deepSeekService.sendChatMessage(conversationHistory);
 
       setState(() {
         _messages.add(ChatMessage(text: response, isUser: false));
@@ -190,6 +219,100 @@ class ChatBubble extends StatelessWidget {
                 ? colorScheme.onPrimary
                 : colorScheme.onSurfaceVariant,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class TypingIndicator extends StatefulWidget {
+  final bool showIndicator;
+
+  const TypingIndicator({
+    super.key,
+    this.showIndicator = false,
+  });
+
+  @override
+  State<TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<TypingIndicator>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (!widget.showIndicator) {
+      return const SizedBox.shrink();
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8, right: 80),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(18).copyWith(
+            bottomLeft: const Radius.circular(4),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'PersonalMedAI is typing',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                fontSize: 13,
+                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(width: 8),
+            AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return Row(
+                  children: List.generate(3, (index) {
+                    final delay = index * 0.3;
+                    final value = (_animationController.value + delay) % 1.0;
+                    final opacity =
+                        (Curves.easeInOut.transform(value) * 0.8 + 0.2)
+                            .clamp(0.0, 1.0);
+
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color:
+                            colorScheme.onSurfaceVariant.withOpacity(opacity),
+                        shape: BoxShape.circle,
+                      ),
+                    );
+                  }),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );

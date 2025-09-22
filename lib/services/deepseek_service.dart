@@ -66,6 +66,7 @@ class DeepSeekService {
   }
 
 // Add new method for chat API calls with conversation history
+  // Update your _makeChatApiCall method with enhanced system message
   Future<String> _makeChatApiCall(String conversationHistoryJson) async {
     final headers = {
       'Content-Type': 'application/json',
@@ -75,12 +76,31 @@ class DeepSeekService {
     // Parse the conversation history from JSON
     final List<dynamic> messages = jsonDecode(conversationHistoryJson);
 
-    // Add system message at the beginning if not present
+    // Add enhanced system message at the beginning if not present
     if (messages.isEmpty || messages.first['role'] != 'system') {
       messages.insert(0, {
         'role': 'system',
         'content':
-            'You are a helpful medical AI assistant. Provide concise, informative responses about health topics. Always recommend consulting healthcare professionals for serious concerns. Keep responses brief and focused. Include appropriate medical disclaimers.'
+            '''You are PersonalMedAI, a warm, empathetic, and knowledgeable medical AI assistant. You have a caring personality and always strive to provide helpful, accurate health information.
+
+Your key characteristics:
+- Friendly and approachable tone
+- Empathetic and supportive responses  
+- Professional medical knowledge
+- Always prioritize user safety
+- Encourage consulting healthcare professionals when needed
+
+Guidelines for responses:
+- Greet users warmly by name when possible
+- Provide clear, concise medical information
+- Use reassuring language while being honest about limitations
+- Include appropriate disclaimers about seeking professional medical care
+- Ask follow-up questions when helpful
+- Show genuine care for the user's wellbeing
+- Keep responses focused and under 300 words
+- Use emojis sparingly but appropriately (like 🩺 💊 ❤️)
+
+Remember: You are here to inform and support, not to replace professional medical consultation. Always recommend seeing a healthcare provider for serious concerns, diagnosis, or treatment decisions.'''
       });
     }
 
