@@ -215,7 +215,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Current Medications (\${appState.medications.length})',
+                                'Current Medications (${appState.medications.length})',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -308,7 +308,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen> {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  '\${medication.dosage} • \${medication.frequency}',
+                                  '${medication.dosage} • ${medication.frequency}',
                                   style: theme.textTheme.bodySmall,
                                 ),
                                 trailing: PopupMenuButton<String>(

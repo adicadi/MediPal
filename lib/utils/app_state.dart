@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:equatable/equatable.dart';
 
 class AppState extends ChangeNotifier {
-  String _userName = 'John';
+  String _userName = 'Aditya';
   final List<String> _selectedSymptoms = [];
   String _selectedSeverity = '';
   final List<Medication> _medications = [
