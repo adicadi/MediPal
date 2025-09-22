@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -8,13 +9,17 @@ class DeepSeekService {
   late final String _baseUrl;
 
   // OPTIMIZED: Reduced timeout from 30s to 15s for faster failure detection
-  static const Duration _timeout = Duration(seconds: 15);
+  static const Duration _timeout = Duration(seconds: 30);
 
   // OPTIMIZED: Increased retries from 2 to 3 for better success rate
-  static const int _maxRetries = 3;
+  static const int _maxRetries = 2;
+
+  // Add connection-specific timeouts
+  static const Duration _connectTimeout = Duration(seconds: 5);
+  static const Duration _receiveTimeout = Duration(seconds: 25);
 
   // OPTIMIZED: Exponential backoff delays
-  static const List<int> _retryDelays = [1000, 2000, 4000]; // ms
+  static const List<int> _retryDelays = [500, 1500]; // Reduced delays
 
   DeepSeekService() {
     _apiKey = dotenv.env['DEEPSEEK_API_KEY'] ?? '';
@@ -47,6 +52,20 @@ class DeepSeekService {
     return _safeApiCall(prompt, 'Error in chat conversation', isChat: true);
   }
 
+  String _getFallbackResponse(String userMessage) {
+    final message = userMessage.toLowerCase();
+
+    if (message.contains('headache')) {
+      return '🩺 For headaches, try:\n• Stay hydrated\n• Rest in a quiet, dark room\n• Apply cold/warm compress\n• Consider over-the-counter pain relief\n\nConsult a doctor if severe or persistent.';
+    }
+
+    if (message.contains('fever')) {
+      return '🌡️ For fever:\n• Stay hydrated\n• Rest\n• Monitor temperature\n• Light clothing\n• Seek medical attention if >101.5°F (38.6°C) or persistent.';
+    }
+
+    return '🩺 I\'m here to help with your health questions. For specific symptoms, I recommend consulting with a healthcare professional for proper evaluation and treatment.';
+  }
+
 // Update the _safeApiCall method to handle chat context
   Future<String> _safeApiCall(String prompt, String contextMessage,
       {bool isChat = false}) async {
@@ -57,8 +76,17 @@ class DeepSeekService {
         return await _makeApiCallWithRetry(prompt);
       }
     } on TimeoutException {
-      print('⏳ $contextMessage: Request timed out.');
-      return 'The request took too long. Please try again later.';
+      print('⏳ $contextMessage: Request timed out - using fallback');
+      if (isChat) {
+        final messages = jsonDecode(prompt) as List<dynamic>;
+        final lastUserMessage = messages.lastWhere(
+              (m) => m['role'] == 'user',
+              orElse: () => {'content': ''},
+            )['content'] ??
+            '';
+        return _getFallbackResponse(lastUserMessage);
+      }
+      return 'The request took too long. Please try again with a shorter question.';
     } catch (e) {
       print('⚠️ $contextMessage: $e');
       return 'Unable to complete this request right now. Please try again later.';
@@ -71,6 +99,8 @@ class DeepSeekService {
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $_apiKey',
+      'Connection': 'keep-alive', // Reuse connections
+      'Accept': 'application/json',
     };
 
     // Parse the conversation history from JSON
@@ -100,15 +130,17 @@ Guidelines for responses:
 - Keep responses focused and under 300 words
 - Use emojis sparingly but appropriately (like 🩺 💊 ❤️)
 
-Remember: You are here to inform and support, not to replace professional medical consultation. Always recommend seeing a healthcare provider for serious concerns, diagnosis, or treatment decisions.'''
+Remember: You are here to inform and support, not to replace professional medical consultation. Always recommend seeing a healthcare provider for serious concerns, diagnosis, or treatment decisions. and also Complete all recommendations and always finish with proper medical disclaimers.'''
       });
     }
 
     final body = jsonEncode({
       'model': 'deepseek-chat',
       'messages': messages,
-      'max_tokens': 400,
-      'temperature': 0.5,
+      'max_tokens': 300,
+      'temperature': 0.3,
+      'top_p': 0.7, // Add top_p for faster generation
+
       'stream': false,
     });
 
@@ -185,6 +217,76 @@ Remember: You are here to inform and support, not to replace professional medica
             '🔄 Retrying API call... (Attempt $attempts/$_maxRetries) - waiting ${finalDelay}ms');
         await Future.delayed(Duration(milliseconds: finalDelay));
       }
+    }
+  }
+
+  // Add this method for streaming responses
+  // Add this method for streaming responses
+  Future<Stream<String>> getChatResponseStream(
+      List<Map<String, String>> conversationHistory) async {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $_apiKey',
+      'Accept': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+    };
+
+    final messages = conversationHistory
+        .map((message) => {
+              'role': message['isUser'] == 'true' ? 'user' : 'assistant',
+              'content': message['text'] ?? '',
+            })
+        .toList();
+
+    // Add system message
+    if (messages.isEmpty || messages.first['role'] != 'system') {
+      messages.insert(0, {
+        'role': 'system',
+        'content':
+            'You are PersonalMedAI. Keep responses concise and under 150 words.'
+      });
+    }
+
+    final body = jsonEncode({
+      'model': 'deepseek-chat',
+      'messages': messages,
+      'max_tokens': 200,
+      'temperature': 0.3,
+      'stream': true, // Enable streaming
+    });
+
+    final request =
+        http.Request('POST', Uri.parse('$_baseUrl/chat/completions'))
+          ..headers.addAll(headers)
+          ..body = body;
+
+    final client = http.Client();
+
+    try {
+      final streamedResponse = await client.send(request).timeout(_timeout);
+
+      // Return the stream properly wrapped
+      final stream = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .where(
+              (line) => line.startsWith('data: ') && !line.contains('[DONE]'))
+          .map<String>((line) {
+        // Explicitly cast to String
+        final data = line.substring(6);
+        try {
+          final json = jsonDecode(data);
+          final content = json['choices']?[0]?['delta']?['content'];
+          return content?.toString() ?? '';
+        } catch (e) {
+          return '';
+        }
+      }).where((content) => content.isNotEmpty);
+
+      return stream;
+    } catch (e) {
+      client.close();
+      throw Exception('Streaming request failed: $e');
     }
   }
 

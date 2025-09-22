@@ -120,17 +120,23 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.clear();
     _scrollToBottom();
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 200));
 
     try {
       final deepSeekService =
           Provider.of<DeepSeekService>(context, listen: false);
 
+      final recentMessages = _messages.length > 10
+          ? _messages.skip(_messages.length - 10).toList()
+          : _messages;
+
       // Convert ChatMessage list to the format expected by your service
       final conversationHistory = _messages
           .map((message) => {
                 'isUser': message.isUser.toString(),
-                'text': message.text,
+                'text': message.text.length > 500
+                    ? '${message.text.substring(0, 500)}...' // Truncate long messages
+                    : message.text,
               })
           .toList();
 
