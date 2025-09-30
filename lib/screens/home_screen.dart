@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../utils/app_state.dart';
 import '../widgets/health_summary_card.dart';
+import '../services/emergency_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1090,55 +1091,324 @@ ${appState.ageAppropriateDisclaimer}
     );
   }
 
-  void _showMinorEmergencyInfo(BuildContext context) {
+  // ENHANCED: Minor emergency info with location-based emergency numbers
+  void _showMinorEmergencyInfo(BuildContext context) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Getting emergency numbers for your area...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final emergencyNumbers = await EmergencyService.getEmergencyNumbers();
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.emergency, color: Colors.red),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Emergency Help',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.6,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '🚨 If there\'s an emergency in ${emergencyNumbers.countryName}:',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.red),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('1. Find a trusted adult RIGHT AWAY'),
+                    const Text(
+                        '2. If no adult is around, call the emergency number below'),
+                    const Text('3. Stay calm and ask for help'),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red[300]!),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '📞 Emergency Number for ${emergencyNumbers.countryName}:',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            emergencyNumbers.emergency,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '🌟 You did the right thing by learning about safety!',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('I understand'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        // Show generic emergency info if location fails
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Emergency Help'),
+            content: const Text(
+                'If there\'s an emergency:\n\n1. Find a trusted adult RIGHT AWAY\n2. Call your local emergency number\n3. Stay calm and ask for help'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('I understand'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  // ENHANCED: Emergency info with location-based emergency numbers
+  void _showEmergencyInfo(BuildContext context) async {
+    // Show loading dialog first
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Getting your location for local emergency numbers...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Get location-based emergency numbers
+      final emergencyNumbers = await EmergencyService.getEmergencyNumbers();
+
+      // Close loading dialog
+      if (mounted) {
+        Navigator.pop(context);
+
+        // Show emergency info with local numbers
+        _showEmergencyInfoDialog(context, emergencyNumbers);
+      }
+    } catch (e) {
+      // Close loading dialog and show error
+      if (mounted) {
+        Navigator.pop(context);
+        _showEmergencyInfoDialog(context, null);
+      }
+    }
+  }
+
+  void _showEmergencyInfoDialog(
+      BuildContext context, EmergencyNumbers? numbers) {
+    final emergencyNumbers = numbers ??
+        const EmergencyNumbers(
+          emergency: '112 (International)',
+          police: '112',
+          fire: '112',
+          ambulance: '112',
+          poisonControl: 'Contact local emergency services',
+          mentalHealth: 'Contact local services',
+          domesticViolence: 'Contact local services',
+          countryName: 'International',
+          countryCode: 'INTL',
+        );
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.emergency, color: Colors.red),
-            SizedBox(width: 8),
+            const Icon(Icons.emergency, color: Colors.red),
+            const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                'Emergency Help',
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Emergency Information',
+                    style: TextStyle(fontSize: 18),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    emergencyNumbers.countryName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.normal,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
           ],
         ),
         content: ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.5,
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
           ),
-          child: const SingleChildScrollView(
+          child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '🚨 If there\'s an emergency:',
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                // Primary Emergency Number
+                _buildEmergencyNumberCard(
+                  '🚨 EMERGENCY',
+                  emergencyNumbers.emergency,
+                  'For immediate life-threatening situations',
+                  Colors.red,
+                  isUrgent: true,
                 ),
-                SizedBox(height: 8),
-                Text('1. Find a trusted adult RIGHT AWAY'),
-                Text('2. Call 911 if no adult is around'),
-                Text('3. Stay calm and ask for help'),
-                SizedBox(height: 16),
-                Text(
-                  '📞 Important numbers to remember:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+
+                const SizedBox(height: 16),
+
+                // Specific Services
+                const Text(
+                  'Specific Emergency Services:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                SizedBox(height: 8),
-                Text('• Emergency: 911'),
-                Text('• Ask an adult to help you call'),
-                SizedBox(height: 16),
-                Text(
-                  '🌟 You did the right thing by learning about safety!',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(height: 12),
+
+                _buildEmergencyNumberCard(
+                  '👮 Police',
+                  emergencyNumbers.police,
+                  'Crime, accidents, immediate danger',
+                  Colors.blue[700]!,
+                ),
+
+                _buildEmergencyNumberCard(
+                  '🚒 Fire Department',
+                  emergencyNumbers.fire,
+                  'Fires, explosions, gas leaks',
+                  Colors.orange[700]!,
+                ),
+
+                _buildEmergencyNumberCard(
+                  '🚑 Ambulance/Medical',
+                  emergencyNumbers.ambulance,
+                  'Medical emergencies, serious injuries',
+                  Colors.green[700]!,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Support Services
+                const Text(
+                  'Support & Crisis Services:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+
+                _buildEmergencyNumberCard(
+                  '☠️ Poison Control',
+                  emergencyNumbers.poisonControl,
+                  'Poisoning, overdose, toxic exposure',
+                  Colors.purple[700]!,
+                ),
+
+                _buildEmergencyNumberCard(
+                  '🧠 Mental Health Crisis',
+                  emergencyNumbers.mentalHealth,
+                  'Suicide prevention, mental health crisis',
+                  Colors.teal[700]!,
+                ),
+
+                _buildEmergencyNumberCard(
+                  '🏠 Domestic Violence',
+                  emergencyNumbers.domesticViolence,
+                  'Domestic abuse, violence, safety',
+                  Colors.pink[700]!,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Location info
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_on,
+                          color: Colors.blue[700], size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          numbers != null
+                              ? 'Numbers updated for your location: ${emergencyNumbers.countryName}'
+                              : 'Unable to get location. Showing international numbers.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1148,67 +1418,145 @@ ${appState.ageAppropriateDisclaimer}
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('I understand'),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => _showManualCountrySelection(context),
+            icon: const Icon(Icons.public, size: 18),
+            label: const Text('Change Country'),
           ),
         ],
       ),
     );
   }
 
-  void _showEmergencyInfo(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.emergency, color: Colors.red),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Emergency Information',
-                overflow: TextOverflow.ellipsis,
+  Widget _buildEmergencyNumberCard(
+    String title,
+    String number,
+    String description,
+    Color color, {
+    bool isUrgent = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        elevation: isUrgent ? 4 : 2,
+        color: isUrgent ? Colors.red[50] : null,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isUrgent
+              ? BorderSide(color: Colors.red[300]!, width: 2)
+              : BorderSide.none,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                        fontSize: isUrgent ? 16 : 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      number,
+                      style: TextStyle(
+                        fontSize: isUrgent ? 18 : 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              IconButton(
+                onPressed: () => _callEmergencyNumber(number),
+                icon: Icon(
+                  Icons.phone,
+                  color: color,
+                  size: isUrgent ? 28 : 24,
+                ),
+                tooltip: 'Call $number',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _callEmergencyNumber(String number) {
+    // Remove any formatting and extract just the numbers
+    final cleanNumber = number.replaceAll(RegExp(r'[^\d\+]'), '');
+
+    if (cleanNumber.isNotEmpty) {
+      // For now, show the number to dial
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Emergency Call'),
+          content: Text(
+              'Dial: $number\n\nFor immediate assistance, use your device\'s phone app to call this number.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
             ),
           ],
         ),
+      );
+    }
+  }
+
+  void _showManualCountrySelection(BuildContext context) {
+    Navigator.pop(context); // Close emergency dialog
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Country'),
         content: ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.6,
           ),
-          child: const SingleChildScrollView(
+          child: SingleChildScrollView(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '🚨 CALL 911 IMMEDIATELY FOR:',
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-                ),
-                SizedBox(height: 8),
-                Text('• Difficulty breathing or chest pain'),
-                Text('• Severe bleeding or major injuries'),
-                Text('• Loss of consciousness'),
-                Text('• Severe allergic reactions'),
-                Text('• Signs of stroke or heart attack'),
-                SizedBox(height: 16),
-                Text(
-                  'Other Important Numbers:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                Text('• Poison Control: 1-800-222-1222'),
-                Text('• Crisis Text Line: Text HOME to 741741'),
-                Text('• National Suicide Prevention: 988'),
-              ],
+              children: EmergencyService.getAvailableCountries().map((code) {
+                final numbers =
+                    EmergencyService.getEmergencyNumbersForCountry(code);
+                return ListTile(
+                  title: Text(numbers.countryName),
+                  subtitle: Text('Emergency: ${numbers.emergency}'),
+                  trailing: Text(code),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showEmergencyInfoDialog(context, numbers);
+                  },
+                );
+              }).toList(),
             ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('Cancel'),
           ),
         ],
       ),
@@ -1294,6 +1642,7 @@ ${appState.ageAppropriateDisclaimer}
                 Text('• Age-appropriate health guidance'),
                 Text('• AI-powered symptom analysis'),
                 Text('• Medication interaction checking'),
+                Text('• Location-based emergency numbers'),
                 Text('• Personalized health insights and tips'),
                 Text('• 24/7 AI chat support'),
                 Text('• Safe mode for young users'),
