@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../utils/app_state.dart';
 import '../services/onboarding_service.dart';
@@ -20,15 +21,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   final _emailController = TextEditingController();
   final _ageController = TextEditingController();
 
-  // Animation controllers
+  // Animation controllers - simplified
   late AnimationController _fadeAnimationController;
-  late AnimationController _slideAnimationController;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
 
   int _currentPage = 0;
   bool _isLoading = false;
   String _selectedGender = '';
+  bool _hasGenderError = false; // NEW: Gender validation state
+  bool _makeFieldsOptional = false; // NEW: Optional fields toggle
 
   @override
   void initState() {
@@ -37,12 +38,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _initializeAnimations() {
+    // Simplified animations - only fade for page content
     _fadeAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _slideAnimationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
@@ -55,16 +52,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       curve: Curves.easeInOut,
     ));
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideAnimationController,
-      curve: Curves.easeOutBack,
-    ));
-
     _fadeAnimationController.forward();
-    _slideAnimationController.forward();
   }
 
   @override
@@ -73,7 +61,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _emailController.dispose();
     _ageController.dispose();
     _fadeAnimationController.dispose();
-    _slideAnimationController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -86,22 +73,75 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: SafeArea(
-        child: PageView(
-          controller: _pageController,
-          onPageChanged: (index) {
-            setState(() {
-              _currentPage = index;
-            });
-            // Restart animations for new page
-            _slideAnimationController.reset();
-            _slideAnimationController.forward();
-          },
+        child: Column(
           children: [
-            _buildWelcomePage(context, colorScheme, theme),
-            _buildUserInfoPage(context, colorScheme, theme),
-            _buildCompletePage(context, colorScheme, theme),
+            // NEW: Progress indicator
+            _buildProgressIndicator(theme, colorScheme),
+
+            // PageView content
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                  // Restart animation only for content, not conflicting with PageView
+                  _fadeAnimationController.reset();
+                  _fadeAnimationController.forward();
+                },
+                children: [
+                  _buildWelcomePage(context, colorScheme, theme),
+                  _buildUserInfoPage(context, colorScheme, theme),
+                  _buildCompletePage(context, colorScheme, theme),
+                ],
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  // NEW: Progress indicator widget
+  Widget _buildProgressIndicator(ThemeData theme, ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        children: [
+          // Dot indicators
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(3, (index) {
+              final isActive = index == _currentPage;
+              final isCompleted = index < _currentPage;
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                height: 8,
+                width: isActive ? 24 : 8,
+                decoration: BoxDecoration(
+                  color: isCompleted || isActive
+                      ? colorScheme.primary
+                      : colorScheme.outline.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              );
+            }),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Page indicator text
+          Text(
+            'Step ${_currentPage + 1} of 3',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurface.withOpacity(0.6),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -111,16 +151,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       BuildContext context, ColorScheme colorScheme, ThemeData theme) {
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const Spacer(flex: 1),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const Spacer(flex: 1),
 
-              // App Logo & Name
-              Container(
+            // App Logo & Name with hero animation
+            Hero(
+              tag: 'app_logo',
+              child: Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -144,107 +184,273 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   color: colorScheme.primary,
                 ),
               ),
+            ),
 
-              const SizedBox(height: 32),
+            const SizedBox(height: 32),
 
-              Text(
-                'PersonalMedAI',
-                style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.primary,
-                  letterSpacing: 1.2,
-                ),
-                textAlign: TextAlign.center,
+            Text(
+              'PersonalMedAI',
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.primary,
+                letterSpacing: 1.2,
               ),
+              textAlign: TextAlign.center,
+            ),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-              Text(
-                'Your Personal Health Assistant',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: colorScheme.onSurface.withOpacity(0.8),
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
+            Text(
+              'Your Personal Health Assistant',
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: colorScheme.onSurface.withOpacity(0.8),
+                fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.center,
+            ),
 
-              const SizedBox(height: 40),
+            const SizedBox(height: 40),
 
-              // Features list
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: colorScheme.outline.withOpacity(0.2),
+            // Enhanced features list
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceVariant.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: colorScheme.outline.withOpacity(0.2),
+                ),
+              ),
+              child: Column(
+                children: [
+                  _buildFeatureItem(
+                    Icons.psychology,
+                    'AI-Powered Health Insights',
+                    'Get personalized health recommendations',
+                    colorScheme,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFeatureItem(
+                    Icons.medication,
+                    'Medication Management',
+                    'Track medications and check interactions',
+                    colorScheme,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFeatureItem(
+                    Icons.chat,
+                    '24/7 AI Health Chat',
+                    'Ask health questions anytime, anywhere',
+                    colorScheme,
+                  ),
+                ],
+              ),
+            ),
+
+            const Spacer(flex: 2),
+
+            // Continue button
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () => _navigateToPage(1),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Get Started',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Page 2: Enhanced User Information Form
+  Widget _buildUserInfoPage(
+      BuildContext context, ColorScheme colorScheme, ThemeData theme) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: GestureDetector(
+        onTap: () => _dismissKeyboard(), // NEW: Dismiss keyboard on tap
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // Header with skip option
+              Container(
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    _buildFeatureItem(
-                      Icons.psychology,
-                      'AI-Powered Health Insights',
-                      'Get personalized health recommendations',
-                      colorScheme,
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.person_add,
+                        size: 40,
+                        color: colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    _buildFeatureItem(
-                      Icons.medication,
-                      'Medication Management',
-                      'Track medications and check interactions',
-                      colorScheme,
+                    Text(
+                      'Tell us about yourself',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.primary,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This helps us provide personalized health recommendations',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    // NEW: Quick setup toggle
                     const SizedBox(height: 16),
-                    _buildFeatureItem(
-                      Icons.chat,
-                      '24/7 AI Health Chat',
-                      'Ask health questions anytime, anywhere',
-                      colorScheme,
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _makeFieldsOptional = !_makeFieldsOptional;
+                        });
+                      },
+                      icon:
+                          Icon(_makeFieldsOptional ? Icons.tune : Icons.speed),
+                      label: Text(_makeFieldsOptional
+                          ? 'Detailed Setup'
+                          : 'Quick Setup'),
+                      style: TextButton.styleFrom(
+                        backgroundColor:
+                            colorScheme.primaryContainer.withOpacity(0.5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
 
-              const Spacer(flex: 2),
+              // Form
+              Expanded(
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 32),
 
-              // Continue button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () {
-                    _pageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Get Started',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: colorScheme.onPrimary,
-                          fontWeight: FontWeight.w600,
+                        // Name field - always required for personalization
+                        _buildEnhancedTextField(
+                          controller: _nameController,
+                          label: 'Full Name',
+                          hint: 'Enter your full name',
+                          icon: Icons.person,
+                          isRequired: true,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter your name';
+                            }
+                            if (value.trim().length < 2) {
+                              return 'Name must be at least 2 characters';
+                            }
+                            return null;
+                          },
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward),
-                    ],
+
+                        const SizedBox(height: 20),
+
+                        // Email field - optional in quick mode
+                        _buildEnhancedTextField(
+                          controller: _emailController,
+                          label:
+                              'Email Address${_makeFieldsOptional ? ' (Optional)' : ''}',
+                          hint: 'Enter your email address',
+                          icon: Icons.email,
+                          keyboardType: TextInputType.emailAddress,
+                          isRequired: !_makeFieldsOptional,
+                          validator: _makeFieldsOptional
+                              ? null
+                              : (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Please enter your email';
+                                  }
+                                  if (!RegExp(
+                                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                      .hasMatch(value)) {
+                                    return 'Please enter a valid email address';
+                                  }
+                                  return null;
+                                },
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Age field - always required for medical relevance
+                        _buildEnhancedTextField(
+                          controller: _ageController,
+                          label: 'Age',
+                          hint: 'Enter your age',
+                          icon: Icons.cake,
+                          keyboardType: TextInputType.number,
+                          isRequired: true,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter your age';
+                            }
+                            final age = int.tryParse(value);
+                            if (age == null || age < 1 || age > 150) {
+                              return 'Please enter a valid age (1-150)';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Enhanced Gender selection with error state
+                        _buildGenderSelector(colorScheme, theme),
+
+                        const SizedBox(height: 32),
+                      ],
+                    ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 16),
+              // Enhanced navigation buttons
+              _buildNavigationButtons(colorScheme),
             ],
           ),
         ),
@@ -252,251 +458,193 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // Page 2: User Information Form
-  Widget _buildUserInfoPage(
-      BuildContext context, ColorScheme colorScheme, ThemeData theme) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.person_add,
-                      size: 40,
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Tell us about yourself',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.primary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'This helps us provide personalized health recommendations',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+  // NEW: Enhanced gender selector with error state
+  Widget _buildGenderSelector(ColorScheme colorScheme, ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _hasGenderError
+              ? Colors.red.withOpacity(0.8)
+              : colorScheme.outline.withOpacity(0.2),
+          width: _hasGenderError ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.wc,
+                color: _hasGenderError ? Colors.red : colorScheme.primary,
+                size: 20,
               ),
-            ),
-
-            // Form
-            Expanded(
-              child: SingleChildScrollView(
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 32),
-
-                      // Name field
-                      _buildTextField(
-                        controller: _nameController,
-                        label: 'Full Name',
-                        hint: 'Enter your full name',
-                        icon: Icons.person,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your name';
-                          }
-                          if (value.trim().length < 2) {
-                            return 'Name must be at least 2 characters';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Email field
-                      _buildTextField(
-                        controller: _emailController,
-                        label: 'Email Address',
-                        hint: 'Enter your email address',
-                        icon: Icons.email,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your email';
-                          }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                              .hasMatch(value)) {
-                            return 'Please enter a valid email address';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Age field
-                      _buildTextField(
-                        controller: _ageController,
-                        label: 'Age',
-                        hint: 'Enter your age',
-                        icon: Icons.cake,
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter your age';
-                          }
-                          final age = int.tryParse(value);
-                          if (age == null || age < 1 || age > 150) {
-                            return 'Please enter a valid age (1-150)';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Gender selection
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceVariant.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: colorScheme.outline.withOpacity(0.2),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.wc,
-                                  color: colorScheme.primary,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Gender',
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildGenderOption('Male', Icons.male),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildGenderOption(
-                                      'Female', Icons.female),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child:
-                                      _buildGenderOption('Other', Icons.person),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-                    ],
-                  ),
+              const SizedBox(width: 8),
+              Text(
+                'Gender *',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: _hasGenderError ? Colors.red : colorScheme.primary,
                 ),
               ),
-            ),
-
-            // Navigation buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      _pageController.previousPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Back'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _submitUserInfo,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorScheme.primary,
-                      foregroundColor: colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Text('Continue'),
-                  ),
+              if (_hasGenderError) ...[
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.error,
+                  color: Colors.red,
+                  size: 16,
                 ),
               ],
+            ],
+          ),
+
+          if (_hasGenderError) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Please select your gender',
+              style: TextStyle(
+                color: Colors.red.shade700,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
-        ),
+
+          const SizedBox(height: 12),
+
+          // Gender options with enhanced feedback
+          Row(
+            children: [
+              Expanded(
+                child: _buildGenderOption('Male', Icons.male),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildGenderOption('Female', Icons.female),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildGenderOption('Other', Icons.person),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  // Page 3: Completion
+  // Enhanced text field with better styling
+  Widget _buildEnhancedTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+    bool isRequired = true,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      textCapitalization: keyboardType == TextInputType.name
+          ? TextCapitalization.words
+          : TextCapitalization.none,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        suffixIcon: isRequired
+            ? Icon(Icons.star, color: Colors.red.shade300, size: 12)
+            : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        filled: true,
+        fillColor:
+            Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      ),
+      onTap: () {
+        // Clear gender error when user interacts with form
+        if (_hasGenderError) {
+          setState(() {
+            _hasGenderError = false;
+          });
+        }
+      },
+    );
+  }
+
+  // Enhanced navigation buttons
+  Widget _buildNavigationButtons(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _navigateToPage(0),
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Back'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton.icon(
+              onPressed: _isLoading ? null : _submitUserInfo,
+              icon: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.arrow_forward),
+              label: Text(_isLoading ? 'Processing...' : 'Continue'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Page 3: Completion (enhanced)
   Widget _buildCompletePage(
       BuildContext context, ColorScheme colorScheme, ThemeData theme) {
-    return SlideTransition(
-      position: _slideAnimation,
+    return FadeTransition(
+      opacity: _fadeAnimation,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             const Spacer(flex: 1),
 
-            // Success animation
+            // Enhanced success animation
             TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 1000),
+              duration: const Duration(milliseconds: 1200),
               tween: Tween(begin: 0.0, end: 1.0),
               builder: (context, value, child) {
                 return Transform.scale(
@@ -519,10 +667,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.check_circle,
-                      size: 80,
-                      color: Colors.green,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          size: 80,
+                          color: Colors.green,
+                        ),
+                        // Animated ring
+                        SizedBox(
+                          height: 100,
+                          width: 100,
+                          child: CircularProgressIndicator(
+                            value: value,
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.green.withOpacity(0.3),
+                            ),
+                            backgroundColor: Colors.transparent,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -557,11 +723,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
             const SizedBox(height: 40),
 
-            // Ready to start features
+            // Enhanced features preview
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withOpacity(0.3),
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primaryContainer.withOpacity(0.3),
+                    colorScheme.secondaryContainer.withOpacity(0.2),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: colorScheme.outline.withOpacity(0.2),
@@ -589,7 +760,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
             const Spacer(flex: 2),
 
-            // Start using app button
+            // Enhanced start button
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -611,6 +782,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
       ),
     );
+  }
+
+  // Helper method for navigation with keyboard dismissal
+  void _navigateToPage(int page) {
+    _dismissKeyboard();
+    _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  // NEW: Dismiss keyboard
+  void _dismissKeyboard() {
+    FocusScope.of(context).unfocus();
   }
 
   Widget _buildFeatureItem(
@@ -655,32 +841,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        filled: true,
-        fillColor:
-            Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-      ),
-    );
-  }
-
   Widget _buildGenderOption(String gender, IconData icon) {
     final isSelected = _selectedGender == gender;
     final colorScheme = Theme.of(context).colorScheme;
@@ -689,9 +849,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       onTap: () {
         setState(() {
           _selectedGender = gender;
+          _hasGenderError = false; // Clear error on selection
         });
+
+        // Haptic feedback
+        HapticFeedback.lightImpact();
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected
@@ -750,12 +915,44 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Future<void> _submitUserInfo() async {
-    if (!_formKey.currentState!.validate() || _selectedGender.isEmpty) {
-      if (_selectedGender.isEmpty) {
+    _dismissKeyboard(); // Dismiss keyboard first
+
+    // Reset gender error state
+    setState(() {
+      _hasGenderError = false;
+    });
+
+    // Validate form and gender
+    bool isFormValid = _formKey.currentState!.validate();
+    bool isGenderValid = _selectedGender.isNotEmpty;
+
+    if (!isFormValid || !isGenderValid) {
+      if (!isGenderValid) {
+        setState(() {
+          _hasGenderError = true;
+        });
+
+        // Enhanced error feedback
+        HapticFeedback.mediumImpact();
+
+        // Show in-context error instead of SnackBar
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select your gender'),
-            backgroundColor: Colors.orange,
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text('Please select your gender to continue'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -771,22 +968,43 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
       // Save user information
       appState.setUserName(_nameController.text.trim());
-      appState.setUserEmail(_emailController.text.trim());
+
+      // Save email only if provided (supports optional mode)
+      if (_emailController.text.trim().isNotEmpty) {
+        appState.setUserEmail(_emailController.text.trim());
+      }
+
       appState.setUserAge(int.parse(_ageController.text.trim()));
       appState.setUserGender(_selectedGender);
 
-      await Future.delayed(
-          const Duration(milliseconds: 800)); // Simulate processing
+      // Enhanced processing delay with haptic feedback
+      await Future.delayed(const Duration(milliseconds: 1200));
+      HapticFeedback.mediumImpact();
 
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      _navigateToPage(2);
     } catch (e) {
+      // Enhanced error handling
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong. Please try again.'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Something went wrong. Please try again.'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: () => _submitUserInfo(),
+          ),
         ),
       );
     } finally {

@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:equatable/equatable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class AppState extends ChangeNotifier {
   // User profile data (enhanced for onboarding)
-  String _userName = 'Aditya';
+  String _userName = '';
   String _userEmail = '';
   int _userAge = 0;
   String _userGender = '';
@@ -43,35 +44,199 @@ class AppState extends ChangeNotifier {
   // Getters - chat
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
 
+  // NEW: Age-based content restrictions
+  bool get isMinor => _userAge > 0 && _userAge < 18;
+  bool get isYoungAdult => _userAge >= 18 && _userAge < 25;
+  bool get isAdult => _userAge >= 25;
+
+  // NEW: Get personalized greeting with time awareness
+  String get personalizedGreeting {
+    final timeOfDay = DateTime.now().hour;
+    String greeting;
+    String emoji;
+
+    if (timeOfDay < 6) {
+      greeting = 'Good night';
+      emoji = '🌙';
+    } else if (timeOfDay < 12) {
+      greeting = 'Good morning';
+      emoji = '🌅';
+    } else if (timeOfDay < 17) {
+      greeting = 'Good afternoon';
+      emoji = '☀️';
+    } else if (timeOfDay < 21) {
+      greeting = 'Good evening';
+      emoji = '🌆';
+    } else {
+      greeting = 'Good night';
+      emoji = '🌙';
+    }
+
+    if (_userName.isNotEmpty && _userName != 'User') {
+      return '$greeting, $_userName! $emoji';
+    } else {
+      return '$greeting! $emoji';
+    }
+  }
+
+  // NEW: Get age-appropriate disclaimer
+  String get ageAppropriateDisclaimer {
+    if (isMinor) {
+      return '''
+⚠️ **Important for Young Users:**
+- Always talk to a parent, guardian, or trusted adult about health concerns
+- Never make medical decisions without adult supervision  
+- If you feel unwell, tell a trusted adult immediately
+- This app provides general information only - not medical advice
+- Ask questions! Adults are here to help you stay healthy 🌟
+      ''';
+    } else if (isYoungAdult) {
+      return '''
+⚠️ **Important Health Information:**
+- This tool provides educational information only
+- Always consult healthcare professionals for medical advice
+- Build relationships with trusted healthcare providers
+- Take charge of your health with professional guidance
+- Call emergency services for urgent symptoms 🏥
+      ''';
+    } else {
+      return '''
+⚠️ **Important Medical Disclaimer:**
+- This tool provides general information only
+- Always consult healthcare professionals for medical advice
+- Never ignore professional medical guidance
+- Call emergency services for urgent symptoms
+- Your health decisions should be made with qualified medical professionals 👩‍⚕️
+      ''';
+    }
+  }
+
+  // NEW: Age-appropriate health tips
+  List<String> get personalizedHealthTips {
+    List<String> baseTips = [
+      '💧 Stay hydrated - drink 8 glasses of water daily',
+      '🚶‍♀️ Take regular walks to stay active',
+      '😴 Get quality sleep every night',
+      '🥗 Eat a balanced diet with fruits and vegetables',
+    ];
+
+    if (isMinor) {
+      return [
+        '🏃‍♀️ Stay active with fun activities and sports',
+        '📱 Limit screen time and take regular breaks',
+        '🧠 Talk about your feelings with trusted adults',
+        '🥕 Try new healthy foods - make it fun!',
+        '😴 Kids need 9-11 hours of sleep each night',
+        '🌟 Always tell an adult if you don\'t feel well',
+      ];
+    } else if (isYoungAdult) {
+      return [
+        ...baseTips,
+        '🏃‍♂️ Build healthy habits early for lifelong wellness',
+        '🧘‍♀️ Practice stress management techniques',
+        '🩺 Start building relationships with healthcare providers',
+        '💪 Include strength training in your routine',
+        '🧠 Prioritize mental health and seek support when needed',
+      ];
+    } else {
+      return [
+        ...baseTips,
+        '🩺 Schedule regular health screenings',
+        '💪 Maintain muscle mass with strength training',
+        '🦴 Focus on bone health with calcium and vitamin D',
+        '👩‍⚕️ Keep up with recommended medical check-ups',
+        '❤️ Monitor cardiovascular health',
+      ];
+    }
+  }
+
+  // NEW: Content filtering for AI responses
+  bool shouldFilterContent(String content) {
+    if (!isMinor) return false;
+
+    // Keywords that might be inappropriate for minors
+    final sensitiveKeywords = [
+      'sexual',
+      'pregnancy',
+      'contraception',
+      'reproductive',
+      'std',
+      'sti',
+      'adult',
+      'mature',
+      'intimate',
+      'private parts',
+      'drug abuse',
+      'alcohol',
+      'addiction',
+      'overdose',
+      'suicide',
+      'self-harm',
+      'depression',
+      'anxiety disorders'
+    ];
+
+    final lowerContent = content.toLowerCase();
+    return sensitiveKeywords.any((keyword) => lowerContent.contains(keyword));
+  }
+
+  // NEW: Get filtered, age-appropriate error message
+  String getAgeAppropriateErrorMessage() {
+    if (isMinor) {
+      return '''
+Oops! $_userName, I'm having trouble connecting right now. 😅
+
+**What you can do:**
+- Try asking your question again in a few minutes
+- Talk to a parent or guardian about your health question  
+- Ask a trusted adult to help you
+- If you're not feeling well, always tell a trusted adult! 🌟
+
+Remember: Adults are there to help keep you healthy and safe! 💙
+      ''';
+    } else {
+      return '''
+I'm experiencing technical difficulties right now, $_userName. 
+
+**Please try:**
+- Asking your question again in a few minutes
+- Consulting with a healthcare professional
+- Calling emergency services if this is urgent
+
+Your health and safety are the top priority. 🏥
+      ''';
+    }
+  }
+
   // User profile setters (enhanced for onboarding)
-  void setUserName(String name) {
+  Future<void> setUserName(String name) async {
     if (_userName != name) {
       _userName = name;
-      _saveUserProfile();
+      await _saveUserProfile();
       notifyListeners();
     }
   }
 
-  void setUserEmail(String email) {
+  Future<void> setUserEmail(String email) async {
     if (_userEmail != email) {
       _userEmail = email;
-      _saveUserProfile();
+      await _saveUserProfile();
       notifyListeners();
     }
   }
 
-  void setUserAge(int age) {
+  Future<void> setUserAge(int age) async {
     if (_userAge != age) {
       _userAge = age;
-      _saveUserProfile();
+      await _saveUserProfile();
       notifyListeners();
     }
   }
 
-  void setUserGender(String gender) {
+  Future<void> setUserGender(String gender) async {
     if (_userGender != gender) {
       _userGender = gender;
-      _saveUserProfile();
+      await _saveUserProfile();
       notifyListeners();
     }
   }
@@ -135,9 +300,30 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Chat management
+  // Chat management (enhanced with age restrictions)
   void addChatMessage(ChatMessage message) {
-    _chatMessages.add(message);
+    // Filter content for minors
+    if (isMinor && !message.isUser && shouldFilterContent(message.text)) {
+      final filteredMessage = ChatMessage(
+        text: '''
+I notice you're asking about something that might be better discussed with a trusted adult like a parent, guardian, or doctor.
+
+**What you can do:**
+- Talk to a parent or guardian about your question  
+- Ask a school nurse or counselor
+- Visit a doctor with a trusted adult
+
+Remember: I'm here to help with general health information, but for anything serious or personal, it's always best to talk to a real person who can help you properly! 😊
+
+Is there something else I can help you with today?
+        ''',
+        isUser: false,
+      );
+      _chatMessages.add(filteredMessage);
+    } else {
+      _chatMessages.add(message);
+    }
+
     _saveChatHistory();
     notifyListeners();
   }
@@ -156,7 +342,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // Enhanced health data with user profile
+  // Enhanced health data with user profile and age considerations
   Map<String, dynamic> getHealthData() {
     return {
       // User profile data
@@ -164,11 +350,16 @@ class AppState extends ChangeNotifier {
       'user_email': _userEmail,
       'user_age': _userAge,
       'user_gender': _userGender,
+      'age_group': isMinor
+          ? 'minor'
+          : isYoungAdult
+              ? 'young_adult'
+              : 'adult',
+      'content_restrictions': isMinor,
 
-      // Health metrics
-      'sleep_hours': '8.5',
-      'steps': '10,000',
-      'heart_rate': '72 bpm',
+      // Health metrics (age-adjusted)
+      'sleep_hours': isMinor ? '9-11' : '7-9',
+      'recommended_steps': isMinor ? '12,000' : '10,000',
       'activity_level': 'Moderate',
 
       // Medication data
@@ -183,44 +374,57 @@ class AppState extends ChangeNotifier {
 
       // Health score calculation based on user data
       'health_score': _calculateHealthScore(),
+      'personalized_tips': personalizedHealthTips,
       'last_update': DateTime.now().toIso8601String(),
     };
   }
 
-  // Calculate health score based on available data
+  // Enhanced health score calculation with age factors
   String _calculateHealthScore() {
     int score = 70; // Base score
 
-    // Age factor
+    // Age factor (more nuanced)
     if (_userAge > 0) {
-      if (_userAge < 30)
+      if (_userAge < 18) {
+        score += 15; // Young people generally healthier
+      } else if (_userAge < 30) {
         score += 10;
-      else if (_userAge < 50)
+      } else if (_userAge < 50) {
         score += 5;
-      else if (_userAge < 70)
+      } else if (_userAge < 70) {
         score += 0;
-      else
+      } else {
         score -= 5;
+      }
     }
 
     // Medication factor
-    if (_medications.isEmpty)
+    if (_medications.isEmpty) {
       score += 10;
-    else if (_medications.length <= 2)
+    } else if (_medications.length <= 2) {
       score += 5;
-    else
-      score -= 2;
+    } else if (_medications.length <= 5) {
+      score += 0;
+    } else {
+      score -= 5;
+    }
 
     // Recent symptoms factor
-    if (_symptomAnalysis.isEmpty)
+    if (_symptomAnalysis.isEmpty) {
       score += 5;
-    else
+    } else {
       score -= 3;
+    }
 
-    return '${score.clamp(50, 100)}/100';
+    // Chat activity (positive engagement)
+    if (_chatMessages.length > 5) {
+      score += 2; // Engaged in health monitoring
+    }
+
+    return '${score.clamp(40, 100)}/100';
   }
 
-  // Persistence methods
+  // Persistence methods (enhanced)
   Future<void> _saveUserProfile() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -242,7 +446,7 @@ class AppState extends ChangeNotifier {
       _userGender = prefs.getString('user_gender') ?? '';
 
       await _loadMedications();
-      await _loadChatHistory(); // FIXED: Now properly defined below
+      await _loadChatHistory();
 
       notifyListeners();
     } catch (e) {
@@ -253,8 +457,9 @@ class AppState extends ChangeNotifier {
   Future<void> _saveMedications() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final medicationsJson = _medications.map((m) => m.toMap()).toList();
-      await prefs.setString('medications', medicationsJson.toString());
+      final medicationsJson =
+          jsonEncode(_medications.map((m) => m.toMap()).toList());
+      await prefs.setString('medications', medicationsJson);
     } catch (e) {
       if (kDebugMode) print('Error saving medications: $e');
     }
@@ -265,34 +470,36 @@ class AppState extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final medicationsString = prefs.getString('medications');
       if (medicationsString != null && medicationsString.isNotEmpty) {
-        // Parse medications if needed
-        // For now, keep the default medications
+        final List<dynamic> medicationsList = jsonDecode(medicationsString);
+        _medications.clear();
+        _medications.addAll(
+            medicationsList.map((json) => Medication.fromMap(json)).toList());
       }
     } catch (e) {
       if (kDebugMode) print('Error loading medications: $e');
+      // Keep default medications if loading fails
     }
   }
 
   Future<void> _saveChatHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final chatJson = _chatMessages.map((m) => m.toMap()).toList();
-      await prefs.setString('chat_history', chatJson.toString());
+      final chatJson = jsonEncode(_chatMessages.map((m) => m.toMap()).toList());
+      await prefs.setString('chat_history', chatJson);
     } catch (e) {
       if (kDebugMode) print('Error saving chat history: $e');
     }
   }
 
-  // FIXED: Added the missing _loadChatHistory method
   Future<void> _loadChatHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final chatString = prefs.getString('chat_history');
       if (chatString != null && chatString.isNotEmpty) {
-        // Parse chat history if needed
-        // Implementation can be added based on your ChatMessage structure
-        // For now, start with empty chat history
+        final List<dynamic> chatList = jsonDecode(chatString);
         _chatMessages.clear();
+        _chatMessages
+            .addAll(chatList.map((json) => ChatMessage.fromMap(json)).toList());
       }
     } catch (e) {
       if (kDebugMode) print('Error loading chat history: $e');
@@ -307,60 +514,17 @@ class AppState extends ChangeNotifier {
     await _saveChatHistory();
   }
 
-  // Get personalized greeting based on time and user data
+  // DEPRECATED: Use personalizedGreeting getter instead
   String getPersonalizedGreeting() {
-    final hour = DateTime.now().hour;
-    String greeting;
-
-    if (hour < 12) {
-      greeting = 'Good morning';
-    } else if (hour < 17) {
-      greeting = 'Good afternoon';
-    } else {
-      greeting = 'Good evening';
-    }
-
-    if (_userName.isNotEmpty && _userName != 'User') {
-      return '$greeting, $_userName!';
-    } else {
-      return '$greeting!';
-    }
+    return personalizedGreeting;
   }
 
-  // Get age-appropriate health tips
+  // DEPRECATED: Use personalizedHealthTips getter instead
   List<String> getPersonalizedHealthTips() {
-    List<String> tips = [
-      '💧 Stay hydrated - drink 8 glasses of water daily',
-      '🚶‍♀️ Take 10,000 steps per day for optimal health',
-      '😴 Get 7-9 hours of quality sleep each night',
-      '🥗 Eat a balanced diet with fruits and vegetables',
-    ];
-
-    // Age-specific tips
-    if (_userAge > 0) {
-      if (_userAge < 30) {
-        tips.add('🏃‍♂️ Build healthy habits early for lifelong wellness');
-        tips.add('🧘‍♀️ Practice stress management techniques');
-      } else if (_userAge < 50) {
-        tips.add('🩺 Get regular health screenings');
-        tips.add('💪 Maintain muscle mass with strength training');
-      } else {
-        tips.add('🦴 Focus on bone health with calcium and vitamin D');
-        tips.add('👩‍⚕️ Regular check-ups become more important');
-      }
-    }
-
-    // Gender-specific tips
-    if (_userGender == 'Female') {
-      tips.add('🩸 Monitor iron levels, especially if menstruating');
-    } else if (_userGender == 'Male') {
-      tips.add('❤️ Pay attention to heart health');
-    }
-
-    return tips;
+    return personalizedHealthTips;
   }
 
-  // Reset all data (existing, enhanced)
+  // Reset methods (existing, enhanced)
   void resetData() {
     _selectedSymptoms.clear();
     _selectedSeverity = '';
@@ -381,15 +545,43 @@ class AppState extends ChangeNotifier {
     _userGender = '';
     _medications.clear();
 
+    // Add back default medications
+    _medications.addAll([
+      const Medication(name: 'Aspirin', dosage: '81mg', frequency: 'Daily'),
+      const Medication(name: 'Lisinopril', dosage: '10mg', frequency: 'Daily'),
+    ]);
+
     // Clear SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
 
     notifyListeners();
   }
+
+  // NEW: Check if user profile is complete
+  bool get isUserProfileComplete {
+    return _userName.isNotEmpty &&
+        _userName != 'User' &&
+        _userAge > 0 &&
+        _userGender.isNotEmpty;
+  }
+
+  // NEW: Get age-appropriate max response length for AI
+  int get maxAIResponseLength {
+    if (isMinor) return 200; // Shorter, simpler responses
+    if (isYoungAdult) return 400; // Medium length
+    return 600; // Full detailed responses for adults
+  }
+
+  // NEW: Get content safety level for AI requests
+  String get contentSafetyLevel {
+    if (isMinor) return 'strict';
+    if (isYoungAdult) return 'moderate';
+    return 'standard';
+  }
 }
 
-// Existing Medication class (unchanged)
+// Existing Medication class (unchanged but enhanced)
 class Medication extends Equatable {
   final String name;
   final String dosage;
@@ -422,30 +614,41 @@ class Medication extends Equatable {
       frequency: map['frequency'] ?? '',
     );
   }
+
+  // NEW: Get medication display string
+  String get displayString => '$name $dosage ($frequency)';
+
+  // NEW: Check if this is an essential medication
+  bool get isEssential {
+    final essentialMeds = ['insulin', 'epipen', 'inhaler', 'nitroglycerin'];
+    return essentialMeds.any((med) => name.toLowerCase().contains(med));
+  }
 }
 
-// FIXED: Chat message class with proper constructor
+// Enhanced Chat message class with better serialization
 class ChatMessage extends Equatable {
   final String text;
   final bool isUser;
   final DateTime timestamp;
+  final String? messageId;
 
   ChatMessage({
     required this.text,
     required this.isUser,
     DateTime? timestamp,
-  }) : timestamp = timestamp ??
-            DateTime
-                .now(); // FIXED: Removed const and used proper initialization
+    this.messageId,
+  }) : timestamp = timestamp ?? DateTime.now();
 
   @override
-  List<Object?> get props => [text, isUser, timestamp];
+  List<Object?> get props => [text, isUser, timestamp, messageId];
 
   Map<String, dynamic> toMap() {
     return {
       'text': text,
       'isUser': isUser,
       'timestamp': timestamp.toIso8601String(),
+      'messageId':
+          messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
     };
   }
 
@@ -454,6 +657,41 @@ class ChatMessage extends Equatable {
       text: map['text'] ?? '',
       isUser: map['isUser'] ?? false,
       timestamp: DateTime.tryParse(map['timestamp'] ?? '') ?? DateTime.now(),
+      messageId: map['messageId'],
     );
+  }
+
+  // NEW: Get formatted timestamp for display
+  String get formattedTime {
+    final now = DateTime.now();
+    final diff = now.difference(timestamp);
+
+    if (diff.inMinutes < 1) {
+      return 'Just now';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}h ago';
+    } else {
+      return '${diff.inDays}d ago';
+    }
+  }
+
+  // NEW: Check if message contains health concern keywords
+  bool get containsHealthConcern {
+    final concernKeywords = [
+      'pain',
+      'hurt',
+      'sick',
+      'fever',
+      'emergency',
+      'urgent',
+      'bleeding',
+      'chest pain',
+      'difficulty breathing',
+      'severe'
+    ];
+    return concernKeywords
+        .any((keyword) => text.toLowerCase().contains(keyword));
   }
 }

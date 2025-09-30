@@ -30,21 +30,42 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   late AnimationController _typingAnimationController;
   late Animation<double> _typingAnimation;
 
-  // OPTIMIZED: Quick action buttons for common queries
-  final List<Map<String, String>> _quickActions = [
-    {'icon': 'help_outline', 'label': 'Help', 'message': 'help'},
-    {'icon': 'emergency', 'label': 'Emergency', 'message': 'emergency'},
-    {
-      'icon': 'medication',
-      'label': 'Medications',
-      'message': 'Tell me about medication safety'
-    },
-    {
-      'icon': 'health_and_safety',
-      'label': 'Symptoms',
-      'message': 'I have some symptoms I\'d like to discuss'
-    },
-  ];
+  // ENHANCED: Age-appropriate quick actions
+  List<Map<String, String>> get _quickActions {
+    final appState = Provider.of<AppState>(context, listen: false);
+
+    if (appState.isMinor) {
+      return [
+        {'icon': 'help_outline', 'label': 'Help', 'message': 'help'},
+        {
+          'icon': 'school',
+          'label': 'Health Tips',
+          'message': 'Tell me about staying healthy'
+        },
+        {
+          'icon': 'family_restroom',
+          'label': 'Tell Adults',
+          'message': 'When should I tell adults about health questions?'
+        },
+        {'icon': 'emergency', 'label': 'Emergency', 'message': 'emergency'},
+      ];
+    } else {
+      return [
+        {'icon': 'help_outline', 'label': 'Help', 'message': 'help'},
+        {'icon': 'emergency', 'label': 'Emergency', 'message': 'emergency'},
+        {
+          'icon': 'medication',
+          'label': 'Medications',
+          'message': 'Tell me about medication safety'
+        },
+        {
+          'icon': 'health_and_safety',
+          'label': 'Symptoms',
+          'message': 'I have some symptoms I\'d like to discuss'
+        },
+      ];
+    }
+  }
 
   @override
   void initState() {
@@ -68,23 +89,51 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     ));
   }
 
+  // ENHANCED: Age-appropriate welcome message
   void _initializeChat() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = Provider.of<AppState>(context, listen: false);
-      final userName =
-          appState.userName.isNotEmpty ? appState.userName : 'there';
 
       setState(() {
         _messages.add(
           ChatMessage(
-            text:
-                '👋 Hello $userName! I\'m PersonalMedAI, your personal health assistant. I\'m here to help you with health questions, symptom analysis, medication information, and wellness tips.\n\nHow can I assist you today?',
+            text: _getAgeAppropriateWelcomeMessage(appState),
             isUser: false,
             timestamp: DateTime.now(),
           ),
         );
       });
     });
+  }
+
+  // NEW: Age-appropriate welcome message
+  String _getAgeAppropriateWelcomeMessage(AppState appState) {
+    if (appState.isMinor) {
+      return '''👋 Hi ${appState.userName.isNotEmpty ? appState.userName : 'there'}! 🌟
+
+I'm PersonalMedAI, and I'm here to help you learn about staying healthy! But remember - **always talk to your parents, guardians, or other trusted adults about health questions.**
+
+I can help you learn about:
+• 🏃‍♀️ Fun ways to stay active and strong
+• 🥕 Healthy foods that taste great  
+• 😴 Why sleep is super important
+• 🧠 When it's important to tell adults you don't feel well
+
+What would you like to learn about today? And don't forget - if you ever don't feel well, always tell a trusted adult! 💙''';
+    } else {
+      return '''👋 Hello ${appState.userName.isNotEmpty ? appState.userName : 'there'}! 
+
+I'm PersonalMedAI, your personal health assistant. I'm here to help you with health questions, symptom analysis, medication information, and wellness tips.
+
+**I can assist with:**
+• Medical questions and symptom guidance
+• Medication interactions and safety
+• Health insights and recommendations  
+• Wellness tips and lifestyle advice
+• Emergency information
+
+How can I help you today? Remember, I provide information to support your health decisions, but always consult healthcare professionals for medical advice.''';
+    }
   }
 
   void _loadChatHistory() async {
@@ -99,83 +148,121 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_showHistory ? 'Chat History' : 'PersonalMedAI Chat'),
-            if (!_showHistory) ...[
-              Text(
-                _isStreaming
-                    ? '✨ Responding...'
-                    : _isLoading
-                        ? '🤔 Thinking...'
-                        : '💬 Ready to help',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color:
-                      _isStreaming || _isLoading ? Colors.orange : Colors.green,
-                ),
-              ),
-            ],
-          ],
-        ),
-        backgroundColor: colorScheme.primaryContainer,
-        actions: [
-          IconButton(
-            icon: Icon(_showHistory ? Icons.chat : Icons.history),
-            onPressed: () {
-              setState(() {
-                _showHistory = !_showHistory;
-              });
-              if (_showHistory) _loadChatHistory();
-            },
-            tooltip: _showHistory ? 'Current Chat' : 'Chat History',
-          ),
-          if (!_showHistory && _messages.length > 1) ...[
-            IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: _saveChatSession,
-              tooltip: 'Save Chat',
-            ),
-            PopupMenuButton<String>(
-              onSelected: _handleMenuAction,
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                    value: 'export',
-                    child: Row(children: [
-                      Icon(Icons.download),
-                      SizedBox(width: 8),
-                      Text('Export Chat')
-                    ])),
-                const PopupMenuItem(
-                    value: 'share',
-                    child: Row(children: [
-                      Icon(Icons.share),
-                      SizedBox(width: 8),
-                      Text('Share Chat')
-                    ])),
-                const PopupMenuItem(
-                    value: 'clear',
-                    child: Row(children: [
-                      Icon(Icons.clear_all),
-                      SizedBox(width: 8),
-                      Text('Clear Chat')
-                    ])),
+    return Consumer<AppState>(
+      builder: (context, appState, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_showHistory
+                    ? 'Chat History'
+                    : appState.isMinor
+                        ? 'PersonalMedAI - Young User'
+                        : 'PersonalMedAI Chat'),
+                if (!_showHistory) ...[
+                  Row(
+                    children: [
+                      Text(
+                        _isStreaming
+                            ? '✨ Responding...'
+                            : _isLoading
+                                ? '🤔 Thinking...'
+                                : '💬 Ready to help',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: _isStreaming || _isLoading
+                              ? Colors.orange
+                              : Colors.green,
+                        ),
+                      ),
+                      if (appState.isMinor) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Safe Mode',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
               ],
             ),
-          ],
-        ],
-      ),
-      body: _showHistory ? _buildHistoryView() : _buildChatView(),
+            backgroundColor: appState.isMinor
+                ? Colors.orange.shade50
+                : colorScheme.primaryContainer,
+            actions: [
+              IconButton(
+                icon: Icon(_showHistory ? Icons.chat : Icons.history),
+                onPressed: () {
+                  setState(() {
+                    _showHistory = !_showHistory;
+                  });
+                  if (_showHistory) _loadChatHistory();
+                },
+                tooltip: _showHistory ? 'Current Chat' : 'Chat History',
+              ),
+              if (!_showHistory && _messages.length > 1) ...[
+                IconButton(
+                  icon: const Icon(Icons.save),
+                  onPressed: _saveChatSession,
+                  tooltip: 'Save Chat',
+                ),
+                PopupMenuButton<String>(
+                  onSelected: _handleMenuAction,
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                        value: 'export',
+                        child: Row(children: [
+                          Icon(Icons.download),
+                          SizedBox(width: 8),
+                          Text('Export Chat')
+                        ])),
+                    const PopupMenuItem(
+                        value: 'share',
+                        child: Row(children: [
+                          Icon(Icons.share),
+                          SizedBox(width: 8),
+                          Text('Share Chat')
+                        ])),
+                    const PopupMenuItem(
+                        value: 'clear',
+                        child: Row(children: [
+                          Icon(Icons.clear_all),
+                          SizedBox(width: 8),
+                          Text('Clear Chat')
+                        ])),
+                  ],
+                ),
+              ],
+            ],
+          ),
+          body: _showHistory ? _buildHistoryView() : _buildChatView(appState),
+        );
+      },
     );
   }
 
-  Widget _buildChatView() {
+  Widget _buildChatView(AppState appState) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       children: [
+        // Age-appropriate safety notice for minors
+        if (appState.isMinor && _messages.length == 1)
+          _buildMinorSafetyNotice(),
+
         // OPTIMIZED: Quick actions bar for instant responses
         if (!_isStreaming && !_isLoading) _buildQuickActionsBar(),
 
@@ -189,31 +276,92 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             itemBuilder: (context, index) {
               // Show streaming message
               if (_isStreaming && index == _messages.length) {
-                return _buildStreamingBubble();
+                return _buildStreamingBubble(appState);
               }
 
               // Show loading indicator
               if (_isLoading && !_isStreaming && index == _messages.length) {
-                return const TypingIndicator(showIndicator: true);
+                return TypingIndicator(showIndicator: true, appState: appState);
               }
 
               final message = _messages[index];
               return ChatBubble(
                 message: message,
+                appState: appState,
                 onCopy: () => _copyMessage(message.text),
               );
             },
           ),
         ),
 
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            border: Border(
-                top: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
+        _buildInputArea(appState, colorScheme),
+      ],
+    );
+  }
+
+  // NEW: Minor safety notice
+  Widget _buildMinorSafetyNotice() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade300),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.family_restroom, color: Colors.orange.shade700),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '🌟 Remember: Always talk to your parents, guardians, or other trusted adults about health questions!',
+              style: TextStyle(
+                color: Colors.orange.shade700,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
           ),
-          child: Row(
+        ],
+      ),
+    );
+  }
+
+  // ENHANCED: Age-appropriate input area
+  Widget _buildInputArea(AppState appState, ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Minor reminder
+          if (appState.isMinor) ...[
+            Container(
+              padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '💡 Ask me about healthy habits, but always talk to trusted adults about health concerns!',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.orange.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+
+          Row(
             children: [
               Expanded(
                 child: TextField(
@@ -221,7 +369,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   decoration: InputDecoration(
                     hintText: _isStreaming || _isLoading
                         ? 'Please wait...'
-                        : 'Type your message...',
+                        : appState.isMinor
+                            ? 'Ask me about staying healthy...'
+                            : 'Type your message...',
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24)),
                     contentPadding:
@@ -237,8 +387,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               FloatingActionButton(
                 onPressed: (_isStreaming || _isLoading) ? null : _sendMessage,
                 mini: true,
+                backgroundColor: appState.isMinor ? Colors.orange : null,
                 child: _isStreaming || _isLoading
-                    ? SizedBox(
+                    ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
@@ -251,12 +402,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  // OPTIMIZED: Quick actions for instant responses
+  // ENHANCED: Age-appropriate quick actions
   Widget _buildQuickActionsBar() {
     return Container(
       height: 60,
@@ -283,8 +434,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     );
   }
 
-  // OPTIMIZED: Streaming response bubble
-  Widget _buildStreamingBubble() {
+  // ENHANCED: Streaming response bubble with age-appropriate styling
+  Widget _buildStreamingBubble(AppState appState) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Align(
@@ -296,10 +447,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceVariant,
+          color: appState.isMinor
+              ? Colors.orange.shade50
+              : colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(18).copyWith(
             bottomLeft: const Radius.circular(4),
           ),
+          border: appState.isMinor
+              ? Border.all(color: Colors.orange.shade200)
+              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,7 +465,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                 child: TexMarkdown(
                   _streamingContent,
                   style: TextStyle(
-                    color: colorScheme.onSurfaceVariant,
+                    color: appState.isMinor
+                        ? Colors.orange.shade800
+                        : colorScheme.onSurfaceVariant,
                     fontSize: 14,
                     height: 1.4,
                   ),
@@ -327,7 +485,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                   style: TextStyle(
                     fontStyle: FontStyle.italic,
                     fontSize: 12,
-                    color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    color: (appState.isMinor
+                            ? Colors.orange.shade600
+                            : colorScheme.onSurfaceVariant)
+                        .withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -347,7 +508,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           width: 6,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: colorScheme.onSurfaceVariant
+                            color: (appState.isMinor
+                                    ? Colors.orange.shade600
+                                    : colorScheme.onSurfaceVariant)
                                 .withOpacity(opacity),
                             shape: BoxShape.circle,
                           ),
@@ -459,10 +622,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _sendMessage();
   }
 
-  // OPTIMIZED: Enhanced message sending with streaming support
+  // ENHANCED: Message sending with age restrictions and AppState
   void _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty || _isStreaming || _isLoading) return;
+
+    // Get AppState for age-appropriate handling
+    final appState = Provider.of<AppState>(context, listen: false);
 
     // Clear input immediately for better UX
     _messageController.clear();
@@ -477,8 +643,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final deepSeekService =
           Provider.of<DeepSeekService>(context, listen: false);
 
-      // Check if quick response is available
-      final quickResponse = deepSeekService.getQuickResponse(text);
+      // Check if quick response is available (now with AppState)
+      final quickResponse = deepSeekService.getQuickResponse(text, appState);
+
       if (quickResponse != null) {
         // Show brief loading for natural feel
         setState(() {
@@ -510,10 +677,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               })
           .toList();
 
-      // Try streaming first
+      // Try streaming first (now with AppState)
       bool hasStreamedContent = false;
-      await for (final chunk
-          in deepSeekService.streamChatResponse(conversationHistory)) {
+      await for (final chunk in deepSeekService.streamChatResponse(
+          conversationHistory, appState)) {
         setState(() {
           _streamingContent = chunk;
           hasStreamedContent = true;
@@ -531,18 +698,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         setState(() {
           _isLoading = true;
         });
-        final response =
-            await deepSeekService.sendChatMessage(conversationHistory);
+        final response = await deepSeekService.sendChatMessage(
+            conversationHistory, appState);
         setState(() {
           _messages.add(ChatMessage(text: response, isUser: false));
         });
       }
     } catch (e) {
+      final appState = Provider.of<AppState>(context, listen: false);
       setState(() {
         _messages.add(
           ChatMessage(
-            text:
-                'I\'m experiencing high demand. Please try again in a moment. 🔄',
+            text: appState.getAgeAppropriateErrorMessage(),
             isUser: false,
           ),
         );
@@ -568,6 +735,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         return Icons.medication;
       case 'health_and_safety':
         return Icons.health_and_safety;
+      case 'school':
+        return Icons.school;
+      case 'family_restroom':
+        return Icons.family_restroom;
       default:
         return Icons.help_outline;
     }
@@ -582,7 +753,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             children: [
               Icon(Icons.copy, color: Colors.white),
               SizedBox(width: 12),
-              Text('Message copied to clipboard'),
+              Expanded(
+                child: Text(
+                  'Message copied to clipboard',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           duration: const Duration(seconds: 2),
@@ -700,8 +876,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   void _clearCurrentChat() {
     setState(() {
       _messages.clear();
-      _initializeChat();
     });
+    _initializeChat(); // Reinitialize with age-appropriate welcome message
   }
 
   void _scrollToBottom() {
@@ -740,12 +916,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 }
 
-// Keep your existing ChatBubble, ChatMessage, and TypingIndicator classes unchanged
+// ENHANCED: Chat bubble with age-appropriate styling
 class ChatBubble extends StatelessWidget {
   final ChatMessage message;
+  final AppState appState;
   final VoidCallback? onCopy;
 
-  const ChatBubble({super.key, required this.message, this.onCopy});
+  const ChatBubble(
+      {super.key, required this.message, required this.appState, this.onCopy});
 
   @override
   Widget build(BuildContext context) {
@@ -763,12 +941,19 @@ class ChatBubble extends StatelessWidget {
               maxWidth: MediaQuery.of(context).size.width * 0.75),
           decoration: BoxDecoration(
             color: message.isUser
-                ? colorScheme.primary
-                : colorScheme.surfaceVariant,
+                ? (appState.isMinor
+                    ? Colors.orange.shade400
+                    : colorScheme.primary)
+                : (appState.isMinor
+                    ? Colors.orange.shade50
+                    : colorScheme.surfaceVariant),
             borderRadius: BorderRadius.circular(18).copyWith(
               bottomRight: message.isUser ? const Radius.circular(4) : null,
               bottomLeft: message.isUser ? null : const Radius.circular(4),
             ),
+            border: appState.isMinor && !message.isUser
+                ? Border.all(color: Colors.orange.shade200)
+                : null,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -777,7 +962,9 @@ class ChatBubble extends StatelessWidget {
                   ? Text(
                       message.text,
                       style: TextStyle(
-                        color: colorScheme.onPrimary,
+                        color: appState.isMinor
+                            ? Colors.white
+                            : colorScheme.onPrimary,
                         fontSize: 14,
                         height: 1.4,
                       ),
@@ -786,7 +973,9 @@ class ChatBubble extends StatelessWidget {
                       child: TexMarkdown(
                         message.text,
                         style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
+                          color: appState.isMinor
+                              ? Colors.orange.shade800
+                              : colorScheme.onSurfaceVariant,
                           fontSize: 14,
                           height: 1.4,
                         ),
@@ -801,7 +990,10 @@ class ChatBubble extends StatelessWidget {
                       _formatTime(message.timestamp),
                       style: TextStyle(
                         fontSize: 10,
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                        color: (appState.isMinor
+                                ? Colors.orange.shade600
+                                : colorScheme.onSurfaceVariant)
+                            .withOpacity(0.6),
                       ),
                     ),
                     const Spacer(),
@@ -813,7 +1005,10 @@ class ChatBubble extends StatelessWidget {
                         child: Icon(
                           Icons.copy,
                           size: 14,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.6),
+                          color: (appState.isMinor
+                                  ? Colors.orange.shade600
+                                  : colorScheme.onSurfaceVariant)
+                              .withOpacity(0.6),
                         ),
                       ),
                     ),
@@ -841,10 +1036,13 @@ class ChatMessage {
       : timestamp = timestamp ?? DateTime.now();
 }
 
+// ENHANCED: Typing indicator with age-appropriate styling
 class TypingIndicator extends StatefulWidget {
   final bool showIndicator;
+  final AppState appState;
 
-  const TypingIndicator({super.key, this.showIndicator = false});
+  const TypingIndicator(
+      {super.key, this.showIndicator = false, required this.appState});
 
   @override
   State<TypingIndicator> createState() => _TypingIndicatorState();
@@ -881,9 +1079,14 @@ class _TypingIndicatorState extends State<TypingIndicator>
         margin: const EdgeInsets.only(bottom: 8, right: 80),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceVariant,
+          color: widget.appState.isMinor
+              ? Colors.orange.shade50
+              : colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(18)
               .copyWith(bottomLeft: const Radius.circular(4)),
+          border: widget.appState.isMinor
+              ? Border.all(color: Colors.orange.shade200)
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -893,7 +1096,10 @@ class _TypingIndicatorState extends State<TypingIndicator>
               style: TextStyle(
                 fontStyle: FontStyle.italic,
                 fontSize: 13,
-                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                color: (widget.appState.isMinor
+                        ? Colors.orange.shade600
+                        : colorScheme.onSurfaceVariant)
+                    .withOpacity(0.7),
               ),
             ),
             const SizedBox(width: 8),
@@ -913,8 +1119,10 @@ class _TypingIndicatorState extends State<TypingIndicator>
                       width: 6,
                       height: 6,
                       decoration: BoxDecoration(
-                        color:
-                            colorScheme.onSurfaceVariant.withOpacity(opacity),
+                        color: (widget.appState.isMinor
+                                ? Colors.orange.shade600
+                                : colorScheme.onSurfaceVariant)
+                            .withOpacity(opacity),
                         shape: BoxShape.circle,
                       ),
                     );
