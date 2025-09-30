@@ -24,11 +24,13 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   bool _showAddForm = false;
   final _formKey = GlobalKey<FormState>();
 
-  // History management
+  // ENHANCED: Smart caching system
   List<MedicationAnalysisHistory> _analysisHistory = [];
   String? _lastAnalysisHash;
+  bool _isResultFromCache = false;
+  String _currentMedicationHash = '';
 
-  // Animation controllers for enhanced UX - FIXED: Made nullable with proper initialization
+  // Animation controllers
   AnimationController? _addFormAnimationController;
   AnimationController? _resultAnimationController;
   Animation<double>? _addFormAnimation;
@@ -39,8 +41,15 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     super.initState();
     _initializeAnimations();
     _loadAnalysisHistory();
+    // FIXED: Don't auto-check on init, let user trigger when ready
+  }
+
+  // FIXED: Override didChangeDependencies to check cache when returning to screen
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkInteractionsWithHistory();
+      _checkInteractionsWithSmartCache();
     });
   }
 
@@ -74,7 +83,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     super.dispose();
   }
 
-  // Load analysis history from SharedPreferences
+  // ENHANCED: Load analysis history from SharedPreferences
   Future<void> _loadAnalysisHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -87,60 +96,276 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
               .map((item) => MedicationAnalysisHistory.fromJson(item))
               .toList();
         });
+
+        print(
+            '📂 Loaded ${_analysisHistory.length} analysis records from cache');
       }
     } catch (e) {
-      print('Error loading analysis history: $e');
+      print('❌ Error loading analysis history: $e');
     }
   }
 
-  // Save analysis history to SharedPreferences
+  // ENHANCED: Save analysis history to SharedPreferences
   Future<void> _saveAnalysisHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final historyJson =
           jsonEncode(_analysisHistory.map((item) => item.toJson()).toList());
       await prefs.setString('medication_analysis_history', historyJson);
+      print('💾 Saved analysis history to cache');
     } catch (e) {
-      print('Error saving analysis history: $e');
+      print('❌ Error saving analysis history: $e');
     }
   }
 
-  // Generate hash for current medication list
+  // ENHANCED: More robust medication hash generation
   String _generateMedicationHash(List<Medication> medications) {
-    final medicationString = medications
-        .map((med) => '${med.name}_${med.dosage}_${med.frequency}')
-        .join('|');
-    return medicationString.hashCode.toString();
+    if (medications.length < 2) return '';
+
+    // Create a sorted list of medication strings for consistent hashing
+    final medicationStrings = medications.map((med) {
+      // Normalize the medication data
+      final name = med.name.toLowerCase().trim();
+      final dosage = med.dosage.toLowerCase().trim();
+      final frequency = med.frequency.toLowerCase().trim();
+      return '$name|$dosage|$frequency';
+    }).toList()
+      ..sort();
+
+    final combinedString = medicationStrings.join('::');
+    final hash = combinedString.hashCode.toString();
+
+    print('🔍 Generated medication hash: $hash');
+    print('📋 For medications: ${medicationStrings.join(' + ')}');
+
+    return hash;
   }
 
-  // Check if analysis exists for current medications
+  // FIXED: Enhanced cache finding with better matching
   MedicationAnalysisHistory? _findExistingAnalysis(
       List<Medication> medications) {
     if (medications.length < 2) return null;
 
-    final hash = _generateMedicationHash(medications);
-    return _analysisHistory
-        .where((analysis) => analysis.medicationHash == hash)
-        .cast<MedicationAnalysisHistory?>()
-        .firstOrNull;
+    final targetHash = _generateMedicationHash(medications);
+    print('🔍 Looking for cached analysis with hash: $targetHash');
+    print('📚 Available cached analyses: ${_analysisHistory.length}');
+
+    for (int i = 0; i < _analysisHistory.length; i++) {
+      final analysis = _analysisHistory[i];
+      print(
+          '  - Cache $i: hash=${analysis.medicationHash}, meds=${analysis.medications.map((m) => m.name).join(", ")}');
+
+      if (analysis.medicationHash == targetHash) {
+        print('✅ Found matching cache at index $i');
+        return analysis;
+      }
+    }
+
+    print('❌ No matching cache found');
+    return null;
+  }
+
+  // FIXED: More reliable cache checking
+  Future<void> _checkInteractionsWithSmartCache() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+
+    print('🔄 Checking interactions with smart cache...');
+    print(
+        '💊 Current medications: ${appState.medications.map((m) => m.name).join(', ')}');
+
+    if (appState.medications.length < 2) {
+      print('⚠️ Less than 2 medications, clearing results');
+      appState.setMedicationInteractionResult('');
+      _lastAnalysisHash = null;
+      _isResultFromCache = false;
+      _currentMedicationHash = '';
+      setState(() {});
+      return;
+    }
+
+    final newHash = _generateMedicationHash(appState.medications);
+    print('🆔 New hash: $newHash');
+    print('🆔 Last hash: $_lastAnalysisHash');
+    print('🆔 Current hash: $_currentMedicationHash');
+
+    // If we already have the result for these exact medications displayed
+    if (_lastAnalysisHash == newHash &&
+        appState.medicationInteractionResult.isNotEmpty &&
+        _isResultFromCache) {
+      print('✅ Result already displayed and cached for current medications');
+      return;
+    }
+
+    // Update current hash
+    _currentMedicationHash = newHash;
+
+    // Check if we have this combination in cache
+    final existingAnalysis = _findExistingAnalysis(appState.medications);
+    if (existingAnalysis != null) {
+      print('⚡ Found cached analysis, displaying instantly');
+
+      // Set the result immediately
+      appState.setMedicationInteractionResult(existingAnalysis.result);
+      _lastAnalysisHash = newHash;
+      _isResultFromCache = true;
+
+      // Update UI immediately
+      setState(() {});
+
+      // Show success notification
+      _showCacheSuccessNotification(existingAnalysis.timestamp);
+      return;
+    }
+
+    print('❌ No cache found, will need to perform analysis');
+    // Reset cache flags since we don't have cached result
+    _isResultFromCache = false;
+    _lastAnalysisHash = null;
+
+    // Don't automatically start analysis - wait for user to click button
+    setState(() {});
+  }
+
+  // NEW: Show cache success notification
+  void _showCacheSuccessNotification(DateTime cacheTime) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.flash_on, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Instant Cache Result ⚡',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Loaded from ${_formatCacheAge(cacheTime)}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Refresh',
+              textColor: Colors.white,
+              onPressed: () => _forceCheckInteractions(),
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  String _formatCacheAge(DateTime timestamp) {
+    final difference = DateTime.now().difference(timestamp);
+
+    if (difference.inMinutes < 1) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else {
+      return '${difference.inDays} days ago';
+    }
+  }
+
+  // FIXED: Force refresh clears cache flags properly
+  Future<void> _forceCheckInteractions() async {
+    print('🔄 Force refresh requested');
+    _isResultFromCache = false;
+    _lastAnalysisHash = null;
+    setState(() {}); // Update UI to remove cache indicator
+    await _performNewAnalysis();
+  }
+
+  // ENHANCED: Perform new analysis with improved caching
+  Future<void> _performNewAnalysis() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    final deepSeekService =
+        Provider.of<DeepSeekService?>(context, listen: false);
+
+    if (appState.medications.length < 2) {
+      appState.setMedicationInteractionResult('');
+      return;
+    }
+
+    if (deepSeekService == null) {
+      appState.setMedicationInteractionResult(
+          'AI service not available. Please check your connection and try again.');
+      return;
+    }
+
+    // Show loading state
+    appState.setLoading(true);
+    _isResultFromCache = false;
+    setState(() {});
+
+    try {
+      final medicationNames =
+          appState.medications.map((med) => med.toString()).toList();
+
+      print('🔄 Starting new analysis for: ${medicationNames.join(', ')}');
+
+      final result =
+          await deepSeekService.checkMedicationInteractions(medicationNames);
+
+      appState.setMedicationInteractionResult(result);
+
+      // Save to history with enhanced metadata
+      final newAnalysis = MedicationAnalysisHistory(
+        medications: List.from(appState.medications),
+        result: result,
+        timestamp: DateTime.now(),
+        medicationHash: _currentMedicationHash,
+      );
+
+      setState(() {
+        // Remove old analysis for same medications if exists
+        _analysisHistory.removeWhere(
+            (analysis) => analysis.medicationHash == _currentMedicationHash);
+
+        // Add new analysis at the beginning
+        _analysisHistory.insert(0, newAnalysis);
+        _lastAnalysisHash = _currentMedicationHash;
+
+        // Keep only last 20 analyses to manage storage
+        if (_analysisHistory.length > 20) {
+          _analysisHistory = _analysisHistory.take(20).toList();
+        }
+      });
+
+      await _saveAnalysisHistory();
+
+      print('✅ New analysis completed and cached');
+    } catch (e) {
+      print('❌ Error during analysis: $e');
+      appState.setMedicationInteractionResult(
+          'Unable to analyze medication interactions at this time. Please check your internet connection and try again later.');
+    } finally {
+      appState.setLoading(false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    // Early return with loading if animations not initialized yet
-    if (_addFormAnimation == null || _resultAnimation == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Medication Warnings'),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -150,13 +375,14 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          // Enhanced history button with count
           Badge(
             isLabelVisible: _analysisHistory.isNotEmpty,
             label: Text('${_analysisHistory.length}'),
             child: IconButton(
               icon: const Icon(Icons.history),
               onPressed: () => _showAnalysisHistory(context),
-              tooltip: 'Analysis History',
+              tooltip: 'Analysis History (${_analysisHistory.length})',
             ),
           ),
           IconButton(
@@ -173,548 +399,22 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Enhanced Safety Notice with animation
-                TweenAnimationBuilder<double>(
-                  duration: const Duration(milliseconds: 800),
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  builder: (context, value, child) {
-                    return Transform.scale(
-                      scale: value,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.orange.shade50,
-                              Colors.orange.shade100.withOpacity(0.5),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.orange.shade200),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.orange.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.shade200,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.security,
-                                color: Colors.orange.shade700,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Safety First!',
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      color: Colors.orange.shade700,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Always consult your healthcare provider or pharmacist before starting, stopping, or changing medications.',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: Colors.orange.shade700,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
+                // Enhanced Safety Notice
+                _buildSafetyNotice(theme, colorScheme),
                 const SizedBox(height: 24),
 
                 // Enhanced Add Medication Section
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header Row - Better responsive layout
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primaryContainer,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.add_circle_outline,
-                                    color: colorScheme.primary,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'Add Medication',
-                                    style:
-                                        theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                AnimatedRotation(
-                                  turns: _showAddForm ? 0.5 : 0,
-                                  duration: const Duration(milliseconds: 300),
-                                  child: IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _showAddForm = !_showAddForm;
-                                        if (_showAddForm) {
-                                          _addFormAnimationController
-                                              ?.forward();
-                                        } else {
-                                          _addFormAnimationController
-                                              ?.reverse();
-                                          _clearForm();
-                                        }
-                                      });
-                                    },
-                                    icon: Icon(_showAddForm
-                                        ? Icons.expand_less
-                                        : Icons.add),
-                                    tooltip: _showAddForm
-                                        ? 'Cancel'
-                                        : 'Add medication',
-                                  ),
-                                ),
-                              ],
-                            ),
-                            // Action buttons moved to separate row
-                            if (appState.medications.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: TextButton.icon(
-                                  onPressed: () => _showClearAllDialog(context),
-                                  icon: const Icon(Icons.clear_all, size: 16),
-                                  label: const Text('Clear All'),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Colors.red.shade600,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-
-                        // Animated Add Form
-                        SizeTransition(
-                          sizeFactor: _addFormAnimation!,
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 16),
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surfaceVariant
-                                      .withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Form(
-                                  key: _formKey,
-                                  child: Column(
-                                    children: [
-                                      TextFormField(
-                                        controller: _medicationController,
-                                        decoration: InputDecoration(
-                                          labelText: 'Medication Name *',
-                                          hintText:
-                                              'e.g., Aspirin, Ibuprofen, Metformin',
-                                          prefixIcon:
-                                              const Icon(Icons.medication),
-                                          border: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          filled: true,
-                                          fillColor: colorScheme.surface,
-                                        ),
-                                        validator: (value) {
-                                          if (value == null ||
-                                              value.trim().isEmpty) {
-                                            return 'Please enter a medication name';
-                                          }
-                                          return null;
-                                        },
-                                        textCapitalization:
-                                            TextCapitalization.words,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      // Responsive row for smaller screens
-                                      LayoutBuilder(
-                                        builder: (context, constraints) {
-                                          if (constraints.maxWidth < 400) {
-                                            // Stack vertically on small screens
-                                            return Column(
-                                              children: [
-                                                TextFormField(
-                                                  controller: _dosageController,
-                                                  decoration: InputDecoration(
-                                                    labelText: 'Dosage',
-                                                    hintText:
-                                                        'e.g., 81mg, 10mg',
-                                                    prefixIcon: const Icon(
-                                                        Icons.medical_services),
-                                                    border: OutlineInputBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              12),
-                                                    ),
-                                                    filled: true,
-                                                    fillColor:
-                                                        colorScheme.surface,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 16),
-                                                TextFormField(
-                                                  controller:
-                                                      _frequencyController,
-                                                  decoration: InputDecoration(
-                                                    labelText: 'Frequency',
-                                                    hintText:
-                                                        'e.g., Daily, Twice daily',
-                                                    prefixIcon: const Icon(
-                                                        Icons.schedule),
-                                                    border: OutlineInputBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              12),
-                                                    ),
-                                                    filled: true,
-                                                    fillColor:
-                                                        colorScheme.surface,
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          } else {
-                                            // Side by side on larger screens
-                                            return Row(
-                                              children: [
-                                                Expanded(
-                                                  child: TextFormField(
-                                                    controller:
-                                                        _dosageController,
-                                                    decoration: InputDecoration(
-                                                      labelText: 'Dosage',
-                                                      hintText:
-                                                          'e.g., 81mg, 10mg',
-                                                      prefixIcon: const Icon(
-                                                          Icons
-                                                              .medical_services),
-                                                      border:
-                                                          OutlineInputBorder(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(12),
-                                                      ),
-                                                      filled: true,
-                                                      fillColor:
-                                                          colorScheme.surface,
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: TextFormField(
-                                                    controller:
-                                                        _frequencyController,
-                                                    decoration: InputDecoration(
-                                                      labelText: 'Frequency',
-                                                      hintText:
-                                                          'e.g., Daily, Twice daily',
-                                                      prefixIcon: const Icon(
-                                                          Icons.schedule),
-                                                      border:
-                                                          OutlineInputBorder(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(12),
-                                                      ),
-                                                      filled: true,
-                                                      fillColor:
-                                                          colorScheme.surface,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          }
-                                        },
-                                      ),
-                                      const SizedBox(height: 20),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton.icon(
-                                          onPressed: _addMedication,
-                                          icon: const Icon(Icons.add),
-                                          label: const Text('Add Medication'),
-                                          style: ElevatedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 16),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
+                _buildAddMedicationSection(colorScheme, theme),
                 const SizedBox(height: 20),
 
                 // Enhanced Current Medications Section
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: colorScheme.secondaryContainer,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.medication_liquid,
-                                color: colorScheme.secondary,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Current Medications',
-                                    style:
-                                        theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    '${appState.medications.length} medication${appState.medications.length != 1 ? 's' : ''} added',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorScheme.onSurface
-                                          .withOpacity(0.7),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (appState.medications.isNotEmpty)
-                              IconButton(
-                                onPressed: () => _forceCheckInteractions(),
-                                icon: const Icon(Icons.refresh),
-                                tooltip: 'Force refresh interactions',
-                                style: IconButton.styleFrom(
-                                  backgroundColor: colorScheme.primaryContainer,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        if (appState.medications.isEmpty) ...[
-                          _buildEmptyMedicationState(
-                              context, colorScheme, theme),
-                        ] else ...[
-                          _buildMedicationList(
-                              context, appState, theme, colorScheme),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-
+                _buildCurrentMedicationsSection(appState, theme, colorScheme),
                 const SizedBox(height: 20),
 
-                // FIXED: Enhanced Interaction Results Section - Always visible with instant cache
+                // ENHANCED: Drug Interaction Analysis with smart caching
                 if (appState.medications.length >= 2) ...[
-                  Card(
-                    elevation: 6,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: LinearGradient(
-                          colors: [
-                            colorScheme.primaryContainer.withOpacity(0.1),
-                            colorScheme.secondaryContainer.withOpacity(0.1),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header with responsive layout
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: colorScheme.primary
-                                            .withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Icon(
-                                        Icons.security,
-                                        color: colorScheme.primary,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Drug Interaction Analysis',
-                                            style: theme.textTheme.titleLarge
-                                                ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          Text(
-                                            'AI-powered medication safety check',
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                              color: colorScheme.onSurface
-                                                  .withOpacity(0.7),
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                // Cache indicator moved to separate row
-                                if (_isResultFromCache()) ...[
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.green.shade100,
-                                          Colors.green.shade50,
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: Colors.green.withOpacity(0.3),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.flash_on,
-                                            color: Colors.green.shade700,
-                                            size: 14),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Instant Cache Result',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.green.shade700,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-
-                            // FIXED: Content that responds to loading states
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              child: _buildAnalysisContent(
-                                  appState, colorScheme, theme, context),
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // Action buttons
-                            _buildActionButtons(appState, colorScheme, context),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  _buildInteractionAnalysisSection(
+                      appState, colorScheme, theme, context),
                 ],
 
                 const SizedBox(height: 32),
@@ -726,14 +426,145 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     );
   }
 
-  // FIXED: New method to handle analysis content switching
+  // ENHANCED: Interaction Analysis Section with cache indicators
+  Widget _buildInteractionAnalysisSection(AppState appState,
+      ColorScheme colorScheme, ThemeData theme, BuildContext context) {
+    return Card(
+      elevation: 6,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              colorScheme.primaryContainer.withOpacity(0.1),
+              colorScheme.secondaryContainer.withOpacity(0.1),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with cache status
+              _buildAnalysisHeader(colorScheme, theme),
+              const SizedBox(height: 20),
+
+              // Content area with smart loading/results
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _buildAnalysisContent(
+                    appState, colorScheme, theme, context),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Action buttons with cache options
+              _buildAnalysisActionButtons(appState, colorScheme, context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalysisHeader(ColorScheme colorScheme, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.security,
+                color: colorScheme.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Drug Interaction Analysis',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    'AI-powered medication safety check',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        // Cache indicator
+        if (_isResultFromCache) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.green.shade100,
+                  Colors.green.shade50,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.green.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.flash_on, color: Colors.green.shade700, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  'Instant Cache Result ⚡',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // FIXED: Enhanced analysis content builder
   Widget _buildAnalysisContent(AppState appState, ColorScheme colorScheme,
       ThemeData theme, BuildContext context) {
+    // If we're loading, show loading state
     if (appState.isLoading) {
-      return _buildLoadingState();
-    } else if (appState.medicationInteractionResult.isEmpty) {
-      return _buildPendingState(colorScheme);
-    } else {
+      return _buildLoadingState(colorScheme, theme);
+    }
+
+    // If we have results, show them
+    if (appState.medicationInteractionResult.isNotEmpty) {
       return _buildInteractionResultWithMarkdown(
         context,
         appState.medicationInteractionResult,
@@ -741,139 +572,470 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
         theme,
       );
     }
+
+    // If we have medications but no results and not loading, show start button
+    if (appState.medications.length >= 2) {
+      return _buildStartAnalysisState(colorScheme, theme);
+    }
+
+    // Default pending state
+    return _buildPendingState(colorScheme);
   }
 
-  // FIXED: New method for action buttons with loading states
-  Widget _buildActionButtons(
+  // NEW: Start analysis state (when we have meds but no results)
+  Widget _buildStartAnalysisState(ColorScheme colorScheme, ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            colorScheme.primaryContainer.withOpacity(0.2),
+            colorScheme.primaryContainer.withOpacity(0.1),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.play_circle_outline,
+              size: 48,
+              color: colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Ready to Analyze',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.primary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Click "Start Analysis" below to check for drug interactions',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurface.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // FIXED: Enhanced action buttons with better logic
+  Widget _buildAnalysisActionButtons(
       AppState appState, ColorScheme colorScheme, BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 500) {
-          // Stack vertically on small screens
-          return Column(
-            children: [
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed:
-                      appState.isLoading ? null : _forceCheckInteractions,
-                  icon: appState.isLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh),
-                  label: Text(appState.isLoading
-                      ? 'Analyzing...'
-                      : 'Recheck Interactions'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+    final hasResults = appState.medicationInteractionResult.isNotEmpty;
+    final hasMedications = appState.medications.length >= 2;
+
+    return Column(
+      children: [
+        // Main action buttons
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: appState.isLoading
+                    ? null
+                    : () {
+                        if (hasResults || _isResultFromCache) {
+                          _forceCheckInteractions();
+                        } else {
+                          _performNewAnalysis();
+                        }
+                      },
+                icon: appState.isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(hasResults || _isResultFromCache
+                        ? Icons.refresh
+                        : Icons.play_arrow),
+                label: Text(appState.isLoading
+                    ? 'Analyzing...'
+                    : hasResults || _isResultFromCache
+                        ? 'Refresh Analysis'
+                        : 'Start Analysis'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: appState.medicationInteractionResult.isNotEmpty
-                          ? () =>
-                              _copyResult(appState.medicationInteractionResult)
-                          : null,
-                      icon: const Icon(Icons.copy),
-                      label: const Text('Copy'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _showAnalysisHistory(context),
+                icon: Badge(
+                  isLabelVisible: _analysisHistory.isNotEmpty,
+                  label: Text('${_analysisHistory.length}'),
+                  child: const Icon(Icons.history),
+                ),
+                label: const Text('History'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.secondaryContainer,
+                  foregroundColor: colorScheme.onSecondaryContainer,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _showPharmacistAdvice(context),
-                      icon: const Icon(Icons.local_pharmacy),
-                      label: const Text('Tips'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.secondaryContainer,
-                        foregroundColor: colorScheme.onSecondaryContainer,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 8),
+
+        // Secondary actions
+        Row(
+          children: [
+            Expanded(
+              child: TextButton.icon(
+                onPressed: hasResults
+                    ? () => _copyResult(appState.medicationInteractionResult)
+                    : null,
+                icon: const Icon(Icons.copy, size: 16),
+                label: const Text('Copy Result'),
+              ),
+            ),
+            Expanded(
+              child: TextButton.icon(
+                onPressed: () => _showPharmacistAdvice(context),
+                icon: const Icon(Icons.local_pharmacy, size: 16),
+                label: const Text('Safety Tips'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSafetyNotice(ThemeData theme, ColorScheme colorScheme) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 800),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.orange.shade50,
+                  Colors.orange.shade100.withOpacity(0.5),
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
-          );
-        } else {
-          // Side by side on larger screens
-          return Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed:
-                      appState.isLoading ? null : _forceCheckInteractions,
-                  icon: appState.isLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh),
-                  label: Text(appState.isLoading ? 'Analyzing...' : 'Recheck'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.orange.shade200),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.security,
+                    color: Colors.orange.shade700,
+                    size: 20,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: appState.medicationInteractionResult.isNotEmpty
-                      ? () => _copyResult(appState.medicationInteractionResult)
-                      : null,
-                  icon: const Icon(Icons.copy),
-                  label: const Text('Copy'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Safety First!',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Always consult your healthcare provider or pharmacist before starting, stopping, or changing medications.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.orange.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _showPharmacistAdvice(context),
-                  icon: const Icon(Icons.local_pharmacy),
-                  label: const Text('Tips'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.secondaryContainer,
-                    foregroundColor: colorScheme.onSecondaryContainer,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
+              ],
+            ),
+          ),
+        );
       },
+    );
+  }
+
+  Widget _buildAddMedicationSection(ColorScheme colorScheme, ThemeData theme) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.add_circle_outline,
+                    color: colorScheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Add Medication',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: _showAddForm ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 300),
+                  child: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _showAddForm = !_showAddForm;
+                        if (_showAddForm) {
+                          _addFormAnimationController?.forward();
+                        } else {
+                          _addFormAnimationController?.reverse();
+                          _clearForm();
+                        }
+                      });
+                    },
+                    icon: Icon(_showAddForm ? Icons.expand_less : Icons.add),
+                    tooltip: _showAddForm ? 'Cancel' : 'Add medication',
+                  ),
+                ),
+              ],
+            ),
+            if (_showAddForm) ...[
+              SizeTransition(
+                sizeFactor: _addFormAnimation!,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceVariant.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              controller: _medicationController,
+                              decoration: InputDecoration(
+                                labelText: 'Medication Name *',
+                                hintText: 'e.g., Aspirin, Ibuprofen, Metformin',
+                                prefixIcon: const Icon(Icons.medication),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: colorScheme.surface,
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter a medication name';
+                                }
+                                return null;
+                              },
+                              textCapitalization: TextCapitalization.words,
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _dosageController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Dosage',
+                                      hintText: 'e.g., 81mg, 10mg',
+                                      prefixIcon:
+                                          const Icon(Icons.medical_services),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      filled: true,
+                                      fillColor: colorScheme.surface,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _frequencyController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Frequency',
+                                      hintText: 'e.g., Daily, Twice daily',
+                                      prefixIcon: const Icon(Icons.schedule),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      filled: true,
+                                      fillColor: colorScheme.surface,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _addMedication,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Medication'),
+                                style: ElevatedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentMedicationsSection(
+      AppState appState, ThemeData theme, ColorScheme colorScheme) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.medication_liquid,
+                    color: colorScheme.secondary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current Medications',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        '${appState.medications.length} medication${appState.medications.length != 1 ? 's' : ''} added',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (appState.medications.isNotEmpty)
+                  IconButton(
+                    onPressed: () => _forceCheckInteractions(),
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Force refresh interactions',
+                    style: IconButton.styleFrom(
+                      backgroundColor: colorScheme.primaryContainer,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (appState.medications.isEmpty) ...[
+              _buildEmptyMedicationState(context, colorScheme, theme),
+            ] else ...[
+              _buildMedicationList(context, appState, theme, colorScheme),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -937,35 +1099,25 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 20),
-                // Responsive button
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SizedBox(
-                      width: constraints.maxWidth > 300 ? 300 : double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _showAddForm = true;
-                            _addFormAnimationController?.forward();
-                          });
-                        },
-                        icon: const Icon(Icons.add),
-                        label: Text(
-                          constraints.maxWidth > 250
-                              ? 'Add Your First Medication'
-                              : 'Add Medication',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _showAddForm = true;
+                        _addFormAnimationController?.forward();
+                      });
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Your First Medication'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1085,8 +1237,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     );
   }
 
-  // FIXED: Enhanced loading state with better progress indication
-  Widget _buildLoadingState() {
+  Widget _buildLoadingState(ColorScheme colorScheme, ThemeData theme) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -1094,7 +1245,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
         gradient: LinearGradient(
           colors: [
             Colors.blue.shade50,
-            Colors.blue.shade50 ?? Colors.blue.shade50,
+            Colors.blue.shade50,
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -1111,7 +1262,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       ),
       child: Column(
         children: [
-          // Larger, more prominent loading indicator
           SizedBox(
             height: 60,
             width: 60,
@@ -1164,8 +1314,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             ),
             textAlign: TextAlign.center,
           ),
-
-          // Added progress steps indicator
           const SizedBox(height: 20),
           _buildAnalysisSteps(),
         ],
@@ -1173,7 +1321,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     );
   }
 
-  // FIXED: Add animated progress steps
   Widget _buildAnalysisSteps() {
     return Column(
       children: [
@@ -1252,7 +1399,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Tap the refresh button to check for interactions.',
+            'Click the start button to check for interactions.',
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade600,
@@ -1368,22 +1515,13 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
         lowerResult.contains('no concerning');
   }
 
-  bool _isResultFromCache() {
-    final appState = Provider.of<AppState>(context, listen: false);
-    if (appState.medications.length < 2) return false;
-
-    final hash = _generateMedicationHash(appState.medications);
-    return hash == _lastAnalysisHash &&
-        _findExistingAnalysis(appState.medications) != null;
-  }
-
   void _clearForm() {
     _medicationController.clear();
     _dosageController.clear();
     _frequencyController.clear();
   }
 
-  // FIXED: Updated _addMedication to handle immediate cache checking
+  // FIXED: Better medication addition handling
   void _addMedication() {
     if (!_formKey.currentState!.validate()) return;
 
@@ -1399,6 +1537,8 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           : _frequencyController.text.trim(),
     );
 
+    print('➕ Adding medication: ${medication.name}');
+
     appState.addMedication(medication);
 
     _clearForm();
@@ -1407,12 +1547,11 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       _addFormAnimationController?.reverse();
     });
 
-    // FIXED: Check interactions immediately for instant cache response
+    // Check cache after adding - but don't clear existing results unless medications changed significantly
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkInteractionsWithHistory();
+      _checkInteractionsWithSmartCache();
     });
 
-    // Enhanced success feedback
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -1437,7 +1576,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           textColor: Colors.white,
           onPressed: () {
             appState.removeMedication(appState.medications.length - 1);
-            _checkInteractionsWithHistory();
+            _checkInteractionsWithSmartCache();
           },
         ),
       ),
@@ -1538,7 +1677,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             onPressed: () {
               Navigator.pop(context);
               appState.removeMedication(index);
-              _checkInteractionsWithHistory();
+              _checkInteractionsWithSmartCache();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Row(
@@ -1572,185 +1711,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     );
   }
 
-  void _showClearAllDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.clear_all, color: Colors.red),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Clear All Medications',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: const Text(
-            'Are you sure you want to remove all medications from your list? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              final appState = Provider.of<AppState>(context, listen: false);
-              final count = appState.medications.length;
-              while (appState.medications.isNotEmpty) {
-                appState.removeMedication(0);
-              }
-              appState.setMedicationInteractionResult('');
-              _lastAnalysisHash = null;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.white),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Cleared $count medications',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Clear All'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // FIXED: Updated _checkInteractionsWithHistory method for instant cached results
-  Future<void> _checkInteractionsWithHistory() async {
-    final appState = Provider.of<AppState>(context, listen: false);
-
-    if (appState.medications.length < 2) {
-      appState.setMedicationInteractionResult('');
-      _lastAnalysisHash = null;
-      return;
-    }
-
-    // Check if we have cached result for current medication combination
-    final existingAnalysis = _findExistingAnalysis(appState.medications);
-    if (existingAnalysis != null) {
-      // FIXED: Set cached result IMMEDIATELY without delay
-      appState.setMedicationInteractionResult(existingAnalysis.result);
-      _lastAnalysisHash = existingAnalysis.medicationHash;
-
-      // Show cache notification without delay
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.cached, color: Colors.white),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Analysis loaded instantly from cache',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              duration: const Duration(seconds: 1), // Shorter duration
-            ),
-          );
-        }
-      });
-      return;
-    }
-
-    // No cached result, make API call
-    await _performNewAnalysis();
-  }
-
-  Future<void> _forceCheckInteractions() async {
-    await _performNewAnalysis();
-  }
-
-  // FIXED: Updated _performNewAnalysis with proper progress indication
-  Future<void> _performNewAnalysis() async {
-    final appState = Provider.of<AppState>(context, listen: false);
-    final deepSeekService =
-        Provider.of<DeepSeekService>(context, listen: false);
-
-    if (appState.medications.length < 2) {
-      appState.setMedicationInteractionResult('');
-      return;
-    }
-
-    // FIXED: Show loading state immediately
-    appState.setLoading(true);
-
-    // FIXED: Ensure the result section appears with loading indicator
-    if (appState.medicationInteractionResult.isEmpty) {
-      // Trigger rebuild to show the loading state
-      setState(() {});
-    }
-
-    try {
-      final medicationNames =
-          appState.medications.map((med) => med.toString()).toList();
-      final result =
-          await deepSeekService.checkMedicationInteractions(medicationNames);
-
-      appState.setMedicationInteractionResult(result);
-
-      // Save to history
-      final newAnalysis = MedicationAnalysisHistory(
-        medications: List.from(appState.medications),
-        result: result,
-        timestamp: DateTime.now(),
-        medicationHash: _generateMedicationHash(appState.medications),
-      );
-
-      setState(() {
-        _analysisHistory.add(newAnalysis);
-        _lastAnalysisHash = newAnalysis.medicationHash;
-
-        if (_analysisHistory.length > 10) {
-          _analysisHistory =
-              _analysisHistory.sublist(_analysisHistory.length - 10);
-        }
-      });
-
-      await _saveAnalysisHistory();
-    } catch (e) {
-      appState.setMedicationInteractionResult(
-          'Unable to check medication interactions at this time. Please consult your pharmacist or healthcare provider.');
-    } finally {
-      appState.setLoading(false);
-    }
-  }
-
+  // FIXED: Enhanced analysis history with current medication highlighting
   void _showAnalysisHistory(BuildContext context) {
     showDialog(
       context: context,
@@ -1780,14 +1741,49 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      'Analysis History',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Analysis History',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${_analysisHistory.length} cached analyses',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.7),
+                                  ),
+                        ),
+                      ],
                     ),
                   ),
+                  // Debug button to clear cache
+                  if (_analysisHistory.isNotEmpty)
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _analysisHistory.clear();
+                        });
+                        _saveAnalysisHistory();
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Cache cleared for testing'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.delete_sweep),
+                      tooltip: 'Clear Cache (Debug)',
+                    ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
@@ -1822,7 +1818,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Your medication interaction analyses will appear here',
+                          'Analyze medication interactions to build your cache history',
                           style: TextStyle(
                             color: Colors.grey.shade500,
                           ),
@@ -1835,137 +1831,172 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   ),
                 ),
               ] else ...[
+                // Debug info
+                /*Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Debug Info:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                      Text(
+                        'Current Hash: $_currentMedicationHash',
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.blue.shade600),
+                      ),
+                      Text(
+                        'Last Hash: $_lastAnalysisHash',
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.blue.shade600),
+                      ),
+                      Text(
+                        'Is Cached: $_isResultFromCache',
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.blue.shade600),
+                      ),
+                    ],
+                  ),
+                ),*/
+                const SizedBox(height: 12),
                 Expanded(
                   child: ListView.builder(
                     itemCount: _analysisHistory.length,
                     itemBuilder: (context, index) {
-                      final analysis =
-                          _analysisHistory.reversed.toList()[index];
+                      final analysis = _analysisHistory[index];
+                      final isCurrentMedications =
+                          analysis.medicationHash == _currentMedicationHash;
+
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
+                        elevation: isCurrentMedications ? 4 : 2,
+                        color: isCurrentMedications
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primaryContainer
+                                .withOpacity(0.3)
+                            : null,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
+                          side: isCurrentMedications
+                              ? BorderSide(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 2,
+                                )
+                              : BorderSide.none,
                         ),
-                        child: ExpansionTile(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                        child: ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isCurrentMedications
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.2)
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .surfaceVariant,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              isCurrentMedications
+                                  ? Icons.star
+                                  : Icons.medication,
+                              color: isCurrentMedications
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                              size: 20,
+                            ),
                           ),
-                          title: Text(
-                            analysis.medications.map((m) => m.name).join(', '),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  analysis.medications
+                                      .map((m) => m.name)
+                                      .join(', '),
+                                  style: TextStyle(
+                                    fontWeight: isCurrentMedications
+                                        ? FontWeight.bold
+                                        : FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isCurrentMedications) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    'CURRENT',
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                          subtitle: Container(
-                            margin: const EdgeInsets.only(top: 4),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Hash: ${analysis.medicationHash}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.5),
+                                ),
+                              ),
+                              Text(
+                                _formatCacheAge(analysis.timestamp),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.6),
+                                ),
+                              ),
+                            ],
+                          ),
+                          trailing: ElevatedButton(
+                            onPressed: () => _loadAnalysisResult(analysis),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                            ),
                             child: Text(
-                              _formatDateTime(analysis.timestamp),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.6),
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                              isCurrentMedications ? 'Current' : 'Use',
+                              style: const TextStyle(fontSize: 12),
                             ),
                           ),
-                          children: [
-                            Container(
-                              margin: const EdgeInsets.all(16),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceVariant
-                                    .withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.analytics,
-                                        size: 16,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'Analysis Result:',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .outline
-                                            .withOpacity(0.2),
-                                      ),
-                                    ),
-                                    child: SelectionArea(
-                                      child: SingleChildScrollView(
-                                        child: TexMarkdown(
-                                          analysis.result,
-                                          style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface,
-                                            fontSize: 13,
-                                            height: 1.4,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: TextButton.icon(
-                                          onPressed: () =>
-                                              _copyResult(analysis.result),
-                                          icon:
-                                              const Icon(Icons.copy, size: 16),
-                                          label: const Text('Copy'),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: FittedBox(
-                                          child: ElevatedButton.icon(
-                                            onPressed: () =>
-                                                _loadAnalysisResult(analysis),
-                                            icon: const Icon(Icons.restore,
-                                                size: 16),
-                                            label: const Text('Use Result'),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
                         ),
                       );
                     },
@@ -1983,6 +2014,12 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     final appState = Provider.of<AppState>(context, listen: false);
     appState.setMedicationInteractionResult(analysis.result);
     _lastAnalysisHash = analysis.medicationHash;
+    _isResultFromCache = true;
+
+    setState(() {
+      // Update UI to show cache indicator
+    });
+
     Navigator.pop(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1993,7 +2030,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Analysis result loaded from history',
+                'Analysis result loaded from history ⚡',
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -2006,23 +2043,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
         ),
       ),
     );
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inHours < 1) {
-      return '${difference.inMinutes} minutes ago';
-    } else if (difference.inDays < 1) {
-      return '${difference.inHours} hours ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-    }
   }
 
   void _showHelpDialog(BuildContext context) {
@@ -2056,9 +2076,20 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 3. Review the interaction analysis
 4. Consult your healthcare provider for questions
 
-## ⚡ Instant Cache Feature
+## ⚡ Smart Cache System
 
-Analysis results are **saved automatically**. Returning to the same medication combination will show **instant cached results**, saving time and API calls.
+Analysis results are **automatically cached**:
+- Same medication combinations load **instantly**
+- Cache shows age of analysis
+- **"Refresh Analysis"** button for new analysis
+- **History view** shows all past analyses
+
+## 🎯 Cache Benefits
+
+- **Instant results** for repeated checks
+- **Reduced API usage** saves costs  
+- **Offline access** to past analyses
+- **Smart detection** of medication changes
 
 ## ⚠️ Important Disclaimer
 
@@ -2119,6 +2150,11 @@ This tool provides **general information only**. Always consult your healthcare 
 - Keep an **updated medication list**
 - Inform **all healthcare providers** of your medications
 
+**Smart Cache Benefits:**
+- **Instant results** when rechecking same medications
+- **Track changes** over time with history
+- **Share results** easily with healthcare providers
+
 **When in Doubt:**
 - **Ask questions** if you're unsure about anything
 - **Never stop** medications without consulting your doctor
@@ -2146,7 +2182,7 @@ This tool provides **general information only**. Always consult your healthcare 
   }
 }
 
-// History model class (unchanged)
+// History model class with enhanced functionality
 class MedicationAnalysisHistory {
   final List<Medication> medications;
   final String result;

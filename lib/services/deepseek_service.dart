@@ -8,18 +8,26 @@ class DeepSeekService {
   late final String _apiKey;
   late final String _baseUrl;
 
-  // OPTIMIZED: Reduced timeout from 30s to 15s for faster failure detection
-  static const Duration _timeout = Duration(seconds: 30);
-
-  // OPTIMIZED: Increased retries from 2 to 3 for better success rate
+  // OPTIMIZED: Reduced timeout for faster failure detection
+  static const Duration _timeout = Duration(seconds: 20);
   static const int _maxRetries = 2;
+  static const Duration _connectTimeout = Duration(seconds: 3);
 
-  // Add connection-specific timeouts
-  static const Duration _connectTimeout = Duration(seconds: 5);
-  static const Duration _receiveTimeout = Duration(seconds: 25);
-
-  // OPTIMIZED: Exponential backoff delays
-  static const List<int> _retryDelays = [500, 1500]; // Reduced delays
+  // OPTIMIZED: Quick response cache for common queries
+  static const Map<String, String> _quickResponses = {
+    'hello':
+        'Hello! I\'m PersonalMedAI, your health assistant. How can I help you today? 😊',
+    'hi':
+        'Hi there! I\'m here to help with any health questions you might have! 🩺',
+    'help':
+        'I can help you with:\n• Medical questions and symptoms\n• Medication information\n• Health guidance\n• Emergency information\n\nWhat would you like to know?',
+    'emergency':
+        '🚨 **MEDICAL EMERGENCY?**\n\nCall 911 immediately if experiencing:\n• Difficulty breathing\n• Chest pain\n• Severe bleeding\n• Loss of consciousness',
+    'thanks':
+        'You\'re welcome! I\'m always here to help with your health questions. Take care! 😊',
+    'thank you':
+        'You\'re very welcome! Feel free to ask if you have more questions. Stay healthy! 💙',
+  };
 
   DeepSeekService() {
     _apiKey = dotenv.env['DEEPSEEK_API_KEY'] ?? '';
@@ -33,6 +41,183 @@ class DeepSeekService {
     }
   }
 
+  // OPTIMIZED: Check for quick responses first
+  String? getQuickResponse(String message) {
+    final normalizedMessage = message.toLowerCase().trim();
+
+    // Direct matches
+    if (_quickResponses.containsKey(normalizedMessage)) {
+      return _quickResponses[normalizedMessage];
+    }
+
+    // Partial matches for common patterns
+    if (normalizedMessage.contains('headache')) {
+      return '🩺 **Headache Relief:**\n• Stay hydrated (drink water)\n• Rest in a quiet, dark room\n• Apply cold/warm compress\n• Consider OTC pain relief\n\n⚠️ See a doctor if severe or persistent.';
+    }
+
+    if (normalizedMessage.contains('fever')) {
+      return '🌡️ **Fever Management:**\n• Stay hydrated\n• Rest and monitor temperature\n• Light clothing\n• Seek medical attention if >101.5°F (38.6°C)\n\n⚠️ Contact healthcare provider if persistent.';
+    }
+
+    if (normalizedMessage.contains('medication') &&
+        normalizedMessage.contains('safe')) {
+      return '💊 **Medication Safety:**\n• Always follow prescribed dosage\n• Check for drug interactions\n• Store properly\n• Don\'t share medications\n\n⚠️ Consult your pharmacist or doctor with questions.';
+    }
+
+    return null; // No quick response available
+  }
+
+  // OPTIMIZED: Enhanced streaming with proper error handling
+  Stream<String> streamChatResponse(
+      List<Map<String, String>> conversationHistory) async* {
+    // Check for quick response first
+    if (conversationHistory.isNotEmpty) {
+      final lastMessage = conversationHistory.last;
+      if (lastMessage['isUser'] == 'true') {
+        final quickResponse = getQuickResponse(lastMessage['text'] ?? '');
+        if (quickResponse != null) {
+          // Simulate typing delay for quick responses
+          await Future.delayed(const Duration(milliseconds: 300));
+          yield quickResponse;
+          return;
+        }
+      }
+    }
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $_apiKey',
+      'Accept': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    };
+
+    final messages = _buildMessageHistory(conversationHistory);
+
+    final body = jsonEncode({
+      'model': 'deepseek-chat',
+      'messages': messages,
+      'max_tokens': 250, // Reduced for faster responses
+      'temperature': 0.4, // Slightly reduced for more focused responses
+      'stream': true,
+      'top_p': 0.8, // Add for faster generation
+    });
+
+    try {
+      final request =
+          http.Request('POST', Uri.parse('$_baseUrl/chat/completions'))
+            ..headers.addAll(headers)
+            ..body = body;
+
+      final client = http.Client();
+      final streamedResponse = await client.send(request).timeout(_timeout);
+
+      if (streamedResponse.statusCode != 200) {
+        throw Exception(
+            'API request failed with status: ${streamedResponse.statusCode}');
+      }
+
+      String accumulatedText = '';
+
+      await for (final line in streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .where((line) => line.trim().isNotEmpty)) {
+        if (line.startsWith('data: ')) {
+          final data = line.substring(6).trim();
+
+          if (data == '[DONE]') {
+            break;
+          }
+
+          try {
+            final json = jsonDecode(data);
+            final content = json['choices']?[0]?['delta']?['content'];
+
+            if (content != null && content.isNotEmpty) {
+              accumulatedText += content;
+              yield accumulatedText;
+            }
+          } catch (e) {
+            // Skip malformed chunks
+            continue;
+          }
+        }
+      }
+
+      client.close();
+    } catch (e) {
+      print('Streaming error: $e');
+      // Fallback to regular API call
+      try {
+        final response = await sendChatMessage(conversationHistory);
+        yield response;
+      } catch (fallbackError) {
+        yield 'I apologize, but I\'m experiencing technical difficulties. Please try again in a moment.';
+      }
+    }
+  }
+
+  // OPTIMIZED: Enhanced regular chat with quick response check
+  Future<String> sendChatMessage(
+      List<Map<String, dynamic>> conversationHistory) async {
+    // Check for quick response first
+    if (conversationHistory.isNotEmpty) {
+      final lastMessage = conversationHistory.last;
+      if (lastMessage['isUser'] == 'true') {
+        final quickResponse = getQuickResponse(lastMessage['text'] ?? '');
+        if (quickResponse != null) {
+          // Simulate a small delay to feel natural
+          await Future.delayed(const Duration(milliseconds: 500));
+          return quickResponse;
+        }
+      }
+    }
+
+    final prompt = _buildChatPrompt(conversationHistory);
+    return _safeApiCall(prompt, 'Error in chat conversation', isChat: true);
+  }
+
+  // Helper method to build message history for streaming
+  List<Map<String, String>> _buildMessageHistory(
+      List<Map<String, String>> conversationHistory) {
+    final messages = <Map<String, String>>[];
+
+    // Add system message
+    messages.add({
+      'role': 'system',
+      'content':
+          '''You are PersonalMedAI, a warm and knowledgeable medical AI assistant.
+
+Key traits:
+- Friendly, empathetic, and supportive
+- Provide clear, concise medical information
+- Keep responses under 200 words
+- Use simple medical terminology
+- Always include appropriate disclaimers
+- Show genuine care for user wellbeing
+
+Guidelines:
+- Recommend healthcare professionals for serious concerns
+- Provide practical health advice
+- Be encouraging and reassuring
+- Use emojis sparingly (🩺 💊 ❤️ ⚠️)
+
+Remember: Inform and support, don't replace professional medical consultation.'''
+    });
+
+    // Convert conversation history
+    for (final message in conversationHistory) {
+      messages.add({
+        'role': message['isUser'] == 'true' ? 'user' : 'assistant',
+        'content': message['text'] ?? '',
+      });
+    }
+
+    return messages;
+  }
+
+  // Keep existing methods but optimize them
   Future<String> analyzeSymptoms(List<String> symptoms, String severity,
       Map<String, dynamic> additionalInfo) async {
     final prompt =
@@ -45,28 +230,14 @@ class DeepSeekService {
     return _safeApiCall(prompt, 'Error checking medication interactions');
   }
 
-  // Add this new method for chat conversations
-  Future<String> sendChatMessage(
-      List<Map<String, String>> conversationHistory) async {
-    final prompt = _buildChatPrompt(conversationHistory);
-    return _safeApiCall(prompt, 'Error in chat conversation', isChat: true);
-  }
-
+  // OPTIMIZED: Enhanced fallback responses
   String _getFallbackResponse(String userMessage) {
-    final message = userMessage.toLowerCase();
+    final quickResponse = getQuickResponse(userMessage);
+    if (quickResponse != null) return quickResponse;
 
-    if (message.contains('headache')) {
-      return '🩺 For headaches, try:\n• Stay hydrated\n• Rest in a quiet, dark room\n• Apply cold/warm compress\n• Consider over-the-counter pain relief\n\nConsult a doctor if severe or persistent.';
-    }
-
-    if (message.contains('fever')) {
-      return '🌡️ For fever:\n• Stay hydrated\n• Rest\n• Monitor temperature\n• Light clothing\n• Seek medical attention if >101.5°F (38.6°C) or persistent.';
-    }
-
-    return '🩺 I\'m here to help with your health questions. For specific symptoms, I recommend consulting with a healthcare professional for proper evaluation and treatment.';
+    return '🩺 I\'m here to help with your health questions. Due to high demand, I\'m experiencing some delays. Please try again in a moment, or contact your healthcare provider for urgent concerns.';
   }
 
-// Update the _safeApiCall method to handle chat context
   Future<String> _safeApiCall(String prompt, String contextMessage,
       {bool isChat = false}) async {
     try {
@@ -86,62 +257,37 @@ class DeepSeekService {
             '';
         return _getFallbackResponse(lastUserMessage);
       }
-      return 'The request took too long. Please try again with a shorter question.';
+      return 'The request took longer than expected. Please try again.';
     } catch (e) {
       print('⚠️ $contextMessage: $e');
-      return 'Unable to complete this request right now. Please try again later.';
+      return 'I\'m experiencing technical difficulties. Please try again in a moment.';
     }
   }
 
-// Add new method for chat API calls with conversation history
-  // Update your _makeChatApiCall method with enhanced system message
   Future<String> _makeChatApiCall(String conversationHistoryJson) async {
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $_apiKey',
-      'Connection': 'keep-alive', // Reuse connections
+      'Connection': 'keep-alive',
       'Accept': 'application/json',
     };
 
-    // Parse the conversation history from JSON
     final List<dynamic> messages = jsonDecode(conversationHistoryJson);
 
-    // Add enhanced system message at the beginning if not present
     if (messages.isEmpty || messages.first['role'] != 'system') {
       messages.insert(0, {
         'role': 'system',
         'content':
-            '''You are PersonalMedAI, a warm, empathetic, and knowledgeable medical AI assistant. You have a caring personality and always strive to provide helpful, accurate health information.
-
-Your key characteristics:
-- Friendly and approachable tone
-- Empathetic and supportive responses  
-- Professional medical knowledge
-- Always prioritize user safety
-- Encourage consulting healthcare professionals when needed
-
-Guidelines for responses:
-- Greet users warmly by name when possible
-- Provide clear, concise medical information
-- Use reassuring language while being honest about limitations
-- Include appropriate disclaimers about seeking professional medical care
-- Ask follow-up questions when helpful
-- Show genuine care for the user's wellbeing
-- Keep responses focused and under 300 words
-- Use emojis sparingly but appropriately (like 🩺 💊 ❤️)
-
-Remember: You are here to inform and support, not to replace professional medical consultation. Always recommend seeing a healthcare provider for serious concerns, diagnosis, or treatment decisions. and also Complete all recommendations and always finish with proper medical disclaimers.'''
+            'You are PersonalMedAI, a helpful medical AI. Keep responses concise (under 200 words) and include medical disclaimers.'
       });
     }
 
     final body = jsonEncode({
       'model': 'deepseek-chat',
       'messages': messages,
-      'max_tokens': 300,
-      'temperature': 0.3,
-      'top_p': 0.7, // Add top_p for faster generation
-
-      'stream': false,
+      'max_tokens': 250, // Reduced for speed
+      'temperature': 0.4, // Reduced for consistency
+      'top_p': 0.8,
     });
 
     final response = await http
@@ -153,8 +299,8 @@ Remember: You are here to inform and support, not to replace professional medica
       final data = jsonDecode(response.body);
       final choices = data['choices'];
       if (choices != null && choices.isNotEmpty) {
-        String content = choices[0]['message']['content']?.trim() ??
-            'No response received from AI service.';
+        String content =
+            choices[0]['message']['content']?.trim() ?? 'No response received.';
         content = _removeWordCountAnnotations(content);
         return content;
       } else {
@@ -165,9 +311,7 @@ Remember: You are here to inform and support, not to replace professional medica
     }
   }
 
-// Add helper method to build chat prompt from conversation history
-  String _buildChatPrompt(List<Map<String, String>> conversationHistory) {
-    // Convert conversation history to the format expected by the API
+  String _buildChatPrompt(List<Map<String, dynamic>> conversationHistory) {
     final messages = conversationHistory
         .map((message) => {
               'role': message['isUser'] == 'true' ? 'user' : 'assistant',
@@ -178,27 +322,9 @@ Remember: You are here to inform and support, not to replace professional medica
     return jsonEncode(messages);
   }
 
-// Update the getHealthInsights method to handle both single queries and chat format
-  Future<String> getHealthInsights(dynamic healthData) async {
-    // If healthData is a string, treat it as a single chat message
-    if (healthData is String) {
-      final conversationHistory = [
-        {'isUser': 'true', 'text': healthData}
-      ];
-      return sendChatMessage(conversationHistory);
-    }
-
-    // Otherwise, use the existing health insights logic
-    if (healthData is Map<String, dynamic>) {
-      final prompt = _buildHealthInsightsPrompt(healthData);
-      return _safeApiCall(prompt, 'Error getting health insights');
-    }
-
-    throw ArgumentError('Invalid healthData format');
-  }
-
   Future<String> _makeApiCallWithRetry(String prompt) async {
     int attempts = 0;
+    const retryDelays = [300, 800]; // Reduced delays
 
     while (true) {
       try {
@@ -207,86 +333,11 @@ Remember: You are here to inform and support, not to replace professional medica
         attempts++;
         if (attempts > _maxRetries) rethrow;
 
-        // OPTIMIZED: Exponential backoff with jitter
-        final delayMs = _retryDelays[attempts - 1];
-        final jitter =
-            (delayMs * 0.1 * (DateTime.now().millisecond % 100) / 100).round();
-        final finalDelay = delayMs + jitter;
-
+        final delayMs = retryDelays[attempts - 1];
         print(
-            '🔄 Retrying API call... (Attempt $attempts/$_maxRetries) - waiting ${finalDelay}ms');
-        await Future.delayed(Duration(milliseconds: finalDelay));
+            '🔄 Retrying API call... (Attempt $attempts/$_maxRetries) - waiting ${delayMs}ms');
+        await Future.delayed(Duration(milliseconds: delayMs));
       }
-    }
-  }
-
-  // Add this method for streaming responses
-  // Add this method for streaming responses
-  Future<Stream<String>> getChatResponseStream(
-      List<Map<String, String>> conversationHistory) async {
-    final headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $_apiKey',
-      'Accept': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-    };
-
-    final messages = conversationHistory
-        .map((message) => {
-              'role': message['isUser'] == 'true' ? 'user' : 'assistant',
-              'content': message['text'] ?? '',
-            })
-        .toList();
-
-    // Add system message
-    if (messages.isEmpty || messages.first['role'] != 'system') {
-      messages.insert(0, {
-        'role': 'system',
-        'content':
-            'You are PersonalMedAI. Keep responses concise and under 150 words.'
-      });
-    }
-
-    final body = jsonEncode({
-      'model': 'deepseek-chat',
-      'messages': messages,
-      'max_tokens': 200,
-      'temperature': 0.3,
-      'stream': true, // Enable streaming
-    });
-
-    final request =
-        http.Request('POST', Uri.parse('$_baseUrl/chat/completions'))
-          ..headers.addAll(headers)
-          ..body = body;
-
-    final client = http.Client();
-
-    try {
-      final streamedResponse = await client.send(request).timeout(_timeout);
-
-      // Return the stream properly wrapped
-      final stream = streamedResponse.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .where(
-              (line) => line.startsWith('data: ') && !line.contains('[DONE]'))
-          .map<String>((line) {
-        // Explicitly cast to String
-        final data = line.substring(6);
-        try {
-          final json = jsonDecode(data);
-          final content = json['choices']?[0]?['delta']?['content'];
-          return content?.toString() ?? '';
-        } catch (e) {
-          return '';
-        }
-      }).where((content) => content.isNotEmpty);
-
-      return stream;
-    } catch (e) {
-      client.close();
-      throw Exception('Streaming request failed: $e');
     }
   }
 
@@ -296,25 +347,20 @@ Remember: You are here to inform and support, not to replace professional medica
       'Authorization': 'Bearer $_apiKey',
     };
 
-    // OPTIMIZED: Reduced max_tokens from 800 to 400 for faster responses
-    // OPTIMIZED: Reduced temperature from 0.7 to 0.5 for more focused responses
-    // OPTIMIZED: Added stream: true for faster perceived response times
     final body = jsonEncode({
       'model': 'deepseek-chat',
       'messages': [
         {
           'role': 'system',
           'content':
-              'You are a helpful medical AI assistant. Provide concise, informative responses about health topics. Always recommend consulting healthcare professionals for serious concerns. Keep responses brief and focused. Include appropriate medical disclaimers.'
+              'You are a medical AI assistant. Provide concise, informative responses. Keep under 200 words and include medical disclaimers.'
         },
         {'role': 'user', 'content': prompt}
       ],
-      'max_tokens': 400, // REDUCED from 800
-      'temperature': 0.5, // REDUCED from 0.7
-      'stream': false, // Keep false for now, but consider streaming for UI
+      'max_tokens': 250,
+      'temperature': 0.4,
     });
 
-    // OPTIMIZED: Separate connect and read timeouts
     final response = await http
         .post(Uri.parse('$_baseUrl/chat/completions'),
             headers: headers, body: body)
@@ -324,12 +370,12 @@ Remember: You are here to inform and support, not to replace professional medica
       final data = jsonDecode(response.body);
       final choices = data['choices'];
       if (choices != null && choices.isNotEmpty) {
-        String content = choices[0]['message']['content']?.trim() ??
-            'No response received from AI service.';
+        String content =
+            choices[0]['message']['content']?.trim() ?? 'No response received.';
         content = _removeWordCountAnnotations(content);
         return content;
       } else {
-        throw Exception('Invalid response format from API');
+        throw Exception('Invalid response format');
       }
     } else {
       throw Exception('API request failed with status: ${response.statusCode}');
@@ -337,7 +383,6 @@ Remember: You are here to inform and support, not to replace professional medica
   }
 
   String _removeWordCountAnnotations(String text) {
-    // Remove patterns like "(Word count: 98)" or "*Word count: 98*"
     return text
         .replaceAll(RegExp(r'\*?\(Word count: \d+\)\*?'), '')
         .replaceAll(RegExp(r'\*Word count: \d+\*'), '')
@@ -346,11 +391,11 @@ Remember: You are here to inform and support, not to replace professional medica
         .trim();
   }
 
-  // OPTIMIZED: Shortened and more focused prompts to reduce processing time
+  // Existing prompt methods with optimizations
   String _buildSymptomAnalysisPrompt(List<String> symptoms, String severity,
       Map<String, dynamic> additionalInfo) {
     final buffer = StringBuffer()
-      ..writeln("Analyze these symptoms briefly:")
+      ..writeln("Analyze these symptoms concisely:")
       ..writeln("Symptoms: ${symptoms.join(', ')}")
       ..writeln("Severity: $severity");
 
@@ -363,47 +408,69 @@ Remember: You are here to inform and support, not to replace professional medica
       });
     }
 
-    buffer.writeln("""
-Provide concise analysis:
-1. Possible causes (2-3 main ones)
-2. When to seek medical attention
-3. Basic self-care suggestions
-4. Medical disclaimer
-
-Keep response under 300 words.
-""");
+    buffer.writeln(
+        "\nProvide: 1) Possible causes 2) When to see doctor 3) Self-care tips 4) Disclaimer. Keep under 200 words.");
     return buffer.toString();
   }
 
   String _buildMedicationInteractionPrompt(List<String> medications) {
-    return """
-Analyze interactions between: ${medications.join(', ')}
-
-Provide brief summary:
-1. Interaction level (Minor/Moderate/Major)
-2. Key effects to watch for
-3. When to consult healthcare provider
-4. Medical disclaimer
-
-Keep response under 250 words.
-""";
+    return "Analyze interactions between: ${medications.join(', ')}\n\nProvide: 1) Risk level 2) Key effects 3) When to consult doctor 4) Disclaimer. Keep under 150 words.";
   }
 
+// Add this method to your DeepSeekService class
+  Future<String> getHealthInsights(Map<String, dynamic> healthData) async {
+    // If healthData is a string, treat it as a single chat message
+    if (healthData is String) {
+      final conversationHistory = [
+        {'isUser': 'true', 'text': healthData}
+      ];
+      return sendChatMessage(conversationHistory);
+    }
+
+    // Check for quick insights first
+    if (healthData.isEmpty) {
+      return '''🌟 **Personalized Health Insights**
+
+**General Wellness Tips:**
+• Stay hydrated - aim for 8 glasses of water daily
+• Get 7-9 hours of quality sleep
+• Take regular breaks from screen time
+• Practice deep breathing exercises
+
+**Healthy Habits:**
+• Walk for 30 minutes daily
+• Eat colorful fruits and vegetables
+• Maintain regular meal times
+• Stay connected with loved ones
+
+💡 **Tip:** Add your health data to get more personalized insights!
+
+⚠️ *These are general wellness suggestions. Consult healthcare providers for personalized medical advice.*''';
+    }
+
+    // Generate insights from health data
+    final prompt = _buildHealthInsightsPrompt(healthData);
+    return _safeApiCall(prompt, 'Error getting health insights');
+  }
+
+// Also add this helper method if it's missing
   String _buildHealthInsightsPrompt(Map<String, dynamic> healthData) {
-    final buffer = StringBuffer()..writeln("Health metrics:");
+    final buffer = StringBuffer()..writeln("Analyze this health data:");
 
     healthData.forEach((key, value) {
-      buffer.writeln("- ${key.replaceAll('_', ' ')}: $value");
+      if (value != null && value.toString().isNotEmpty) {
+        buffer.writeln("- ${key.replaceAll('_', ' ')}: $value");
+      }
     });
 
     buffer.writeln("""
-Provide brief insights:
-1. Key observations
+Provide personalized health insights:
+1. Key observations from the data
 2. Improvement suggestions
-3. General lifestyle tips
-4. Encouragement
+3. Lifestyle recommendations
+4. Encouragement and motivation
 
-Keep response under 200 words.
+Keep response under 200 words and include medical disclaimer.
 """);
     return buffer.toString();
   }
