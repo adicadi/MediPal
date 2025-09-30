@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
+import 'package:personalmedai/utils/app_state.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/symptom_checker_models.dart';
 import '../services/symptom_checker_service.dart';
@@ -1546,10 +1548,12 @@ All your assessments are **automatically saved**:
       print('🤖 Calling DeepSeek API...'); // Debug log
 
       final deepSeekService = DeepSeekService();
+      final appState = Provider.of<AppState>(context, listen: false);
       final result = await deepSeekService.analyzeSymptoms(
         [_answers['primary_symptom']],
         _answers['severity'] ?? '5',
         _answers,
+        appState,
       );
 
       print(

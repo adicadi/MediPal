@@ -135,7 +135,7 @@ ThemeData _buildLightTheme() {
 
     // Divider Theme
     dividerTheme: DividerThemeData(
-      color: colorScheme.outline.withOpacity(0.2),
+      color: colorScheme.outline.withValues(alpha: 150),
       thickness: 1,
     ),
   );
@@ -174,7 +174,7 @@ ThemeData _buildDarkTheme() {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      color: colorScheme.surfaceVariant.withOpacity(0.3),
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 230),
     ),
 
     // Elevated Button Theme
@@ -191,14 +191,15 @@ ThemeData _buildDarkTheme() {
     // Input Decoration Theme
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: colorScheme.surfaceVariant.withOpacity(0.2),
+      fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 230),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.outline),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.outline.withOpacity(0.5)),
+        borderSide:
+            BorderSide(color: colorScheme.outline.withValues(alpha: 150)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),

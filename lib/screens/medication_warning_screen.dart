@@ -34,7 +34,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   AnimationController? _addFormAnimationController;
   AnimationController? _resultAnimationController;
   Animation<double>? _addFormAnimation;
-  Animation<double>? _resultAnimation;
 
   @override
   void initState() {
@@ -66,10 +65,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     _addFormAnimation = CurvedAnimation(
       parent: _addFormAnimationController!,
       curve: Curves.easeInOut,
-    );
-    _resultAnimation = CurvedAnimation(
-      parent: _resultAnimationController!,
-      curve: Curves.elasticOut,
     );
   }
 
@@ -317,13 +312,14 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     setState(() {});
 
     try {
+      final appState = Provider.of<AppState>(context, listen: false);
       final medicationNames =
           appState.medications.map((med) => med.toString()).toList();
 
       print('🔄 Starting new analysis for: ${medicationNames.join(', ')}');
 
-      final result =
-          await deepSeekService.checkMedicationInteractions(medicationNames);
+      final result = await deepSeekService.checkMedicationInteractions(
+          medicationNames, appState);
 
       appState.setMedicationInteractionResult(result);
 
@@ -641,7 +637,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   Widget _buildAnalysisActionButtons(
       AppState appState, ColorScheme colorScheme, BuildContext context) {
     final hasResults = appState.medicationInteractionResult.isNotEmpty;
-    final hasMedications = appState.medications.length >= 2;
 
     return Column(
       children: [
