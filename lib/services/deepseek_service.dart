@@ -9,10 +9,15 @@ class DeepSeekService {
   late final String _apiKey;
   late final String _baseUrl;
 
-  // OPTIMIZED: Reduced timeout for faster failure detection
-  static const Duration _timeout = Duration(seconds: 20);
+  // RESTORED: Working timeout values from old version
+  static const Duration _timeout = Duration(seconds: 30); // INCREASED from 20
   static const int _maxRetries = 2;
-  static const Duration _connectTimeout = Duration(seconds: 3);
+  static const Duration _connectTimeout =
+      Duration(seconds: 5); // INCREASED from 3
+  static const Duration _receiveTimeout = Duration(seconds: 25);
+
+  // RESTORED: Working retry delays with exponential backoff
+  static const List<int> _retryDelays = [500, 1500]; // INCREASED from 300, 800
 
   // ENHANCED: Age-appropriate quick responses
   static const Map<String, Map<String, String>> _quickResponses = {
@@ -159,64 +164,29 @@ Is there something else I can help you with today?
     return null; // No quick response available
   }
 
-  // ENHANCED: Age-appropriate system prompts
+  // OPTIMIZED: Dramatically simplified system prompts
   String _getAgeAppropriateSystemPrompt(AppState appState) {
     final basePrompt = '''
-You are PersonalMedAI, a helpful medical information assistant.
-User Profile: ${appState.userName}, Age: ${appState.userAge}, Gender: ${appState.userGender}
+You are PersonalMedAI for ${appState.userName}, Age: ${appState.userAge}, Gender: ${appState.userGender}
 ''';
 
     if (appState.isMinor) {
       return '''
 $basePrompt
-
-CRITICAL AGE RESTRICTIONS FOR MINOR (Under 18):
-- Use simple, age-appropriate language (elementary/middle school level)
-- Always emphasize talking to parents/guardians/trusted adults
-- Avoid detailed medical terminology - use simple words
-- Focus on general wellness, safety, and healthy habits
-- Never suggest self-medication or self-treatment
-- Always recommend adult supervision for any health concerns
-- Use encouraging, non-scary language
-- Include fun, engaging explanations when appropriate
-- Redirect sensitive topics to trusted adults
-- Keep responses short and easy to understand
-
-FORBIDDEN TOPICS: reproductive health, mental health disorders, adult medications, self-diagnosis
-
-RESPONSE STYLE: Friendly, educational, and always directing to trusted adults for real medical decisions.
-ALWAYS end responses with reminders to talk to trusted adults.
+MINOR (Under 18): Use simple language. Always direct to trusted adults. Focus on wellness and safety. 
+Avoid: self-medication, detailed medical terms, sensitive topics. Keep under 250 words. End with reminder to talk to adults.
       ''';
     } else if (appState.isYoungAdult) {
       return '''
 $basePrompt
-
-AGE-APPROPRIATE GUIDANCE FOR YOUNG ADULT (18-24):
-- Use clear, educational language
-- Focus on preventive care and healthy lifestyle
-- Emphasize the importance of establishing healthcare relationships
-- Provide comprehensive information while stressing professional consultation
-- Address common concerns for this age group (mental health, lifestyle, etc.)
-- Encourage taking responsibility for health decisions
-- Provide practical advice for independent living
-
-RESPONSE LENGTH: Up to 400 words
-TONE: Supportive and empowering while maintaining medical disclaimers
+YOUNG ADULT (18-24): Clear educational language. Emphasize preventive care and professional consultation.
+Keep under 350 words with disclaimers.
       ''';
     } else {
       return '''
 $basePrompt
-
-COMPREHENSIVE MEDICAL INFORMATION FOR ADULT (25+):
-- Provide detailed, medical-grade information
-- Use appropriate medical terminology with explanations
-- Discuss complex health topics as appropriate
-- Address age-specific health concerns
-- Provide thorough analysis while maintaining professional disclaimers
-- Include detailed self-care instructions where appropriate
-
-RESPONSE LENGTH: Up to 600 words
-TONE: Professional and comprehensive while remaining accessible
+ADULT (25+): Detailed medical-grade information with appropriate terminology. 
+Thorough analysis with disclaimers. Keep under 500 words.
       ''';
     }
   }
@@ -251,8 +221,8 @@ TONE: Professional and comprehensive while remaining accessible
     final body = jsonEncode({
       'model': 'deepseek-chat',
       'messages': messages,
-      'max_tokens': appState.maxAIResponseLength,
-      'temperature': appState.isMinor ? 0.3 : 0.4, // More consistent for minors
+      'max_tokens': appState.isMinor ? 200 : 400, // OPTIMIZED
+      'temperature': 0.4, // SIMPLIFIED: Single value
       'stream': true,
       'top_p': 0.8,
     });
@@ -315,7 +285,7 @@ TONE: Professional and comprehensive while remaining accessible
         yield finalResponse;
       }
     } catch (e) {
-      print('Streaming error: $e');
+      print('❌ Streaming error: $e');
       try {
         final response = await sendChatMessage(conversationHistory, appState);
         yield response;
@@ -518,8 +488,9 @@ ${appState.ageAppropriateDisclaimer}
       } else {
         return await _makeApiCallWithRetry(prompt, appState);
       }
-    } on TimeoutException {
-      print('⏳ $contextMessage: Request timed out - using fallback');
+    } on TimeoutException catch (e) {
+      print(
+          '⏳ $contextMessage: Request timed out after ${_timeout.inSeconds}s');
       if (isChat && appState != null) {
         final messages = jsonDecode(prompt) as List<dynamic>;
         final lastUserMessage = messages.lastWhere(
@@ -531,6 +502,10 @@ ${appState.ageAppropriateDisclaimer}
       }
       return appState?.getAgeAppropriateErrorMessage() ??
           'The request took longer than expected. Please try again.';
+    } on SocketException catch (e) {
+      print('🌐 Network error: ${e.message}');
+      return appState?.getAgeAppropriateErrorMessage() ??
+          'Network connection issue. Please check your internet and try again.';
     } catch (e) {
       print('⚠️ $contextMessage: $e');
       return appState?.getAgeAppropriateErrorMessage() ??
@@ -561,8 +536,8 @@ ${appState.ageAppropriateDisclaimer}
     final body = jsonEncode({
       'model': 'deepseek-chat',
       'messages': messages,
-      'max_tokens': appState?.maxAIResponseLength ?? 250,
-      'temperature': appState?.isMinor == true ? 0.3 : 0.4,
+      'max_tokens': appState?.isMinor == true ? 200 : 400, // OPTIMIZED
+      'temperature': 0.4, // SIMPLIFIED
       'top_p': 0.8,
     });
 
@@ -588,6 +563,10 @@ ${appState.ageAppropriateDisclaimer}
       } else {
         throw Exception('Invalid response format from API');
       }
+    } else if (response.statusCode == 429) {
+      throw Exception('Rate limit exceeded - DeepSeek API is under heavy load');
+    } else if (response.statusCode >= 500) {
+      throw Exception('DeepSeek API server error: ${response.statusCode}');
     } else {
       throw Exception('API request failed with status: ${response.statusCode}');
     }
@@ -605,22 +584,44 @@ ${appState.ageAppropriateDisclaimer}
     return jsonEncode(messages);
   }
 
+  // RESTORED: Working retry logic with exponential backoff
   Future<String> _makeApiCallWithRetry(
       String prompt, AppState? appState) async {
     int attempts = 0;
-    const retryDelays = [300, 800];
 
     while (true) {
       try {
+        print('🔄 API attempt ${attempts + 1}/${_maxRetries + 1}');
         return await _makeApiCall(prompt, appState);
-      } catch (e) {
+      } on TimeoutException catch (e) {
         attempts++;
-        if (attempts > _maxRetries) rethrow;
+        if (attempts > _maxRetries) {
+          print('⏳ Max retries reached after ${attempts} attempts');
+          rethrow;
+        }
 
-        final delayMs = retryDelays[attempts - 1];
+        // Use working retry delays with jitter
+        final delayMs = _retryDelays[attempts - 1];
+        final jitter =
+            (delayMs * 0.1 * (DateTime.now().millisecond % 100) / 100).round();
+        final finalDelay = delayMs + jitter;
+
         print(
-            '🔄 Retrying API call... (Attempt $attempts/$_maxRetries) - waiting ${delayMs}ms');
+            '🔄 Retrying API call... (Attempt $attempts/$_maxRetries) - waiting ${finalDelay}ms');
+        await Future.delayed(Duration(milliseconds: finalDelay));
+      } on SocketException catch (e) {
+        attempts++;
+        if (attempts > _maxRetries) {
+          print('🌐 Network error after ${attempts} attempts: ${e.message}');
+          rethrow;
+        }
+
+        final delayMs = _retryDelays[attempts - 1];
+        print('🌐 Network issue, retrying in ${delayMs}ms...');
         await Future.delayed(Duration(milliseconds: delayMs));
+      } catch (e) {
+        print('❌ Non-retryable error: $e');
+        rethrow;
       }
     }
   }
@@ -629,6 +630,7 @@ ${appState.ageAppropriateDisclaimer}
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $_apiKey',
+      'Connection': 'keep-alive', // Important for long requests
     };
 
     final body = jsonEncode({
@@ -642,14 +644,22 @@ ${appState.ageAppropriateDisclaimer}
         },
         {'role': 'user', 'content': prompt}
       ],
-      'max_tokens': appState?.maxAIResponseLength ?? 250,
-      'temperature': appState?.isMinor == true ? 0.3 : 0.4,
+      'max_tokens': appState?.isMinor == true ? 200 : 400, // OPTIMIZED
+      'temperature': 0.4, // SIMPLIFIED
     });
 
     final response = await http
         .post(Uri.parse('$_baseUrl/chat/completions'),
             headers: headers, body: body)
-        .timeout(_timeout);
+        .timeout(
+      _timeout,
+      onTimeout: () {
+        throw TimeoutException(
+          'Request to DeepSeek API exceeded ${_timeout.inSeconds}s timeout',
+          _timeout,
+        );
+      },
+    );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -666,8 +676,12 @@ ${appState.ageAppropriateDisclaimer}
 
         return content;
       } else {
-        throw Exception('Invalid response format');
+        throw Exception('Invalid response format from DeepSeek API');
       }
+    } else if (response.statusCode == 429) {
+      throw Exception('Rate limit exceeded - DeepSeek API is under heavy load');
+    } else if (response.statusCode >= 500) {
+      throw Exception('DeepSeek API server error: ${response.statusCode}');
     } else {
       throw Exception('API request failed with status: ${response.statusCode}');
     }
@@ -682,134 +696,101 @@ ${appState.ageAppropriateDisclaimer}
         .trim();
   }
 
-  // ENHANCED: Age-appropriate symptom analysis prompt
+  // OPTIMIZED: Dramatically simplified symptom analysis prompt
   String _buildSymptomAnalysisPrompt(List<String> symptoms, String severity,
       Map<String, dynamic> additionalInfo, AppState appState) {
     final buffer = StringBuffer();
 
     if (appState.isMinor) {
+      buffer.writeln("Help young person (age ${appState.userAge}):");
+      buffer.writeln("Symptoms: ${symptoms.join(', ')}, Severity: $severity");
       buffer.writeln(
-          "Help a young person (age ${appState.userAge}) understand these symptoms:");
-      buffer.writeln("Symptoms: ${symptoms.join(', ')}");
-      buffer.writeln("How bad it feels: $severity");
-      buffer.writeln(
-          "\nProvide: 1) Simple explanation 2) When to tell adults 3) What adults can do to help");
-      buffer.writeln(
-          "Use simple words and always direct to trusted adults for help.");
+          "Provide: Simple explanation, when to tell adults. Keep brief under 200 words.");
     } else {
-      buffer.writeln(
-          "Analyze these symptoms for ${appState.userAge}-year-old ${appState.userGender.toLowerCase()}:");
-      buffer.writeln("Symptoms: ${symptoms.join(', ')}");
-      buffer.writeln("Severity: $severity");
+      buffer
+          .writeln("Analyze for ${appState.userAge}yo ${appState.userGender}:");
+      buffer.writeln("Symptoms: ${symptoms.join(', ')}, Severity: $severity");
 
+      // Only include top 3 additional info items to keep prompt short
       if (additionalInfo.isNotEmpty) {
-        buffer.writeln("Additional info:");
-        additionalInfo.forEach((key, value) {
-          if (value.toString().isNotEmpty) {
-            buffer.writeln("- ${key.replaceAll('_', ' ')}: $value");
+        int count = 0;
+        buffer.writeln("Info:");
+        for (var entry in additionalInfo.entries) {
+          if (entry.value.toString().isNotEmpty && count < 3) {
+            buffer.writeln("- ${entry.key}: ${entry.value}");
+            count++;
           }
-        });
+        }
       }
 
       buffer.writeln(
-          "\nProvide: 1) Possible causes 2) When to see doctor 3) Self-care tips 4) Disclaimer. Keep under ${appState.maxAIResponseLength} words.");
+          "\nProvide: Causes, when to see doctor, self-care, disclaimer. Under 300 words.");
     }
 
     return buffer.toString();
   }
 
-  // ENHANCED: Age-appropriate medication interaction prompt
+  // OPTIMIZED: Simplified medication interaction prompt
   String _buildMedicationInteractionPrompt(
       List<String> medications, AppState appState) {
     if (appState.isMinor) {
-      return "A young person is asking about medicine safety. Redirect them to trusted adults and explain why medicine safety is important for young people.";
+      return "Minor asking about medicines. Redirect to trusted adults briefly.";
     }
 
-    return "Analyze interactions between: ${medications.join(', ')}\n\nFor ${appState.userAge}-year-old ${appState.userGender.toLowerCase()}. Provide: 1) Risk level 2) Key effects 3) When to consult doctor 4) Disclaimer. Keep under ${appState.maxAIResponseLength} words.";
+    return """
+Analyze interactions: ${medications.join(', ')}
+For ${appState.userAge}yo ${appState.userGender}. 
+Provide: 1) Risk level 2) Key effects 3) When to consult doctor 4) Disclaimer
+Keep under 250 words.
+""";
   }
 
-  // ENHANCED: Age-appropriate health insights prompt with comprehensive data analysis
+  // OPTIMIZED: Dramatically simplified health insights prompt
   String _buildHealthInsightsPrompt(
       Map<String, dynamic> healthData, AppState appState) {
-    final buffer = StringBuffer();
-
     if (appState.isMinor) {
-      buffer.writeln(
-          "Create fun, educational health tips for a ${appState.userAge}-year-old named ${appState.userName}:");
-      buffer.writeln(
-          "Focus on: healthy habits, exercise, sleep, eating well, when to tell adults about health");
-      buffer.writeln(
-          "Use simple, encouraging language and always mention talking to trusted adults.");
-    } else {
-      buffer.writeln(
-          "Analyze this comprehensive health data for ${appState.userName} (age ${appState.userAge}, ${appState.userGender}):");
-
-      // Process the health data systematically
-      final processedData = <String, dynamic>{};
-      healthData.forEach((key, value) {
-        if (value != null &&
-            value.toString().isNotEmpty &&
-            value.toString() != 'null') {
-          processedData[key] = value;
-        }
-      });
-
-      // Group data by categories for better analysis
-      final categories = {
-        'Demographics': ['user_name', 'user_age', 'user_gender', 'age_group'],
-        'Medications': [
-          'medications_count',
-          'medications',
-          'medication_details'
-        ],
-        'Health Metrics': [
-          'health_score',
-          'sleep_hours',
-          'recommended_steps',
-          'activity_level'
-        ],
-        'Symptoms & History': [
-          'last_symptom_check',
-          'recent_symptoms',
-          'symptom_severity'
-        ],
-        'Engagement': ['chat_activity', 'app_usage_days', 'most_asked_topics'],
-      };
-
-      categories.forEach((category, keys) {
-        final categoryData = <String, dynamic>{};
-        for (final key in keys) {
-          if (processedData.containsKey(key)) {
-            categoryData[key] = processedData[key];
-          }
-        }
-
-        if (categoryData.isNotEmpty) {
-          buffer.writeln("\n**${category}:**");
-          categoryData.forEach((key, value) {
-            buffer.writeln("- ${key.replaceAll('_', ' ')}: $value");
-          });
-        }
-      });
-
-      buffer.writeln("""
-
-Provide comprehensive personalized health insights:
-1. Profile-based health assessment
-2. Medication analysis (if applicable)
-3. Lifestyle recommendations based on age/gender
-4. Specific improvement suggestions
-5. Motivational encouragement
-6. Risk factors to monitor
-
-Keep response under ${appState.maxAIResponseLength} words and include medical disclaimer.
-""");
+      return """
+Create health tips for ${appState.userName} (${appState.userAge}yo):
+Focus on: healthy habits, exercise, sleep, nutrition.
+Use simple, encouraging language. Mention trusted adults. Keep under 200 words.
+""";
     }
 
+    // Extract only top 5 most relevant health data items
+    final relevantData = <String, dynamic>{};
+    final priorityKeys = [
+      'medications_count',
+      'health_score',
+      'sleep_hours',
+      'recent_symptoms',
+      'activity_level'
+    ];
+
+    for (final key in priorityKeys) {
+      if (healthData.containsKey(key) &&
+          healthData[key] != null &&
+          healthData[key].toString().isNotEmpty) {
+        relevantData[key] = healthData[key];
+      }
+      if (relevantData.length >= 5) break;
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+        "Health insights for ${appState.userName} (${appState.userAge}yo, ${appState.userGender}):");
+
+    if (relevantData.isNotEmpty) {
+      relevantData.forEach((key, value) {
+        buffer.writeln("- $key: $value");
+      });
+    }
+
+    buffer.writeln(
+        "\nProvide: Assessment, lifestyle tips, improvements, encouragement. Under 350 words with disclaimer.");
     return buffer.toString();
   }
 
   bool get isConfigured => _apiKey.isNotEmpty;
   String get configurationStatus =>
-      'API Key: ${_apiKey.isNotEmpty ? "✓ Configured" : "✗ Missing"}\nBase URL: $_baseUrl';
+      'API Key: ${_apiKey.isNotEmpty ? "✓ Configured" : "✗ Missing"}\nBase URL: $_baseUrl\nTimeout: ${_timeout.inSeconds}s';
 }
