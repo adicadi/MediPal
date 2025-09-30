@@ -369,12 +369,6 @@ class _HomeScreenState extends State<HomeScreen> {
           () => Navigator.pushNamed(context, '/medications'),
         ),
         _buildEnhancedPillButton(
-          'AI Chat',
-          Icons.psychology,
-          Colors.purple,
-          () => Navigator.pushNamed(context, '/chat'),
-        ),
-        _buildEnhancedPillButton(
           'Emergency',
           Icons.emergency,
           Colors.red,
