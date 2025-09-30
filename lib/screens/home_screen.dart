@@ -36,7 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              // FIX: Prevent app title overflow
               child: Text(
                 'PersonalMedAI',
                 style: theme.textTheme.titleLarge?.copyWith(
@@ -72,7 +71,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     Icon(Icons.refresh, color: Colors.white),
                     SizedBox(width: 12),
                     Expanded(
-                      // FIX: Prevent snackbar overflow
                       child: Text(
                         'Health data refreshed',
                         overflow: TextOverflow.ellipsis,
@@ -95,42 +93,31 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ENHANCED: Personalized Welcome Card with Age-Based Content
               Consumer<AppState>(
                 builder: (context, appState, child) {
                   return _buildPersonalizedWelcomeCard(
                       appState, colorScheme, theme);
                 },
               ),
-
               const SizedBox(height: 24),
-
-              // ENHANCED: Quick Actions Section with Age Restrictions
               Consumer<AppState>(
                 builder: (context, appState, child) {
                   return _buildQuickActionsSection(appState, theme);
                 },
               ),
-
               const SizedBox(height: 32),
-
-              // ENHANCED: Health Summary Section with Age-Appropriate Content
               Consumer<AppState>(
                 builder: (context, appState, child) {
                   return _buildHealthSummarySection(appState, theme);
                 },
               ),
-
               const SizedBox(height: 32),
-
-              // NEW: Personalized Health Tips Section
               Consumer<AppState>(
                 builder: (context, appState, child) {
                   return _buildPersonalizedTipsSection(
                       appState, theme, colorScheme);
                 },
               ),
-
               const SizedBox(height: 32),
             ],
           ),
@@ -143,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.psychology),
             label: Text(
               appState.isMinor ? 'Ask Questions' : 'Ask AI',
-              overflow: TextOverflow.ellipsis, // FIX: FAB text overflow
+              overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
             elevation: 4,
@@ -154,7 +141,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // FIXED: Personalized Welcome Card with proper text overflow handling
   Widget _buildPersonalizedWelcomeCard(
       AppState appState, ColorScheme colorScheme, ThemeData theme) {
     return Card(
@@ -185,7 +171,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // FIX: Proper greeting text overflow
                       Text(
                         appState.personalizedGreeting,
                         style: theme.textTheme.headlineSmall?.copyWith(
@@ -196,7 +181,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         maxLines: 2,
                       ),
                       const SizedBox(height: 8),
-                      // FIX: Subtitle text overflow
                       Text(
                         _getAgeAppropriateSubtitle(appState),
                         style: theme.textTheme.bodyLarge?.copyWith(
@@ -209,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16), // FIX: Add spacing before icon
+                const SizedBox(width: 16),
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -238,7 +222,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // FIX: Age-appropriate subtitle with overflow protection
   String _getAgeAppropriateSubtitle(AppState appState) {
     if (appState.isMinor) {
       return 'Remember to talk to trusted adults about health questions! 🌟';
@@ -249,7 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // FIXED: Minor safety information bar with proper text wrapping
   Widget _buildMinorSafetyBar(ColorScheme colorScheme, ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -263,7 +245,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(Icons.family_restroom, color: Colors.orange.shade700, size: 20),
           const SizedBox(width: 8),
           Expanded(
-            // FIX: Prevent text overflow
             child: Text(
               'Young User Mode: Always consult with parents or guardians',
               style: TextStyle(
@@ -280,10 +261,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // FIXED: Health stats row with proper spacing and overflow handling
+  // FIXED: Health stats row WITHOUT health score
   Widget _buildHealthStatsRow(AppState appState, ColorScheme colorScheme) {
     return Wrap(
-      // FIX: Use Wrap instead of Row to prevent overflow
       spacing: 16,
       runSpacing: 8,
       children: [
@@ -299,17 +279,10 @@ class _HomeScreenState extends State<HomeScreen> {
           Icons.chat,
           colorScheme,
         ),
-        _buildQuickStat(
-          appState.getHealthData()['health_score'] ?? '70/100',
-          'Health Score',
-          Icons.favorite,
-          colorScheme,
-        ),
       ],
     );
   }
 
-  // FIXED: Quick Actions with proper text overflow handling
   Widget _buildQuickActionsSection(AppState appState, ThemeData theme) {
     return Column(
       children: [
@@ -317,7 +290,6 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              // FIX: Prevent title overflow
               child: Text(
                 appState.isMinor ? 'Things You Can Do' : 'Quick Actions',
                 style: theme.textTheme.titleLarge?.copyWith(
@@ -350,7 +322,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // FIXED: Age-appropriate action buttons with proper text handling
   List<Widget> _buildAgeAppropriateActions(AppState appState) {
     List<Widget> actions = [];
 
@@ -413,7 +384,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return actions;
   }
 
-  // FIXED: Health Summary with proper text overflow handling
   Widget _buildHealthSummarySection(AppState appState, ThemeData theme) {
     return Column(
       children: [
@@ -421,7 +391,6 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              // FIX: Prevent title overflow
               child: Text(
                 appState.isMinor ? 'Health Information' : 'Health Summary',
                 style: theme.textTheme.titleLarge?.copyWith(
@@ -449,7 +418,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Health cards remain the same but with built-in overflow handling in HealthSummaryCard
   List<Widget> _buildAgeAppropriateHealthCards(AppState appState) {
     List<Widget> cards = [];
 
@@ -521,7 +489,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return cards;
   }
 
-  // FIXED: Personalized Tips Section with proper text handling
   Widget _buildPersonalizedTipsSection(
       AppState appState, ThemeData theme, ColorScheme colorScheme) {
     final tips = appState.personalizedHealthTips.take(3).toList();
@@ -545,7 +512,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  // FIX: Prevent title overflow
                   child: Text(
                     appState.isMinor
                         ? 'Tips Just for You!'
@@ -577,7 +543,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        // FIX: Prevent tip text overflow
                         child: Text(
                           tip.substring(
                               tip.indexOf(' ') + 1), // Get text after emoji
@@ -595,7 +560,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // FIXED: Enhanced pill button with proper text overflow handling
   Widget _buildEnhancedPillButton(
       String text, IconData icon, Color color, VoidCallback onPressed) {
     return Container(
@@ -609,7 +573,7 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Colors.white,
             fontWeight: FontWeight.w600,
           ),
-          overflow: TextOverflow.ellipsis, // FIX: Button text overflow
+          overflow: TextOverflow.ellipsis,
           maxLines: 1,
         ),
         style: ElevatedButton.styleFrom(
@@ -625,11 +589,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // FIXED: Quick stat widget with better text handling
   Widget _buildQuickStat(
       String value, String label, IconData icon, ColorScheme colorScheme) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 120), // FIX: Constrain width
+      constraints: const BoxConstraints(maxWidth: 120),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -640,7 +603,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 4),
           Expanded(
-            // FIX: Allow text to wrap properly
             child: Text(
               '$value $label',
               style: TextStyle(
@@ -657,185 +619,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // FIXED: Profile dialog with proper scrolling and text overflow
+  // FIXED: Profile dialog using separate widget to avoid TextEditingController disposal issues
   void _showProfileDialog(BuildContext context) {
     final appState = Provider.of<AppState>(context, listen: false);
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.person, color: Colors.blue),
-            SizedBox(width: 8),
-            Expanded(
-              // FIX: Prevent title overflow
-              child: Text(
-                'Profile Settings',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: ConstrainedBox(
-          // FIX: Constrain dialog content height
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.6,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // User information display
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Your Information:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Name: ${appState.userName}',
-                        overflow:
-                            TextOverflow.ellipsis, // FIX: Profile text overflow
-                        maxLines: 1,
-                      ),
-                      if (appState.userAge > 0)
-                        Text('Age: ${appState.userAge}'),
-                      if (appState.userGender.isNotEmpty)
-                        Text(
-                          'Gender: ${appState.userGender}',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      if (appState.userEmail.isNotEmpty)
-                        Text(
-                          'Email: ${appState.userEmail}',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-
-                      const SizedBox(height: 8),
-
-                      // Age group indicator
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: appState.isMinor
-                              ? Colors.orange.shade100
-                              : Colors.green.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: appState.isMinor
-                                ? Colors.orange.shade300
-                                : Colors.green.shade300,
-                          ),
-                        ),
-                        child: Text(
-                          appState.isMinor
-                              ? 'Young User Mode 👶'
-                              : appState.isYoungAdult
-                                  ? 'Young Adult 🎓'
-                                  : 'Adult User 👨‍⚕️',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: appState.isMinor
-                                ? Colors.orange.shade700
-                                : Colors.green.shade700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Profile completion status
-                if (!appState.isUserProfileComplete) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade200),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info, color: Colors.orange.shade700),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          // FIX: Profile completion text overflow
-                          child: Text(
-                            'Complete your profile in Settings for better personalized recommendations.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange.shade700,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Health score display
-                Text(
-                  'Health Score: ${appState.getHealthData()['health_score']}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          if (!appState.isUserProfileComplete)
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/onboarding');
-              },
-              child: const Text(
-                'Complete Profile',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-        ],
-      ),
+      builder: (context) => ProfileEditDialog(appState: appState),
     );
   }
-
-  // The rest of your dialog methods remain the same...
-  // (I'll keep them as they are since they already have proper text handling in most cases)
 
   void _showSettingsDialog(BuildContext context) {
     showDialog(
@@ -860,11 +651,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.person),
               title: const Text(
-                'Profile',
+                'Edit Profile',
                 overflow: TextOverflow.ellipsis,
               ),
               subtitle: const Text(
-                'Update your information',
+                'Update your personal information',
                 overflow: TextOverflow.ellipsis,
               ),
               onTap: () {
@@ -919,271 +710,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  // Continue with your existing dialog methods...
-  // (The rest of the methods can remain as they are, but add overflow protection where needed)
-
-  void _showMinorChatInfo(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.help, color: Colors.blue),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Ask Health Questions',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.5,
-          ),
-          child: const SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '🌟 I can help you learn about:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                Text('• How to stay healthy and strong'),
-                Text('• Why eating good food is important'),
-                Text('• How much sleep you need'),
-                Text('• Fun ways to exercise'),
-                Text('• When to wash your hands'),
-                SizedBox(height: 16),
-                Text(
-                  '⚠️ Important Reminder:',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.orange),
-                ),
-                SizedBox(height: 8),
-                Text(
-                    'Always talk to a parent, guardian, or trusted adult about:'),
-                Text('• If you feel sick or hurt'),
-                Text('• Any health questions you have'),
-                Text('• Before trying anything new'),
-                SizedBox(height: 16),
-                Text(
-                  'Remember: Adults are there to help keep you safe and healthy! 💙',
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Got it!'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/chat');
-            },
-            child: const Text('Ask Questions'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Add similar overflow protection to your other dialog methods...
-  // (I'm including just a few more as examples, but apply the same pattern to all)
-
-  void _showPersonalizedHealthTips(BuildContext context, AppState appState) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.tips_and_updates, color: Colors.green),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                appState.isMinor
-                    ? 'Health Tips for You!'
-                    : 'Personalized Health Tips',
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.6,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (appState.isMinor) ...[
-                  Text(
-                    '🌟 Special tips just for young people like you:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                ...appState.personalizedHealthTips.map((tip) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        tip,
-                        overflow:
-                            TextOverflow.visible, // Allow wrapping for tips
-                      ),
-                    )),
-                if (appState.isMinor) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade200),
-                    ),
-                    child: Text(
-                      '💡 Remember: Always talk to your parents or guardians about health and ask them to help you with these tips!',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange.shade700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Got it!'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ... Continue with your other existing methods, applying overflow protection as needed ...
-
-  void _showAboutDialog(BuildContext context) {
-    Navigator.pop(context);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.psychology, color: Colors.blue),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'About PersonalMedAI',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.5,
-          ),
-          child: const SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('PersonalMedAI v1.0.0'),
-                SizedBox(height: 8),
-                Text(
-                    'Your personal AI health assistant powered by advanced language models.'),
-                SizedBox(height: 16),
-                Text('Features:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('• Age-appropriate health guidance'),
-                Text('• AI-powered symptom analysis'),
-                Text('• Medication interaction checking'),
-                Text('• Personalized health insights and tips'),
-                Text('• 24/7 AI chat support'),
-                Text('• Safe mode for young users'),
-                SizedBox(height: 16),
-                Text(
-                  '⚠️ This app provides information only and does not replace professional medical advice.',
-                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Include your remaining methods with similar overflow protection...
-  // (I'm keeping the essential structure but adding overflow protection throughout)
-
-  void _showComingSoonDialog(BuildContext context, String feature) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          feature,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.construction, size: 48, color: Colors.orange),
-            const SizedBox(height: 16),
-            Text(
-              '$feature is coming soon!',
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'We are working hard to bring you this feature.',
-              style: TextStyle(fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ... Add your remaining methods here with similar overflow protection ...
 
   Future<void> _getHealthInsights(BuildContext context,
       {bool showDialog = true}) async {
@@ -1244,8 +770,6 @@ Hello ${appState.userName}!
 
 Based on your health profile, here are personalized insights:
 
-📊 **Health Score:** ${appState.getHealthData()['health_score']}
-
 💊 **Medications:** You're tracking ${appState.medications.length} medication${appState.medications.length != 1 ? 's' : ''}. Great job staying organized!
 
 ${appState.isYoungAdult ? '''
@@ -1256,7 +780,7 @@ ${appState.isYoungAdult ? '''
 ''' : '''
 👨‍⚕️ **Health Maintenance:**
 - Keep up with regular health screenings
-- Monitor any changes in your health status
+- Monitor any changes in your health status  
 - Maintain an active lifestyle appropriate for your age
 '''}
 
@@ -1346,20 +870,756 @@ ${appState.ageAppropriateDisclaimer}
     );
   }
 
-  // Add your remaining method implementations here...
+  void _showPersonalizedHealthTips(BuildContext context, AppState appState) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.tips_and_updates, color: Colors.green),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                appState.isMinor
+                    ? 'Health Tips for You!'
+                    : 'Personalized Health Tips',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (appState.isMinor) ...[
+                  Text(
+                    '🌟 Special tips just for young people like you:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                ...appState.personalizedHealthTips.map((tip) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(tip),
+                    )),
+                if (appState.isMinor) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Text(
+                      '💡 Remember: Always talk to your parents or guardians about health and ask them to help you with these tips!',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it!'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMinorChatInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.help, color: Colors.blue),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Ask Health Questions',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          child: const SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '🌟 I can help you learn about:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text('• How to stay healthy and strong'),
+                Text('• Why eating good food is important'),
+                Text('• How much sleep you need'),
+                Text('• Fun ways to exercise'),
+                Text('• When to wash your hands'),
+                SizedBox(height: 16),
+                Text(
+                  '⚠️ Important Reminder:',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.orange),
+                ),
+                SizedBox(height: 8),
+                Text(
+                    'Always talk to a parent, guardian, or trusted adult about:'),
+                Text('• If you feel sick or hurt'),
+                Text('• Any health questions you have'),
+                Text('• Before trying anything new'),
+                SizedBox(height: 16),
+                Text(
+                  'Remember: Adults are there to help keep you safe and healthy! 💙',
+                  style: TextStyle(fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it!'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/chat');
+            },
+            child: const Text('Ask Questions'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showMinorGuidance(BuildContext context) {
-    // Implementation with overflow protection
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.family_restroom, color: Colors.orange),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'When to Tell Adults',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          child: const SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '🏠 Always tell a trusted adult if:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text('• You feel sick or hurt'),
+                Text('• Something doesn\'t feel right'),
+                Text('• You have questions about your body'),
+                Text('• Someone makes you uncomfortable'),
+                Text('• You need help with anything'),
+                SizedBox(height: 16),
+                Text(
+                  '👨‍👩‍👧‍👦 Trusted adults include:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text('• Parents or guardians'),
+                Text('• Teachers'),
+                Text('• School nurses'),
+                Text('• Doctors'),
+                Text('• Family members you trust'),
+                SizedBox(height: 16),
+                Text(
+                  'You are never bothering adults when you ask for help! 🌟',
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('I understand'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showMinorEmergencyInfo(BuildContext context) {
-    // Implementation with overflow protection
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.emergency, color: Colors.red),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Emergency Help',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          child: const SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '🚨 If there\'s an emergency:',
+                  style:
+                      TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                ),
+                SizedBox(height: 8),
+                Text('1. Find a trusted adult RIGHT AWAY'),
+                Text('2. Call 911 if no adult is around'),
+                Text('3. Stay calm and ask for help'),
+                SizedBox(height: 16),
+                Text(
+                  '📞 Important numbers to remember:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text('• Emergency: 911'),
+                Text('• Ask an adult to help you call'),
+                SizedBox(height: 16),
+                Text(
+                  '🌟 You did the right thing by learning about safety!',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('I understand'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showEmergencyInfo(BuildContext context) {
-    // Implementation with overflow protection
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.emergency, color: Colors.red),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Emergency Information',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          child: const SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '🚨 CALL 911 IMMEDIATELY FOR:',
+                  style:
+                      TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                ),
+                SizedBox(height: 8),
+                Text('• Difficulty breathing or chest pain'),
+                Text('• Severe bleeding or major injuries'),
+                Text('• Loss of consciousness'),
+                Text('• Severe allergic reactions'),
+                Text('• Signs of stroke or heart attack'),
+                SizedBox(height: 16),
+                Text(
+                  'Other Important Numbers:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text('• Poison Control: 1-800-222-1222'),
+                Text('• Crisis Text Line: Text HOME to 741741'),
+                Text('• National Suicide Prevention: 988'),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showLastConsultation(BuildContext context, String analysis) {
-    // Implementation with overflow protection
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.psychology, color: Colors.blue),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Last Consultation',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          child: SingleChildScrollView(
+            child: SelectionArea(child: Text(analysis)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/chat');
+            },
+            child: const Text('New Chat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    Navigator.pop(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.psychology, color: Colors.blue),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'About PersonalMedAI',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          child: const SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('PersonalMedAI v1.0.0'),
+                SizedBox(height: 8),
+                Text(
+                    'Your personal AI health assistant powered by advanced language models.'),
+                SizedBox(height: 16),
+                Text('Features:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('• Age-appropriate health guidance'),
+                Text('• AI-powered symptom analysis'),
+                Text('• Medication interaction checking'),
+                Text('• Personalized health insights and tips'),
+                Text('• 24/7 AI chat support'),
+                Text('• Safe mode for young users'),
+                SizedBox(height: 16),
+                Text(
+                  '⚠️ This app provides information only and does not replace professional medical advice.',
+                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showComingSoonDialog(BuildContext context, String feature) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          feature,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.construction, size: 48, color: Colors.orange),
+            const SizedBox(height: 16),
+            Text(
+              '$feature is coming soon!',
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'We are working hard to bring you this feature.',
+              style: TextStyle(fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// FIXED: Separate ProfileEditDialog widget to handle TextEditingController properly
+class ProfileEditDialog extends StatefulWidget {
+  final AppState appState;
+
+  const ProfileEditDialog({super.key, required this.appState});
+
+  @override
+  State<ProfileEditDialog> createState() => _ProfileEditDialogState();
+}
+
+class _ProfileEditDialogState extends State<ProfileEditDialog> {
+  late final TextEditingController nameController;
+  late final TextEditingController emailController;
+  late final TextEditingController ageController;
+  late String selectedGender;
+
+  @override
+  void initState() {
+    super.initState();
+    nameController = TextEditingController(text: widget.appState.userName);
+    emailController = TextEditingController(text: widget.appState.userEmail);
+    ageController = TextEditingController(
+        text: widget.appState.userAge > 0
+            ? widget.appState.userAge.toString()
+            : '');
+    selectedGender = widget.appState.userGender;
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    ageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Row(
+        children: [
+          Icon(Icons.person, color: Colors.blue),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Profile Settings',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  prefixIcon: Icon(Icons.person),
+                  border: OutlineInputBorder(),
+                ),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email (Optional)',
+                  prefixIcon: Icon(Icons.email),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: ageController,
+                decoration: const InputDecoration(
+                  labelText: 'Age',
+                  prefixIcon: Icon(Icons.cake),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Gender',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: _buildGenderOption('Male', Icons.male)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildGenderOption('Female', Icons.female)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildGenderOption('Other', Icons.person)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: widget.appState.isMinor
+                      ? Colors.orange.shade50
+                      : Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: widget.appState.isMinor
+                        ? Colors.orange.shade200
+                        : Colors.blue.shade200,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      widget.appState.isMinor ? Icons.school : Icons.person,
+                      color: widget.appState.isMinor
+                          ? Colors.orange.shade700
+                          : Colors.blue.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.appState.isMinor
+                            ? 'Young User Mode - Always consult with parents or guardians'
+                            : widget.appState.isYoungAdult
+                                ? 'Young Adult Mode - Building healthy habits for your future'
+                                : 'Adult Mode - Full access to all health features',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: widget.appState.isMinor
+                              ? Colors.orange.shade700
+                              : Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _saveProfile,
+          child: const Text('Save Changes'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenderOption(String gender, IconData icon) {
+    final isSelected = selectedGender == gender;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedGender = gender;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colorScheme.primary.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? colorScheme.primary
+                : colorScheme.outline.withOpacity(0.3),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected
+                  ? colorScheme.primary
+                  : colorScheme.onSurface.withOpacity(0.7),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              gender,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveProfile() async {
+    try {
+      int? age;
+      if (ageController.text.trim().isNotEmpty) {
+        age = int.tryParse(ageController.text.trim());
+        if (age == null || age < 1 || age > 150) {
+          _showErrorSnackBar('Please enter a valid age between 1 and 150');
+          return;
+        }
+      }
+
+      await widget.appState.setUserName(nameController.text.trim());
+      await widget.appState.setUserEmail(emailController.text.trim());
+
+      if (age != null) {
+        await widget.appState.setUserAge(age);
+      }
+
+      if (selectedGender.isNotEmpty) {
+        await widget.appState.setUserGender(selectedGender);
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error saving profile: $e');
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }
