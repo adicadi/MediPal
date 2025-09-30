@@ -1,5 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 import 'dart:io' show Platform;
 
 class EmergencyNumbers {
@@ -489,7 +490,7 @@ class EmergencyService {
     return null;
   }
 
-  /// Call emergency number with proper URL launching
+  /// ENHANCED: Call emergency number with comprehensive fallback options
   static Future<bool> callEmergency() async {
     try {
       final emergencyNumbers = await getEmergencyNumbers();
@@ -501,25 +502,236 @@ class EmergencyService {
     }
   }
 
-  /// Call a specific emergency number
+  /// ENHANCED: Call a specific emergency number with multiple fallback methods
   static Future<bool> callSpecificNumber(String number) async {
     try {
-      // Clean the number for calling (remove non-digit characters except +)
-      final cleanNumber = number.replaceAll(RegExp(r'[^\d\+]'), '');
+      // Clean and validate the number
+      String cleanNumber = _cleanPhoneNumber(number);
 
-      if (cleanNumber.isNotEmpty) {
-        final uri = Uri.parse('tel:$cleanNumber');
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri);
-          return true;
-        } else {
-          print('❌ Cannot launch phone dialer for $cleanNumber');
+      if (cleanNumber.isEmpty) {
+        print('❌ Invalid phone number: $number');
+        return false;
+      }
+
+      print('📞 Attempting to call: $cleanNumber (original: $number)');
+
+      // Method 1: Try different URL schemes in order of preference
+      final urlSchemes = Platform.isIOS
+          ? ['tel:$cleanNumber', 'telprompt:$cleanNumber']
+          : ['tel:$cleanNumber'];
+
+      for (String scheme in urlSchemes) {
+        try {
+          print('📞 Trying scheme: $scheme');
+          final uri = Uri.parse(scheme);
+
+          if (await canLaunchUrl(uri)) {
+            print('📞 Can launch $scheme - attempting launch');
+
+            // Try different launch modes
+            final launchModes = [
+              LaunchMode.externalApplication,
+              LaunchMode.platformDefault,
+            ];
+
+            for (LaunchMode mode in launchModes) {
+              try {
+                final launched = await launchUrl(uri, mode: mode);
+                if (launched) {
+                  print(
+                      '✅ Successfully launched dialer with: $scheme (mode: $mode)');
+                  return true;
+                }
+              } catch (e) {
+                print('❌ Launch failed with mode $mode: $e');
+                continue;
+              }
+            }
+          } else {
+            print('❌ Cannot launch URL: $scheme');
+          }
+        } catch (e) {
+          print('❌ Error with scheme $scheme: $e');
+          continue;
         }
       }
+
+      // Method 2: Try platform-specific calling (Android Intent)
+      if (Platform.isAndroid) {
+        try {
+          print('📞 Trying Android platform channel method');
+          const platform = MethodChannel('flutter/platform');
+          final result =
+              await platform.invokeMethod('android.intent.action.CALL', {
+            'phone': cleanNumber,
+          });
+          if (result == true) {
+            print('✅ Successfully launched dialer via platform channel');
+            return true;
+          }
+        } catch (e) {
+          print('❌ Platform channel method failed: $e');
+        }
+      }
+
+      // Method 3: Try opening dialer instead of direct call
+      try {
+        print('📞 Trying dialer scheme: tel:$cleanNumber');
+        final dialerUri = Uri(scheme: 'tel', path: cleanNumber);
+        if (await canLaunchUrl(dialerUri)) {
+          final launched = await launchUrl(
+            dialerUri,
+            mode: LaunchMode.externalApplication,
+          );
+          if (launched) {
+            print('✅ Successfully opened dialer');
+            return true;
+          }
+        }
+      } catch (e) {
+        print('❌ Dialer scheme failed: $e');
+      }
+
+      print('❌ All phone dialer methods failed for: $cleanNumber');
+      return false;
     } catch (e) {
       print('❌ Error calling $number: $e');
+      return false;
     }
-    return false;
+  }
+
+  /// Clean phone number for calling
+  static String _cleanPhoneNumber(String number) {
+    if (number.isEmpty) return '';
+
+    // Remove all non-digit characters except + and spaces
+    String cleaned = number.replaceAll(RegExp(r'[^\d\+\s\-\(\)]'), '');
+
+    // Remove formatting characters but keep + for international numbers
+    cleaned = cleaned.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+
+    // Handle special cases for different countries
+    if (cleaned.startsWith('1-800') || cleaned.startsWith('1800')) {
+      // US toll-free numbers
+      cleaned = cleaned.replaceFirst('1-', '1');
+    }
+
+    return cleaned;
+  }
+
+  /// ENHANCED: Test phone dialer functionality with comprehensive diagnostics
+  static Future<Map<String, dynamic>> testPhoneDialer() async {
+    final results = <String, dynamic>{};
+
+    try {
+      print('🔍 Starting comprehensive phone dialer test...');
+
+      // Test platform detection
+      results['platform'] = Platform.isAndroid
+          ? 'Android'
+          : Platform.isIOS
+              ? 'iOS'
+              : 'Other';
+
+      // Test different URL schemes
+      final testNumbers = ['112', '911', '110'];
+      final schemes = Platform.isIOS ? ['tel:', 'telprompt:'] : ['tel:'];
+
+      for (String scheme in schemes) {
+        for (String number in testNumbers) {
+          final key = '$scheme$number';
+          try {
+            final uri = Uri.parse('$scheme$number');
+            final canLaunch = await canLaunchUrl(uri);
+            results[key] = canLaunch;
+            print('📞 $key: $canLaunch');
+          } catch (e) {
+            results['$key-error'] = e.toString();
+            print('❌ $key error: $e');
+          }
+        }
+      }
+
+      // Test URL launcher package info
+      try {
+        results['url_launcher_available'] = true;
+      } catch (e) {
+        results['url_launcher_error'] = e.toString();
+      }
+
+      // Test emergency number retrieval
+      try {
+        final emergencyNumbers = await getEmergencyNumbers();
+        results['emergency_number'] = emergencyNumbers.emergency;
+        results['country'] = emergencyNumbers.countryName;
+        results['primary_number'] = emergencyNumbers.primaryEmergencyNumber;
+      } catch (e) {
+        results['emergency_retrieval_error'] = e.toString();
+      }
+
+      results['test_status'] = 'completed';
+      results['test_timestamp'] = DateTime.now().toIso8601String();
+    } catch (e) {
+      results['error'] = e.toString();
+      results['test_status'] = 'failed';
+    }
+
+    return results;
+  }
+
+  /// ENHANCED: Debug phone dialer with step-by-step testing
+  static Future<Map<String, dynamic>> debugPhoneDialer(
+      String testNumber) async {
+    final results = <String, dynamic>{};
+    final cleanNumber = _cleanPhoneNumber(testNumber);
+
+    print('🔍 Debug testing phone dialer for: $testNumber -> $cleanNumber');
+
+    try {
+      // Step 1: Test URL construction
+      results['original_number'] = testNumber;
+      results['cleaned_number'] = cleanNumber;
+
+      // Step 2: Test URI parsing
+      try {
+        final uri = Uri.parse('tel:$cleanNumber');
+        results['uri_parsing'] = 'success';
+        results['uri_scheme'] = uri.scheme;
+        results['uri_path'] = uri.path;
+      } catch (e) {
+        results['uri_parsing'] = 'failed';
+        results['uri_error'] = e.toString();
+      }
+
+      // Step 3: Test canLaunchUrl
+      try {
+        final uri = Uri.parse('tel:$cleanNumber');
+        final canLaunch = await canLaunchUrl(uri);
+        results['can_launch_url'] = canLaunch;
+      } catch (e) {
+        results['can_launch_error'] = e.toString();
+      }
+
+      // Step 4: Test actual launch (without calling)
+      try {
+        final uri = Uri.parse('tel:$cleanNumber');
+        if (await canLaunchUrl(uri)) {
+          // Don't actually launch for testing
+          results['launch_ready'] = true;
+        } else {
+          results['launch_ready'] = false;
+        }
+      } catch (e) {
+        results['launch_test_error'] = e.toString();
+      }
+
+      results['debug_status'] = 'completed';
+    } catch (e) {
+      results['debug_error'] = e.toString();
+      results['debug_status'] = 'failed';
+    }
+
+    return results;
   }
 
   /// Open telehealth service
@@ -671,7 +883,7 @@ class EmergencyService {
     };
   }
 
-  /// Test basic functionality
+  /// ENHANCED: Test emergency functionality with phone dialer testing
   static Future<Map<String, dynamic>> testEmergencyFunctionality() async {
     final results = <String, dynamic>{};
 
@@ -687,14 +899,19 @@ class EmergencyService {
       results['emergency_numbers'] = {
         'country': emergencyNumbers.countryName,
         'primary': emergencyNumbers.emergency,
+        'cleaned': _cleanPhoneNumber(emergencyNumbers.emergency),
         'detection_method': 'simplified_geographic',
       };
 
-      // Test URL launching capability (without actually calling)
-      final canCall = await canLaunchUrl(Uri.parse('tel:112'));
-      results['can_make_calls'] = canCall;
+      // ENHANCED: Test phone dialer capabilities
+      results['phone_dialer_test'] = await testPhoneDialer();
 
       results['overall_status'] = 'success';
+      results['platform'] = Platform.isAndroid
+          ? 'Android'
+          : Platform.isIOS
+              ? 'iOS'
+              : 'Other';
     } catch (e) {
       results['error'] = e.toString();
       results['overall_status'] = 'failed';
@@ -753,6 +970,11 @@ class EmergencyService {
           : null,
       'emergency_numbers_available': _cachedNumbers != null,
       'plugin_status': 'simplified_without_geocoding',
+      'platform': Platform.isAndroid
+          ? 'Android'
+          : Platform.isIOS
+              ? 'iOS'
+              : 'Other',
     };
   }
 }

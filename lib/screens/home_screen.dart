@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:provider/provider.dart';
 import '../utils/app_state.dart';
 import '../widgets/health_summary_card.dart';
@@ -819,7 +820,7 @@ ${appState.ageAppropriateDisclaimer}
             maxHeight: MediaQuery.of(context).size.height * 0.6,
           ),
           child: SingleChildScrollView(
-            child: SelectionArea(child: Text(insights)),
+            child: SelectionArea(child: TexMarkdown((insights))),
           ),
         ),
         actions: [

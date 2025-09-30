@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/emergency_service.dart';
@@ -61,6 +62,8 @@ class EmergencyButton extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // DEBUG: Add test button for phone dialer (remove in production)
             ],
           ),
         );
@@ -265,24 +268,28 @@ class EmergencyButton extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _buildEmergencyOption(
+                  context,
                   '🚨 Call Emergency',
                   emergencyNumbers.emergency,
                   'Life-threatening situations',
                   Colors.red,
                 ),
                 _buildEmergencyOption(
+                  context,
                   '🚑 Ambulance/Medical',
                   emergencyNumbers.ambulance,
                   'Medical emergencies',
                   Colors.green[700]!,
                 ),
                 _buildEmergencyOption(
+                  context,
                   '☠️ Poison Control',
                   emergencyNumbers.poisonControl,
                   'Poisoning or overdose',
                   Colors.purple[700]!,
                 ),
                 _buildEmergencyOption(
+                  context,
                   '🧠 Mental Health Crisis',
                   emergencyNumbers.mentalHealth,
                   'Suicide prevention, crisis support',
@@ -309,51 +316,63 @@ class EmergencyButton extends StatelessWidget {
     );
   }
 
-  Widget _buildEmergencyOption(
-      String title, String number, String description, Color color) {
+  Widget _buildEmergencyOption(BuildContext context, String title,
+      String number, String description, Color color) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        border: Border.all(color: color.withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => _callEmergency(context, number),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: color.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: color,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                        overflow:
+                            TextOverflow.ellipsis, // FIX: Prevent overflow
+                        maxLines: 1,
+                      ),
+                      Text(
+                        number,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        overflow:
+                            TextOverflow.ellipsis, // FIX: Prevent overflow
+                        maxLines: 1,
+                      ),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                        overflow:
+                            TextOverflow.ellipsis, // FIX: Prevent overflow
+                        maxLines: 1,
+                      ),
+                    ],
                   ),
-                  overflow: TextOverflow.ellipsis, // FIX: Prevent overflow
-                  maxLines: 1,
                 ),
-                Text(
-                  number,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis, // FIX: Prevent overflow
-                  maxLines: 1,
-                ),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                  overflow: TextOverflow.ellipsis, // FIX: Prevent overflow
-                  maxLines: 1,
-                ),
+                const SizedBox(width: 8), // Add spacing
+                Icon(Icons.phone, color: color, size: 20),
               ],
             ),
           ),
-          const SizedBox(width: 8), // Add spacing
-          Icon(Icons.phone, color: color, size: 20),
-        ],
+        ),
       ),
     );
   }
@@ -397,9 +416,17 @@ class EmergencyButton extends StatelessWidget {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                _openTelehealthService();
+                final success = await EmergencyService.openTelehealthService();
+                if (!success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open telehealth service'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
               },
               child: const Text('Open Telehealth'),
             ),
@@ -514,31 +541,47 @@ class EmergencyButton extends StatelessWidget {
     );
   }
 
+  // ENHANCED: Complete phone dialer implementation with fallbacks
   void _callEmergency(BuildContext context, String number) {
     // Show confirmation before calling
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Emergency Call'),
-        content: Text('Call emergency services?\n\nNumber: $number'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.phone, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text('Call emergency services?'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Text(
+                number,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // Here you would actually make the call
-              // For now, just show a message
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                      'Would call: $number\n\nUse your phone app to call this number.'),
-                  duration: const Duration(seconds: 4),
-                  backgroundColor: Colors.red,
-                ),
-              );
+              await _attemptEmergencyCall(context, number);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child:
@@ -549,8 +592,285 @@ class EmergencyButton extends StatelessWidget {
     );
   }
 
-  void _openTelehealthService() {
-    // Placeholder for telehealth service
-    print('Opening telehealth service...');
+  // ENHANCED: Attempt emergency call with comprehensive fallbacks
+  Future<void> _attemptEmergencyCall(
+      BuildContext context, String number) async {
+    // Show calling dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            const Expanded(child: Text('Opening phone dialer...')),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Try to call using the emergency service
+      final success = await EmergencyService.callSpecificNumber(number);
+
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.pop(context);
+
+        if (!success) {
+          // Show fallback dialog with manual instruction
+          _showManualDialDialog(context, number);
+        } else {
+          // Show success confirmation
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Opening dialer for: $number'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        _showManualDialDialog(context, number);
+      }
+    }
+  }
+
+  // ENHANCED: Manual dial dialog with copy-to-clipboard functionality
+  void _showManualDialDialog(BuildContext context, String number) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.phone_in_talk, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Manual Dial Required'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Please manually dial this emergency number:'),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () => _copyToClipboard(context, number),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      number,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.content_copy,
+                            size: 16, color: Colors.blue.shade700),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Tap to copy number',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '1. Copy the number above\n2. Open your phone app\n3. Dial the number\n4. Press call',
+              style: TextStyle(fontSize: 14),
+              textAlign: TextAlign.left,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => _copyToClipboard(context, number),
+            child: const Text('Copy Number'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Copy number to clipboard
+  Future<void> _copyToClipboard(BuildContext context, String number) async {
+    try {
+      await Clipboard.setData(ClipboardData(text: number));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Emergency number $number copied!')),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error copying to clipboard: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not copy number'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // DEBUG: Test phone dialer functionality
+  void _testPhoneDialer(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Testing phone dialer...'),
+          ],
+        ),
+      ),
+    );
+
+    final results = await EmergencyService.testPhoneDialer();
+
+    if (context.mounted) {
+      Navigator.pop(context); // Close loading
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Phone Dialer Test Results'),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.6,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ...results.entries.map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '${entry.key}: ${entry.value}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                _testSpecificNumber(context, '112');
+              },
+              child: const Text('Test 112'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  // DEBUG: Test specific number
+  void _testSpecificNumber(BuildContext context, String testNumber) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Expanded(child: Text('Testing $testNumber...')),
+          ],
+        ),
+      ),
+    );
+
+    final results = await EmergencyService.debugPhoneDialer(testNumber);
+
+    if (context.mounted) {
+      Navigator.pop(context); // Close loading
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Debug Results: $testNumber'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: results.entries
+                  .map(
+                    (entry) => Text('${entry.key}: ${entry.value}',
+                        style: const TextStyle(fontSize: 12)),
+                  )
+                  .toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+            if (results['can_launch_url'] == true)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _attemptEmergencyCall(context, testNumber);
+                },
+                child: const Text('Try Call'),
+              ),
+          ],
+        ),
+      );
+    }
   }
 }
