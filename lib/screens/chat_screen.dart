@@ -14,19 +14,58 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
+
+  // OPTIMIZED: Enhanced state management for streaming
   bool _isLoading = false;
+  bool _isStreaming = false;
   bool _showHistory = false;
+  String _streamingContent = '';
   List<Map<String, dynamic>> _chatSessions = [];
+
+  // OPTIMIZED: Animation controllers for better UX
+  late AnimationController _typingAnimationController;
+  late Animation<double> _typingAnimation;
+
+  // OPTIMIZED: Quick action buttons for common queries
+  final List<Map<String, String>> _quickActions = [
+    {'icon': 'help_outline', 'label': 'Help', 'message': 'help'},
+    {'icon': 'emergency', 'label': 'Emergency', 'message': 'emergency'},
+    {
+      'icon': 'medication',
+      'label': 'Medications',
+      'message': 'Tell me about medication safety'
+    },
+    {
+      'icon': 'health_and_safety',
+      'label': 'Symptoms',
+      'message': 'I have some symptoms I\'d like to discuss'
+    },
+  ];
 
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
     _initializeChat();
     _loadChatHistory();
+  }
+
+  void _initializeAnimations() {
+    _typingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _typingAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _typingAnimationController,
+      curve: Curves.easeInOut,
+    ));
   }
 
   void _initializeChat() {
@@ -51,7 +90,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _loadChatHistory() async {
     final sessions = await ChatHistoryService.getChatSessions();
     setState(() {
-      _chatSessions = sessions.reversed.toList(); // Show newest first
+      _chatSessions = sessions.reversed.toList();
     });
   }
 
@@ -62,7 +101,25 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_showHistory ? 'Chat History' : 'AI Chat'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_showHistory ? 'Chat History' : 'PersonalMedAI Chat'),
+            if (!_showHistory) ...[
+              Text(
+                _isStreaming
+                    ? '✨ Responding...'
+                    : _isLoading
+                        ? '🤔 Thinking...'
+                        : '💬 Ready to help',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color:
+                      _isStreaming || _isLoading ? Colors.orange : Colors.green,
+                ),
+              ),
+            ],
+          ],
+        ),
         backgroundColor: colorScheme.primaryContainer,
         actions: [
           IconButton(
@@ -85,35 +142,26 @@ class _ChatScreenState extends State<ChatScreen> {
               onSelected: _handleMenuAction,
               itemBuilder: (context) => [
                 const PopupMenuItem(
-                  value: 'export',
-                  child: Row(
-                    children: [
+                    value: 'export',
+                    child: Row(children: [
                       Icon(Icons.download),
                       SizedBox(width: 8),
-                      Text('Export Chat'),
-                    ],
-                  ),
-                ),
+                      Text('Export Chat')
+                    ])),
                 const PopupMenuItem(
-                  value: 'share',
-                  child: Row(
-                    children: [
+                    value: 'share',
+                    child: Row(children: [
                       Icon(Icons.share),
                       SizedBox(width: 8),
-                      Text('Share Chat'),
-                    ],
-                  ),
-                ),
+                      Text('Share Chat')
+                    ])),
                 const PopupMenuItem(
-                  value: 'clear',
-                  child: Row(
-                    children: [
+                    value: 'clear',
+                    child: Row(children: [
                       Icon(Icons.clear_all),
                       SizedBox(width: 8),
-                      Text('Clear Chat'),
-                    ],
-                  ),
-                ),
+                      Text('Clear Chat')
+                    ])),
               ],
             ),
           ],
@@ -128,13 +176,24 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Column(
       children: [
+        // OPTIMIZED: Quick actions bar for instant responses
+        if (!_isStreaming && !_isLoading) _buildQuickActionsBar(),
+
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
             padding: const EdgeInsets.all(16),
-            itemCount: _messages.length + (_isLoading ? 1 : 0),
+            itemCount: _messages.length +
+                (_isStreaming ? 1 : 0) +
+                (_isLoading && !_isStreaming ? 1 : 0),
             itemBuilder: (context, index) {
-              if (index == _messages.length && _isLoading) {
+              // Show streaming message
+              if (_isStreaming && index == _messages.length) {
+                return _buildStreamingBubble();
+              }
+
+              // Show loading indicator
+              if (_isLoading && !_isStreaming && index == _messages.length) {
                 return const TypingIndicator(showIndicator: true);
               }
 
@@ -146,13 +205,13 @@ class _ChatScreenState extends State<ChatScreen> {
             },
           ),
         ),
+
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: colorScheme.surface,
             border: Border(
-              top: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
-            ),
+                top: BorderSide(color: colorScheme.outline.withOpacity(0.2))),
           ),
           child: Row(
             children: [
@@ -160,30 +219,148 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: TextField(
                   controller: _messageController,
                   decoration: InputDecoration(
-                    hintText: 'Type your message...',
+                    hintText: _isStreaming || _isLoading
+                        ? 'Please wait...'
+                        : 'Type your message...',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                        borderRadius: BorderRadius.circular(24)),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                   maxLines: null,
+                  enabled: !_isStreaming && !_isLoading,
                   textCapitalization: TextCapitalization.sentences,
                   onSubmitted: (_) => _sendMessage(),
                 ),
               ),
               const SizedBox(width: 8),
               FloatingActionButton(
-                onPressed: _sendMessage,
+                onPressed: (_isStreaming || _isLoading) ? null : _sendMessage,
                 mini: true,
-                child: const Icon(Icons.send),
+                child: _isStreaming || _isLoading
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.send),
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  // OPTIMIZED: Quick actions for instant responses
+  Widget _buildQuickActionsBar() {
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _quickActions.length,
+        itemBuilder: (context, index) {
+          final action = _quickActions[index];
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ActionChip(
+              avatar: Icon(_getIconData(action['icon']!), size: 16),
+              label: Text(action['label']!),
+              onPressed: () => _sendQuickMessage(action['message']!),
+              backgroundColor: Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withOpacity(0.3),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // OPTIMIZED: Streaming response bubble
+  Widget _buildStreamingBubble() {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8, right: 80),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(18).copyWith(
+            bottomLeft: const Radius.circular(4),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_streamingContent.isNotEmpty) ...[
+              SelectionArea(
+                child: TexMarkdown(
+                  _streamingContent,
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+
+            // Typing indicator
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'PersonalMedAI is typing',
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    fontSize: 12,
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                AnimatedBuilder(
+                  animation: _typingAnimation,
+                  builder: (context, child) {
+                    return Row(
+                      children: List.generate(3, (index) {
+                        final delay = index * 0.3;
+                        final value = (_typingAnimation.value + delay) % 1.0;
+                        final opacity =
+                            (Curves.easeInOut.transform(value) * 0.8 + 0.2)
+                                .clamp(0.0, 1.0);
+
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: colorScheme.onSurfaceVariant
+                                .withOpacity(opacity),
+                            shape: BoxShape.circle,
+                          ),
+                        );
+                      }),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -195,15 +372,11 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Icon(Icons.history, size: 64, color: Colors.grey),
             SizedBox(height: 16),
-            Text(
-              'No chat history yet',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
+            Text('No chat history yet',
+                style: TextStyle(fontSize: 18, color: Colors.grey)),
             SizedBox(height: 8),
-            Text(
-              'Start a conversation to see your chat history here',
-              style: TextStyle(color: Colors.grey),
-            ),
+            Text('Start a conversation to see your chat history here',
+                style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
@@ -228,17 +401,14 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  preview.length > 50
-                      ? '${preview.substring(0, 50)}...'
-                      : preview,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                    preview.length > 50
+                        ? '${preview.substring(0, 50)}...'
+                        : preview,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
-                Text(
-                  _formatDate(sessionTime),
-                  style: const TextStyle(fontSize: 12),
-                ),
+                Text(_formatDate(sessionTime),
+                    style: const TextStyle(fontSize: 12)),
               ],
             ),
             leading: const CircleAvatar(child: Icon(Icons.chat)),
@@ -247,45 +417,33 @@ class _ChatScreenState extends State<ChatScreen> {
                   _handleHistoryAction(value, index, session),
               itemBuilder: (context) => [
                 const PopupMenuItem(
-                  value: 'load',
-                  child: Row(
-                    children: [
+                    value: 'load',
+                    child: Row(children: [
                       Icon(Icons.restore),
                       SizedBox(width: 8),
-                      Text('Load Chat'),
-                    ],
-                  ),
-                ),
+                      Text('Load Chat')
+                    ])),
                 const PopupMenuItem(
-                  value: 'export',
-                  child: Row(
-                    children: [
+                    value: 'export',
+                    child: Row(children: [
                       Icon(Icons.download),
                       SizedBox(width: 8),
-                      Text('Export'),
-                    ],
-                  ),
-                ),
+                      Text('Export')
+                    ])),
                 const PopupMenuItem(
-                  value: 'share',
-                  child: Row(
-                    children: [
+                    value: 'share',
+                    child: Row(children: [
                       Icon(Icons.share),
                       SizedBox(width: 8),
-                      Text('Share'),
-                    ],
-                  ),
-                ),
+                      Text('Share')
+                    ])),
                 const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
+                    value: 'delete',
+                    child: Row(children: [
                       Icon(Icons.delete, color: Colors.red),
                       SizedBox(width: 8),
-                      Text('Delete', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
+                      Text('Delete', style: TextStyle(color: Colors.red))
+                    ])),
               ],
             ),
             onTap: () => _handleHistoryAction('load', index, session),
@@ -295,66 +453,141 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  // OPTIMIZED: Send quick message with instant response
+  void _sendQuickMessage(String message) {
+    _messageController.text = message;
+    _sendMessage();
+  }
+
+  // OPTIMIZED: Enhanced message sending with streaming support
   void _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isStreaming || _isLoading) return;
 
+    // Clear input immediately for better UX
+    _messageController.clear();
+
+    // Add user message instantly
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true));
-      _isLoading = true;
     });
-
-    _messageController.clear();
     _scrollToBottom();
 
-    await Future.delayed(const Duration(milliseconds: 300));
-
     try {
-      final deepSeekService = Provider.of<DeepSeekService>(
-        context,
-        listen: false,
-      );
+      final deepSeekService =
+          Provider.of<DeepSeekService>(context, listen: false);
+
+      // Check if quick response is available
+      final quickResponse = deepSeekService.getQuickResponse(text);
+      if (quickResponse != null) {
+        // Show brief loading for natural feel
+        setState(() {
+          _isLoading = true;
+        });
+        await Future.delayed(const Duration(milliseconds: 600));
+
+        setState(() {
+          _messages.add(ChatMessage(text: quickResponse, isUser: false));
+          _isLoading = false;
+        });
+        _scrollToBottom();
+        return;
+      }
+
+      // Use streaming for better UX
+      setState(() {
+        _isStreaming = true;
+        _streamingContent = '';
+      });
+
+      _typingAnimationController.repeat();
+      _scrollToBottom();
 
       final conversationHistory = _messages
-          .map(
-            (message) => {
-              'isUser': message.isUser.toString(),
-              'text': message.text,
-            },
-          )
+          .map((message) => {
+                'isUser': message.isUser.toString(),
+                'text': message.text,
+              })
           .toList();
 
-      final response = await deepSeekService.sendChatMessage(
-        conversationHistory,
-      );
+      // Try streaming first
+      bool hasStreamedContent = false;
+      await for (final chunk
+          in deepSeekService.streamChatResponse(conversationHistory)) {
+        setState(() {
+          _streamingContent = chunk;
+          hasStreamedContent = true;
+        });
+        _scrollToBottom();
+      }
 
-      setState(() {
-        _messages.add(ChatMessage(text: response, isUser: false));
-        _isLoading = false;
-      });
+      // Add final message to history
+      if (hasStreamedContent && _streamingContent.isNotEmpty) {
+        setState(() {
+          _messages.add(ChatMessage(text: _streamingContent, isUser: false));
+        });
+      } else {
+        // Fallback to regular API if streaming failed
+        setState(() {
+          _isLoading = true;
+        });
+        final response =
+            await deepSeekService.sendChatMessage(conversationHistory);
+        setState(() {
+          _messages.add(ChatMessage(text: response, isUser: false));
+        });
+      }
     } catch (e) {
       setState(() {
         _messages.add(
           ChatMessage(
             text:
-                'I\'m experiencing high demand. Please try again in a moment.',
+                'I\'m experiencing high demand. Please try again in a moment. 🔄',
             isUser: false,
           ),
         );
-        _isLoading = false;
       });
+    } finally {
+      setState(() {
+        _isLoading = false;
+        _isStreaming = false;
+        _streamingContent = '';
+      });
+      _typingAnimationController.stop();
+      _scrollToBottom();
     }
+  }
 
-    _scrollToBottom();
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'help_outline':
+        return Icons.help_outline;
+      case 'emergency':
+        return Icons.emergency;
+      case 'medication':
+        return Icons.medication;
+      case 'health_and_safety':
+        return Icons.health_and_safety;
+      default:
+        return Icons.help_outline;
+    }
   }
 
   void _copyMessage(String text) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Message copied to clipboard'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.copy, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Message copied to clipboard'),
+            ],
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
     }
@@ -365,7 +598,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final sessionName =
         'Chat ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year} ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}';
-
     await ChatHistoryService.saveChatSession(_messages, sessionName);
 
     if (mounted) {
@@ -393,10 +625,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _handleHistoryAction(
-    String action,
-    int index,
-    Map<String, dynamic> session,
-  ) async {
+      String action, int index, Map<String, dynamic> session) async {
     switch (action) {
       case 'load':
         final messages = await ChatHistoryService.loadChatSession(session);
@@ -409,9 +638,7 @@ class _ChatScreenState extends State<ChatScreen> {
       case 'export':
         final messages = await ChatHistoryService.loadChatSession(session);
         final filePath = await ChatHistoryService.exportChatToFile(
-          messages,
-          session['name'],
-        );
+            messages, session['name']);
         _showExportSuccess(filePath);
         break;
       case 'share':
@@ -427,12 +654,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _exportCurrentChat() async {
     if (_messages.length <= 1) return;
-
     final sessionName = 'Current_Chat';
-    final filePath = await ChatHistoryService.exportChatToFile(
-      _messages,
-      sessionName,
-    );
+    final filePath =
+        await ChatHistoryService.exportChatToFile(_messages, sessionName);
     _showExportSuccess(filePath);
   }
 
@@ -454,9 +678,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _shareChat(
-    List<ChatMessage> messages,
-    String sessionName,
-  ) async {
+      List<ChatMessage> messages, String sessionName) async {
     if (messages.length <= 1) return;
 
     final buffer = StringBuffer();
@@ -471,10 +693,8 @@ class _ChatScreenState extends State<ChatScreen> {
       buffer.writeln();
     }
 
-    await Share.share(
-      buffer.toString(),
-      subject: 'PersonalMedAI Chat - $sessionName',
-    );
+    await Share.share(buffer.toString(),
+        subject: 'PersonalMedAI Chat - $sessionName');
   }
 
   void _clearCurrentChat() {
@@ -515,10 +735,12 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _typingAnimationController.dispose();
     super.dispose();
   }
 }
 
+// Keep your existing ChatBubble, ChatMessage, and TypingIndicator classes unchanged
 class ChatBubble extends StatelessWidget {
   final ChatMessage message;
   final VoidCallback? onCopy;
@@ -538,8 +760,7 @@ class ChatBubble extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.75,
-          ),
+              maxWidth: MediaQuery.of(context).size.width * 0.75),
           decoration: BoxDecoration(
             color: message.isUser
                 ? colorScheme.primary
@@ -552,7 +773,6 @@ class ChatBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Use GptMarkdown for AI responses, regular Text for user messages
               message.isUser
                   ? Text(
                       message.text,
@@ -568,11 +788,10 @@ class ChatBubble extends StatelessWidget {
                         style: TextStyle(
                           color: colorScheme.onSurfaceVariant,
                           fontSize: 14,
-                          height: 1.4, // Add line height for better readability
+                          height: 1.4,
                         ),
                       ),
                     ),
-
               if (!message.isUser) ...[
                 const SizedBox(height: 4),
                 Row(
@@ -613,7 +832,6 @@ class ChatBubble extends StatelessWidget {
   }
 }
 
-// Keep your existing ChatMessage and TypingIndicator classes
 class ChatMessage {
   final String text;
   final bool isUser;
@@ -655,9 +873,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    if (!widget.showIndicator) {
-      return const SizedBox.shrink();
-    }
+    if (!widget.showIndicator) return const SizedBox.shrink();
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -666,9 +882,8 @@ class _TypingIndicatorState extends State<TypingIndicator>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: colorScheme.surfaceVariant,
-          borderRadius: BorderRadius.circular(
-            18,
-          ).copyWith(bottomLeft: const Radius.circular(4)),
+          borderRadius: BorderRadius.circular(18)
+              .copyWith(bottomLeft: const Radius.circular(4)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -690,19 +905,16 @@ class _TypingIndicatorState extends State<TypingIndicator>
                     final delay = index * 0.3;
                     final value = (_animationController.value + delay) % 1.0;
                     final opacity =
-                        (Curves.easeInOut.transform(value) * 0.8 + 0.2).clamp(
-                      0.0,
-                      1.0,
-                    );
+                        (Curves.easeInOut.transform(value) * 0.8 + 0.2)
+                            .clamp(0.0, 1.0);
 
                     return Container(
                       margin: const EdgeInsets.symmetric(horizontal: 1.5),
                       width: 6,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: colorScheme.onSurfaceVariant.withOpacity(
-                          opacity,
-                        ),
+                        color:
+                            colorScheme.onSurfaceVariant.withOpacity(opacity),
                         shape: BoxShape.circle,
                       ),
                     );

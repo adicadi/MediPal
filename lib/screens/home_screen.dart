@@ -29,24 +29,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'PersonalMedAI',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.psychology,
+                color: colorScheme.primary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'PersonalMedAI',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              _showProfileDialog(context);
-            },
+            onPressed: () => _showProfileDialog(context),
             icon: const Icon(Icons.account_circle),
             tooltip: 'Profile',
           ),
           IconButton(
-            onPressed: () {
-              _showSettingsDialog(context);
-            },
+            onPressed: () => _showSettingsDialog(context),
             icon: const Icon(Icons.settings),
             tooltip: 'Settings',
           ),
@@ -54,13 +67,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          // Refresh health data
-          await Future.delayed(const Duration(seconds: 1));
+          // Refresh health data and get new insights
+          await _getHealthInsights(context, showDialog: false);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Health data refreshed'),
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.refresh, color: Colors.white),
+                    SizedBox(width: 12),
+                    Text('Health data refreshed'),
+                  ],
+                ),
+                backgroundColor: Colors.green,
                 behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             );
           }
@@ -71,22 +94,25 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome Card
+              // Enhanced Welcome Card
               Consumer<AppState>(
                 builder: (context, appState, child) {
                   return Card(
-                    elevation: 3,
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            colorScheme.primaryContainer.withOpacity(0.5),
-                            colorScheme.secondaryContainer.withOpacity(0.3),
+                            colorScheme.primaryContainer.withOpacity(0.8),
+                            colorScheme.secondaryContainer.withOpacity(0.6),
                           ],
                         ),
                       ),
@@ -97,10 +123,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${_getGreeting()}, ${appState.userName}!',
+                                  '${_getGreeting()}, ${appState.userName.isNotEmpty ? appState.userName : 'there'}!',
                                   style:
                                       theme.textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.bold,
                                     color: colorScheme.onPrimaryContainer,
                                   ),
                                 ),
@@ -112,19 +138,40 @@ class _HomeScreenState extends State<HomeScreen> {
                                         .withOpacity(0.8),
                                   ),
                                 ),
+                                const SizedBox(height: 12),
+                                // Quick stats
+                                Row(
+                                  children: [
+                                    _buildQuickStat(
+                                      '${appState.medications.length}',
+                                      'Medications',
+                                      Icons.medication,
+                                      colorScheme,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    _buildQuickStat(
+                                      appState.symptomAnalysis.isNotEmpty
+                                          ? '1'
+                                          : '0',
+                                      'Consultations',
+                                      Icons.chat,
+                                      colorScheme,
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: colorScheme.primary.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(24),
                             ),
                             child: Icon(
                               Icons.favorite,
                               color: colorScheme.primary,
-                              size: 32,
+                              size: 40,
                             ),
                           ),
                         ],
@@ -136,47 +183,53 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 24),
 
-              // Quick Actions Section
-              Text(
-                'Quick Actions',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+              // Enhanced Quick Actions Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Quick Actions',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  /*TextButton.icon(
+                    onPressed: () => Navigator.pushNamed(context, '/chat'),
+                    icon: const Icon(Icons.chat, size: 18),
+                    label: const Text('AI Chat'),
+                  ),*/
+                ],
               ),
               const SizedBox(height: 12),
 
               SizedBox(
-                height: 60,
+                height: 70,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    PillButton(
-                      text: 'Symptom Checker',
-                      icon: Icons.search,
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/symptoms');
-                      },
+                    _buildEnhancedPillButton(
+                      'Symptom Checker',
+                      Icons.search,
+                      Colors.blue,
+                      () => Navigator.pushNamed(context, '/symptoms'),
                     ),
-                    PillButton(
-                      text: 'Medication Info',
-                      icon: Icons.medication,
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/medications');
-                      },
+                    _buildEnhancedPillButton(
+                      'Medications',
+                      Icons.medication,
+                      Colors.green,
+                      () => Navigator.pushNamed(context, '/medications'),
                     ),
-                    PillButton(
-                      text: 'Emergency Guide',
-                      icon: Icons.emergency,
-                      onPressed: () {
-                        _showComingSoonDialog(context, 'Emergency Guide');
-                      },
-                    ),
-                    PillButton(
-                      text: 'My Records',
-                      icon: Icons.folder,
-                      onPressed: () {
-                        _showComingSoonDialog(context, 'My Records');
-                      },
+                    /*_buildEnhancedPillButton(
+                      'AI Chat',
+                      Icons.psychology,
+                      Colors.purple,
+                      () => Navigator.pushNamed(context, '/chat'),
+                    ),*/
+                    _buildEnhancedPillButton(
+                      'Emergency',
+                      Icons.emergency,
+                      Colors.red,
+                      () => _showEmergencyInfo(context),
                     ),
                   ],
                 ),
@@ -184,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 32),
 
-              // Health Summary Section
+              // Enhanced Health Summary Section
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -195,9 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   TextButton.icon(
-                    onPressed: () {
-                      _showHealthTips(context);
-                    },
+                    onPressed: () => _showHealthTips(context),
                     icon: const Icon(Icons.tips_and_updates, size: 18),
                     label: const Text('Tips'),
                   ),
@@ -210,43 +261,40 @@ class _HomeScreenState extends State<HomeScreen> {
                   return Column(
                     children: [
                       HealthSummaryCard(
-                        title: "Today's Insights",
-                        content: "Good sleep last night - 8.5 hours",
-                        subtitle: "Activity goal met: 10,000 steps",
+                        title: "AI Health Insights",
+                        content: "Get personalized health recommendations",
+                        subtitle: "Powered by PersonalMedAI",
                         icon: Icons.insights,
                         isLoading: _isGettingInsights,
                         onTap: () => _getHealthInsights(context),
                       ),
                       HealthSummaryCard(
-                        title: "Upcoming Medications",
+                        title: "Medications",
                         content: appState.medications.isNotEmpty
-                            ? "${appState.medications.first.name} - Next dose in 2 hours"
-                            : "No medications scheduled",
-                        subtitle: appState.medications.length > 1
-                            ? "${appState.medications.length} medications total"
-                            : appState.medications.isEmpty
-                                ? "Tap to add medications"
-                                : null,
-                        icon: Icons.schedule,
-                        onTap: () {
-                          Navigator.pushNamed(context, '/medications');
-                        },
+                            ? "${appState.medications.length} medication${appState.medications.length != 1 ? 's' : ''} tracked"
+                            : "No medications added yet",
+                        subtitle: appState.medications.isNotEmpty
+                            ? "Latest: ${appState.medications.last.name}"
+                            : "Tap to add your first medication",
+                        icon: Icons.medication,
+                        onTap: () =>
+                            Navigator.pushNamed(context, '/medications'),
                       ),
                       HealthSummaryCard(
-                        title: "Recent Consultations",
+                        title: "AI Consultations",
                         content: appState.symptomAnalysis.isNotEmpty
-                            ? "Last AI consultation: Today"
+                            ? "Recent consultation available"
                             : "No recent consultations",
                         subtitle: appState.symptomAnalysis.isNotEmpty
-                            ? "Tap to view analysis"
+                            ? "Tap to view last analysis"
                             : "Start your first consultation",
-                        icon: Icons.chat,
+                        icon: Icons.psychology,
                         onTap: () {
                           if (appState.symptomAnalysis.isNotEmpty) {
                             _showLastConsultation(
                                 context, appState.symptomAnalysis);
                           } else {
-                            Navigator.pushNamed(context, '/symptoms');
+                            Navigator.pushNamed(context, '/chat');
                           }
                         },
                       ),
@@ -260,30 +308,79 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      /*floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _startAIConsultation(context),
-        icon: const Icon(Icons.psychology),
-        label: const Text('Ask PersonalMedAI'),
-        elevation: 4,
-      ),*/
-
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () =>
-            Navigator.pushNamed(context, '/chat'), // Change this line
-        icon: const Icon(Icons.chat),
-        label: const Text('AI Chat'),
+        onPressed: () => Navigator.pushNamed(context, '/chat'),
+        icon: const Icon(Icons.psychology),
+        label: const Text('Ask AI'),
         elevation: 4,
       ),
     );
   }
 
+  // Enhanced pill button with colors
+  Widget _buildEnhancedPillButton(
+      String text, IconData icon, Color color, VoidCallback onPressed) {
+    return Container(
+      margin: const EdgeInsets.only(right: 12),
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 20, color: Colors.white),
+        label: Text(
+          text,
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          elevation: 3,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Quick stat widget
+  Widget _buildQuickStat(
+      String value, String label, IconData icon, ColorScheme colorScheme) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: colorScheme.onPrimaryContainer.withOpacity(0.7),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$value $label',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: colorScheme.onPrimaryContainer.withOpacity(0.8),
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showProfileDialog(BuildContext context) {
     final appState = Provider.of<AppState>(context, listen: false);
+    final nameController = TextEditingController(text: appState.userName);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Profile Settings'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.person, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Profile Settings'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -291,11 +388,30 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: const InputDecoration(
                 labelText: 'Your Name',
                 prefixIcon: Icon(Icons.person),
+                border: OutlineInputBorder(),
               ),
-              controller: TextEditingController(text: appState.userName),
-              onChanged: (value) {
-                appState.setUserName(value);
-              },
+              controller: nameController,
+              onChanged: (value) => appState.setUserName(value),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info, color: Colors.blue),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Your name helps PersonalMedAI provide personalized responses.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -313,24 +429,78 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Settings'),
-        content: const Column(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.settings, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Settings'),
+          ],
+        ),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(Icons.notifications),
-              title: Text('Notifications'),
-              subtitle: Text('Coming soon'),
+              leading: const Icon(Icons.notifications),
+              title: const Text('Notifications'),
+              subtitle: const Text('Coming soon'),
+              onTap: () => _showComingSoonDialog(context, 'Notifications'),
             ),
             ListTile(
-              leading: Icon(Icons.security),
-              title: Text('Privacy'),
-              subtitle: Text('Coming soon'),
+              leading: const Icon(Icons.security),
+              title: const Text('Privacy'),
+              subtitle: const Text('Coming soon'),
+              onTap: () => _showComingSoonDialog(context, 'Privacy Settings'),
             ),
             ListTile(
-              leading: Icon(Icons.info),
-              title: Text('About'),
-              subtitle: Text('PersonalMedAI v1.0.0'),
+              leading: const Icon(Icons.info),
+              title: const Text('About'),
+              subtitle: const Text('PersonalMedAI v1.0.0'),
+              onTap: () => _showAboutDialog(context),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    Navigator.pop(context); // Close settings dialog first
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.psychology, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('About PersonalMedAI'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('PersonalMedAI v1.0.0'),
+            SizedBox(height: 8),
+            Text(
+                'Your personal AI health assistant powered by advanced language models.'),
+            SizedBox(height: 16),
+            Text('Features:', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('• AI-powered symptom analysis'),
+            Text('• Medication interaction checking'),
+            Text('• Health insights and tips'),
+            Text('• 24/7 AI chat support'),
+            SizedBox(height: 16),
+            Text(
+              '⚠️ This app provides information only and does not replace professional medical advice.',
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
             ),
           ],
         ),
@@ -348,17 +518,14 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(feature),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.construction,
-              size: 48,
-              color: Colors.orange,
-            ),
+            const Icon(Icons.construction, size: 48, color: Colors.orange),
             const SizedBox(height: 16),
-            Text('$feature feature is coming soon!'),
+            Text('$feature is coming soon!'),
             const SizedBox(height: 8),
             const Text(
               'We are working hard to bring you this feature.',
@@ -377,25 +544,82 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showLastConsultation(BuildContext context, String analysis) {
+  void _showEmergencyInfo(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Last Consultation'),
-        content: SingleChildScrollView(
-          child: Text(analysis),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.emergency, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Emergency Information'),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '🚨 CALL 911 IMMEDIATELY FOR:',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+              ),
+              SizedBox(height: 8),
+              Text('• Difficulty breathing or chest pain'),
+              Text('• Severe bleeding or major injuries'),
+              Text('• Loss of consciousness'),
+              Text('• Severe allergic reactions'),
+              Text('• Signs of stroke or heart attack'),
+              SizedBox(height: 16),
+              Text(
+                'Other Important Numbers:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('• Poison Control: 1-800-222-1222'),
+              Text('• Crisis Text Line: Text HOME to 741741'),
+              Text('• National Suicide Prevention: 988'),
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
           ),
+        ],
+      ),
+    );
+  }
+
+  void _showLastConsultation(BuildContext context, String analysis) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.psychology, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('Last Consultation'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: SelectionArea(child: Text(analysis)),
+        ),
+        actions: [
           TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, '/symptoms');
+              Navigator.pushNamed(context, '/chat');
             },
-            child: const Text('New Consultation'),
+            child: const Text('New Chat'),
           ),
         ],
       ),
@@ -406,7 +630,14 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Health Tips'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.tips_and_updates, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Health Tips'),
+          ],
+        ),
         content: const SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,6 +654,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Text('🧘‍♀️ Practice stress management and mindfulness'),
               SizedBox(height: 8),
               Text('👩‍⚕️ Regular check-ups with healthcare providers'),
+              SizedBox(height: 8),
+              Text('📱 Use PersonalMedAI for health questions anytime!'),
             ],
           ),
         ),
@@ -436,7 +669,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _getHealthInsights(BuildContext context) async {
+  // FIXED: Enhanced health insights method
+  Future<void> _getHealthInsights(BuildContext context,
+      {bool showDialog = true}) async {
     final appState = Provider.of<AppState>(context, listen: false);
     final deepSeekService =
         Provider.of<DeepSeekService>(context, listen: false);
@@ -446,23 +681,31 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final insights =
-          await deepSeekService.getHealthInsights(appState.getHealthData());
+      // Get health data from app state
+      final healthData = appState.getHealthData();
+
+      // Call the health insights method
+      final insights = await deepSeekService.getHealthInsights(healthData);
 
       if (mounted) {
         setState(() {
           _isGettingInsights = false;
         });
 
-        _showInsightsDialog(context, insights);
+        if (showDialog) {
+          _showInsightsDialog(context, insights);
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isGettingInsights = false;
         });
-        _showErrorDialog(
-            context, 'Unable to get health insights at this time.');
+
+        if (showDialog) {
+          _showErrorDialog(context,
+              'Unable to get health insights at this time. Please try again later.');
+        }
       }
     }
   }
@@ -471,61 +714,29 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.insights, color: Colors.blue),
+            Icon(Icons.psychology, color: Colors.blue),
             SizedBox(width: 8),
             Text('AI Health Insights'),
           ],
         ),
         content: SingleChildScrollView(
-          child: Text(insights),
+          child: SelectionArea(child: Text(insights)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
           ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _startAIConsultation(BuildContext context) async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('AI Consultation'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.psychology,
-              size: 48,
-              color: Colors.teal,
-            ),
-            SizedBox(height: 16),
-            Text('What would you like to discuss with PersonalMedAI today?'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
+          ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, '/symptoms');
+              Navigator.pushNamed(context, '/chat');
             },
-            child: const Text('Check Symptoms'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/medications');
-            },
-            child: const Text('Medication Help'),
+            icon: const Icon(Icons.chat),
+            label: const Text('Chat with AI'),
           ),
         ],
       ),
@@ -536,7 +747,14 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Error'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.error, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Error'),
+          ],
+        ),
         content: Text(message),
         actions: [
           TextButton(
