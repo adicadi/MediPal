@@ -12,6 +12,7 @@ MediPal is an intelligent Flutter-based personal health assistant app that provi
 !## 📱 Screenshots
 
 <div align="center">
+<img src = "Screenshots/FirstScreen.jpeg" alt="OnBoarding Screen" width="200" style="margin: 5px;">
   <img src="Screenshots/HomeScreen.jpeg" alt="Home Screen" width="200" style="margin: 5px;">
   <img src="Screenshots/Symptom_Checker.jpeg" alt="Symptom Checker" width="200" style="margin: 5px;">
   <img src="Screenshots/MedicationWarning.jpeg" alt="Medication Interaction" width="200" style="margin: 5px;">
