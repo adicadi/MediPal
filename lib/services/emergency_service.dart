@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
@@ -366,8 +367,10 @@ class EmergencyService {
           _lastLocationUpdate != null &&
           DateTime.now().difference(_lastLocationUpdate!) <
               _cacheValidityDuration) {
-        print(
-            '📍 Using cached emergency numbers for ${_cachedNumbers!.countryName}');
+        if (kDebugMode) {
+          print(
+              '📍 Using cached emergency numbers for ${_cachedNumbers!.countryName}');
+        }
         return _cachedNumbers!;
       }
 
@@ -376,22 +379,29 @@ class EmergencyService {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          print(
-              '📍 Location permission denied, using default emergency numbers');
+          if (kDebugMode) {
+            print(
+                '📍 Location permission denied, using default emergency numbers');
+          }
           return _defaultNumbers;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        print(
-            '📍 Location permission permanently denied, using default emergency numbers');
+        if (kDebugMode) {
+          print(
+              '📍 Location permission permanently denied, using default emergency numbers');
+        }
         return _defaultNumbers;
       }
 
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        print('📍 Location services disabled, using default emergency numbers');
+        if (kDebugMode) {
+          print(
+              '📍 Location services disabled, using default emergency numbers');
+        }
         return _defaultNumbers;
       }
 
@@ -419,25 +429,33 @@ class EmergencyService {
         _lastKnownCountry = country;
         if (_emergencyDatabase.containsKey(country)) {
           _cachedNumbers = _emergencyDatabase[country]!;
-          print(
-              '📍 Located in approximately ${_cachedNumbers!.countryName}, using local emergency numbers');
+          if (kDebugMode) {
+            print(
+                '📍 Located in approximately ${_cachedNumbers!.countryName}, using local emergency numbers');
+          }
           return _cachedNumbers!;
         }
       }
 
-      print(
-          '📍 Could not determine country from coordinates, using default emergency numbers');
+      if (kDebugMode) {
+        print(
+            '📍 Could not determine country from coordinates, using default emergency numbers');
+      }
       return _defaultNumbers;
     } catch (e) {
-      print('❌ Error getting location-based emergency numbers: $e');
+      if (kDebugMode) {
+        print('❌ Error getting location-based emergency numbers: $e');
+      }
 
       // Try to determine country by platform locale as fallback
       final countryFromLocale = _getCountryFromPlatformLocale();
       if (countryFromLocale != null &&
           _emergencyDatabase.containsKey(countryFromLocale)) {
         _cachedNumbers = _emergencyDatabase[countryFromLocale]!;
-        print(
-            '📍 Using emergency numbers based on device locale: ${_cachedNumbers!.countryName}');
+        if (kDebugMode) {
+          print(
+              '📍 Using emergency numbers based on device locale: ${_cachedNumbers!.countryName}');
+        }
         return _cachedNumbers!;
       }
 
@@ -485,7 +503,10 @@ class EmergencyService {
         return null;
       }
     } catch (e) {
-      print('❌ Error getting platform locale: $e');
+      if (kDebugMode) {
+        if (kDebugMode) {}
+        print('❌ Error getting platform locale: $e');
+      }
     }
     return null;
   }
@@ -496,7 +517,9 @@ class EmergencyService {
       final emergencyNumbers = await getEmergencyNumbers();
       return await callSpecificNumber(emergencyNumbers.primaryEmergencyNumber);
     } catch (e) {
-      print('❌ Error calling emergency: $e');
+      if (kDebugMode) {
+        print('❌ Error calling emergency: $e');
+      }
       // Fallback: try calling generic emergency numbers
       return await callSpecificNumber('112') || await callSpecificNumber('911');
     }
@@ -509,11 +532,15 @@ class EmergencyService {
       String cleanNumber = _cleanPhoneNumber(number);
 
       if (cleanNumber.isEmpty) {
-        print('❌ Invalid phone number: $number');
+        if (kDebugMode) {
+          print('❌ Invalid phone number: $number');
+        }
         return false;
       }
 
-      print('📞 Attempting to call: $cleanNumber (original: $number)');
+      if (kDebugMode) {
+        print('📞 Attempting to call: $cleanNumber (original: $number)');
+      }
 
       // Method 1: Try different URL schemes in order of preference
       final urlSchemes = Platform.isIOS
@@ -522,11 +549,15 @@ class EmergencyService {
 
       for (String scheme in urlSchemes) {
         try {
-          print('📞 Trying scheme: $scheme');
+          if (kDebugMode) {
+            print('📞 Trying scheme: $scheme');
+          }
           final uri = Uri.parse(scheme);
 
           if (await canLaunchUrl(uri)) {
-            print('📞 Can launch $scheme - attempting launch');
+            if (kDebugMode) {
+              print('📞 Can launch $scheme - attempting launch');
+            }
 
             // Try different launch modes
             final launchModes = [
@@ -538,20 +569,28 @@ class EmergencyService {
               try {
                 final launched = await launchUrl(uri, mode: mode);
                 if (launched) {
-                  print(
-                      '✅ Successfully launched dialer with: $scheme (mode: $mode)');
+                  if (kDebugMode) {
+                    print(
+                        '✅ Successfully launched dialer with: $scheme (mode: $mode)');
+                  }
                   return true;
                 }
               } catch (e) {
-                print('❌ Launch failed with mode $mode: $e');
+                if (kDebugMode) {
+                  print('❌ Launch failed with mode $mode: $e');
+                }
                 continue;
               }
             }
           } else {
-            print('❌ Cannot launch URL: $scheme');
+            if (kDebugMode) {
+              print('❌ Cannot launch URL: $scheme');
+            }
           }
         } catch (e) {
-          print('❌ Error with scheme $scheme: $e');
+          if (kDebugMode) {
+            print('❌ Error with scheme $scheme: $e');
+          }
           continue;
         }
       }
@@ -559,24 +598,32 @@ class EmergencyService {
       // Method 2: Try platform-specific calling (Android Intent)
       if (Platform.isAndroid) {
         try {
-          print('📞 Trying Android platform channel method');
+          if (kDebugMode) {
+            print('📞 Trying Android platform channel method');
+          }
           const platform = MethodChannel('flutter/platform');
           final result =
               await platform.invokeMethod('android.intent.action.CALL', {
             'phone': cleanNumber,
           });
           if (result == true) {
-            print('✅ Successfully launched dialer via platform channel');
+            if (kDebugMode) {
+              print('✅ Successfully launched dialer via platform channel');
+            }
             return true;
           }
         } catch (e) {
-          print('❌ Platform channel method failed: $e');
+          if (kDebugMode) {
+            print('❌ Platform channel method failed: $e');
+          }
         }
       }
 
       // Method 3: Try opening dialer instead of direct call
       try {
-        print('📞 Trying dialer scheme: tel:$cleanNumber');
+        if (kDebugMode) {
+          print('📞 Trying dialer scheme: tel:$cleanNumber');
+        }
         final dialerUri = Uri(scheme: 'tel', path: cleanNumber);
         if (await canLaunchUrl(dialerUri)) {
           final launched = await launchUrl(
@@ -584,18 +631,26 @@ class EmergencyService {
             mode: LaunchMode.externalApplication,
           );
           if (launched) {
-            print('✅ Successfully opened dialer');
+            if (kDebugMode) {
+              print('✅ Successfully opened dialer');
+            }
             return true;
           }
         }
       } catch (e) {
-        print('❌ Dialer scheme failed: $e');
+        if (kDebugMode) {
+          print('❌ Dialer scheme failed: $e');
+        }
       }
 
-      print('❌ All phone dialer methods failed for: $cleanNumber');
+      if (kDebugMode) {
+        print('❌ All phone dialer methods failed for: $cleanNumber');
+      }
       return false;
     } catch (e) {
-      print('❌ Error calling $number: $e');
+      if (kDebugMode) {
+        print('❌ Error calling $number: $e');
+      }
       return false;
     }
   }
@@ -624,7 +679,9 @@ class EmergencyService {
     final results = <String, dynamic>{};
 
     try {
-      print('🔍 Starting comprehensive phone dialer test...');
+      if (kDebugMode) {
+        print('🔍 Starting comprehensive phone dialer test...');
+      }
 
       // Test platform detection
       results['platform'] = Platform.isAndroid
@@ -644,10 +701,14 @@ class EmergencyService {
             final uri = Uri.parse('$scheme$number');
             final canLaunch = await canLaunchUrl(uri);
             results[key] = canLaunch;
-            print('📞 $key: $canLaunch');
+            if (kDebugMode) {
+              print('📞 $key: $canLaunch');
+            }
           } catch (e) {
             results['$key-error'] = e.toString();
-            print('❌ $key error: $e');
+            if (kDebugMode) {
+              print('❌ $key error: $e');
+            }
           }
         }
       }
@@ -685,7 +746,9 @@ class EmergencyService {
     final results = <String, dynamic>{};
     final cleanNumber = _cleanPhoneNumber(testNumber);
 
-    print('🔍 Debug testing phone dialer for: $testNumber -> $cleanNumber');
+    if (kDebugMode) {
+      print('🔍 Debug testing phone dialer for: $testNumber -> $cleanNumber');
+    }
 
     try {
       // Step 1: Test URL construction
@@ -747,7 +810,9 @@ class EmergencyService {
 
       return false;
     } catch (e) {
-      print('❌ Error opening telehealth service: $e');
+      if (kDebugMode) {
+        print('❌ Error opening telehealth service: $e');
+      }
       return false;
     }
   }
@@ -768,7 +833,9 @@ class EmergencyService {
       // Location services
       results['location_service'] = await Geolocator.isLocationServiceEnabled();
     } catch (e) {
-      print('❌ Error checking permissions: $e');
+      if (kDebugMode) {
+        print('❌ Error checking permissions: $e');
+      }
       results['location'] = false;
       results['phone'] = true;
       results['location_service'] = false;
@@ -789,7 +856,9 @@ class EmergencyService {
       results['phone'] = true; // Assume phone calling is available
       results['location_service'] = await Geolocator.isLocationServiceEnabled();
     } catch (e) {
-      print('❌ Error requesting permissions: $e');
+      if (kDebugMode) {
+        print('❌ Error requesting permissions: $e');
+      }
       results['location'] = false;
       results['phone'] = true;
       results['location_service'] = false;
@@ -803,7 +872,9 @@ class EmergencyService {
     try {
       return await Geolocator.isLocationServiceEnabled();
     } catch (e) {
-      print('❌ Error checking location service: $e');
+      if (kDebugMode) {
+        print('❌ Error checking location service: $e');
+      }
       return false;
     }
   }
@@ -813,7 +884,9 @@ class EmergencyService {
     try {
       return await Geolocator.openLocationSettings();
     } catch (e) {
-      print('❌ Error opening location settings: $e');
+      if (kDebugMode) {
+        print('❌ Error opening location settings: $e');
+      }
       return false;
     }
   }
@@ -824,7 +897,9 @@ class EmergencyService {
       // For now, just open location settings as that's the main permission we need
       return await openLocationSettings();
     } catch (e) {
-      print('❌ Error opening app settings: $e');
+      if (kDebugMode) {
+        print('❌ Error opening app settings: $e');
+      }
       return false;
     }
   }
@@ -857,7 +932,9 @@ class EmergencyService {
     _lastKnownCountry = null;
     _cachedNumbers = null;
     _lastLocationUpdate = null;
-    print('📍 Emergency service cache cleared');
+    if (kDebugMode) {
+      print('📍 Emergency service cache cleared');
+    }
   }
 
   /// Force refresh location and emergency numbers
@@ -951,7 +1028,10 @@ class EmergencyService {
     _cachedNumbers = numbers;
     _lastLocationUpdate = DateTime.now();
 
-    print('📍 Manually selected ${numbers.countryName} for emergency numbers');
+    if (kDebugMode) {
+      print(
+          '📍 Manually selected ${numbers.countryName} for emergency numbers');
+    }
     return numbers;
   }
 

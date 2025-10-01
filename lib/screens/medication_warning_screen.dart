@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:personalmedai/models/medication.dart';
@@ -88,11 +89,15 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
               .map((item) => MedicationAnalysisHistory.fromJson(item))
               .toList();
         });
-        print(
-            '📂 Loaded ${_analysisHistory.length} analysis records from cache');
+        if (kDebugMode) {
+          print(
+              '📂 Loaded ${_analysisHistory.length} analysis records from cache');
+        }
       }
     } catch (e) {
-      print('❌ Error loading analysis history: $e');
+      if (kDebugMode) {
+        print('❌ Error loading analysis history: $e');
+      }
     }
   }
 
@@ -103,9 +108,13 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       final historyJson =
           jsonEncode(_analysisHistory.map((item) => item.toJson()).toList());
       await prefs.setString('medication_analysis_history', historyJson);
-      print('💾 Saved analysis history to cache');
+      if (kDebugMode) {
+        print('💾 Saved analysis history to cache');
+      }
     } catch (e) {
-      print('❌ Error saving analysis history: $e');
+      if (kDebugMode) {
+        print('❌ Error saving analysis history: $e');
+      }
     }
   }
 
@@ -125,8 +134,12 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 
     final combinedString = medicationStrings.join('::');
     final hash = combinedString.hashCode.toString();
-    print('🔍 Generated medication hash: $hash');
-    print('📋 For medications: ${medicationStrings.join(' + ')}');
+    if (kDebugMode) {
+      print('🔍 Generated medication hash: $hash');
+    }
+    if (kDebugMode) {
+      print('📋 For medications: ${medicationStrings.join(' + ')}');
+    }
     return hash;
   }
 
@@ -135,32 +148,48 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     if (medications.length < 2) return null;
 
     final targetHash = _generateMedicationHash(medications);
-    print('🔍 Looking for cached analysis with hash: $targetHash');
-    print('📚 Available cached analyses: ${_analysisHistory.length}');
+    if (kDebugMode) {
+      print('🔍 Looking for cached analysis with hash: $targetHash');
+    }
+    if (kDebugMode) {
+      print('📚 Available cached analyses: ${_analysisHistory.length}');
+    }
 
     for (int i = 0; i < _analysisHistory.length; i++) {
       final analysis = _analysisHistory[i];
-      print(
-          ' - Cache $i: hash=${analysis.medicationHash}, meds=${analysis.medications.map((m) => m.name).join(", ")}');
+      if (kDebugMode) {
+        print(
+            ' - Cache $i: hash=${analysis.medicationHash}, meds=${analysis.medications.map((m) => m.name).join(", ")}');
+      }
       if (analysis.medicationHash == targetHash) {
-        print('✅ Found matching cache at index $i');
+        if (kDebugMode) {
+          print('✅ Found matching cache at index $i');
+        }
         return analysis;
       }
     }
 
-    print('❌ No matching cache found');
+    if (kDebugMode) {
+      print('❌ No matching cache found');
+    }
     return null;
   }
 
   // FIXED: More reliable cache checking
   Future<void> _checkInteractionsWithSmartCache() async {
     final appState = Provider.of<AppState>(context, listen: false);
-    print('🔄 Checking interactions with smart cache...');
-    print(
-        '💊 Current medications: ${appState.medications.map((m) => m.name).join(', ')}');
+    if (kDebugMode) {
+      print('🔄 Checking interactions with smart cache...');
+    }
+    if (kDebugMode) {
+      print(
+          '💊 Current medications: ${appState.medications.map((m) => m.name).join(', ')}');
+    }
 
     if (appState.medications.length < 2) {
-      print('⚠️ Less than 2 medications, clearing results');
+      if (kDebugMode) {
+        print('⚠️ Less than 2 medications, clearing results');
+      }
       appState.setMedicationInteractionResult('');
       _lastAnalysisHash = null;
       _isResultFromCache = false;
@@ -170,15 +199,23 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     }
 
     final newHash = _generateMedicationHash(appState.medications);
-    print('🆔 New hash: $newHash');
-    print('🆔 Last hash: $_lastAnalysisHash');
-    print('🆔 Current hash: $_currentMedicationHash');
+    if (kDebugMode) {
+      print('🆔 New hash: $newHash');
+    }
+    if (kDebugMode) {
+      print('🆔 Last hash: $_lastAnalysisHash');
+    }
+    if (kDebugMode) {
+      print('🆔 Current hash: $_currentMedicationHash');
+    }
 
     // If we already have the result for these exact medications displayed
     if (_lastAnalysisHash == newHash &&
         appState.medicationInteractionResult.isNotEmpty &&
         _isResultFromCache) {
-      print('✅ Result already displayed and cached for current medications');
+      if (kDebugMode) {
+        print('✅ Result already displayed and cached for current medications');
+      }
       return;
     }
 
@@ -188,7 +225,9 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     // Check if we have this combination in cache
     final existingAnalysis = _findExistingAnalysis(appState.medications);
     if (existingAnalysis != null) {
-      print('⚡ Found cached analysis, displaying instantly');
+      if (kDebugMode) {
+        print('⚡ Found cached analysis, displaying instantly');
+      }
 
       // Set the result immediately
       appState.setMedicationInteractionResult(existingAnalysis.result);
@@ -203,7 +242,9 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       return;
     }
 
-    print('❌ No cache found, will need to perform analysis');
+    if (kDebugMode) {
+      print('❌ No cache found, will need to perform analysis');
+    }
     // Reset cache flags since we don't have cached result
     _isResultFromCache = false;
     _lastAnalysisHash = null;
@@ -220,7 +261,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.flash_on, color: Colors.white, size: 20),
+                const Icon(Icons.flash_on, color: Colors.white, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -272,7 +313,9 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 
   // FIXED: Force refresh clears cache flags properly
   Future<void> _forceCheckInteractions() async {
-    print('🔄 Force refresh requested');
+    if (kDebugMode) {
+      print('🔄 Force refresh requested');
+    }
     _isResultFromCache = false;
     _lastAnalysisHash = null;
     setState(() {}); // Update UI to remove cache indicator
@@ -290,12 +333,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       return;
     }
 
-    if (deepSeekService == null) {
-      appState.setMedicationInteractionResult(
-          'AI service not available. Please check your connection and try again.');
-      return;
-    }
-
     // Show loading state
     appState.setLoading(true);
     _isResultFromCache = false;
@@ -304,7 +341,9 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     try {
       final medicationNames =
           appState.medications.map((med) => med.toString()).toList();
-      print('🔄 Starting new analysis for: ${medicationNames.join(', ')}');
+      if (kDebugMode) {
+        print('🔄 Starting new analysis for: ${medicationNames.join(', ')}');
+      }
 
       final result = await deepSeekService.checkMedicationInteractions(
           medicationNames, appState);
@@ -335,9 +374,13 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       });
 
       await _saveAnalysisHistory();
-      print('✅ New analysis completed and cached');
+      if (kDebugMode) {
+        print('✅ New analysis completed and cached');
+      }
     } catch (e) {
-      print('❌ Error during analysis: $e');
+      if (kDebugMode) {
+        print('❌ Error during analysis: $e');
+      }
       appState.setMedicationInteractionResult(
           'Unable to analyze medication interactions at this time. Please check your internet connection and try again later.');
     } finally {
@@ -868,7 +911,8 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceVariant.withOpacity(0.3),
+                        color: colorScheme.surfaceContainerHighest
+                            .withOpacity(0.3),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Form(
@@ -1047,8 +1091,8 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  colorScheme.surfaceVariant.withOpacity(0.3),
-                  colorScheme.surfaceVariant.withOpacity(0.1),
+                  colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  colorScheme.surfaceContainerHighest.withOpacity(0.1),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -1175,7 +1219,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
               margin: const EdgeInsets.only(top: 4),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant.withOpacity(0.5),
+                color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -1339,7 +1383,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             shape: BoxShape.circle,
           ),
           child: isActive
-              ? SizedBox(
+              ? const SizedBox(
                   width: 8,
                   height: 8,
                   child: CircularProgressIndicator(
@@ -1536,7 +1580,9 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       createdAt: DateTime.now(), // Current timestamp
     );
 
-    print('➕ Adding medication: ${medication.name}');
+    if (kDebugMode) {
+      print('➕ Adding medication: ${medication.name}');
+    }
     appState.addMedication(medication);
     _clearForm();
 
@@ -1786,7 +1832,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                     icon: const Icon(Icons.close),
                     style: IconButton.styleFrom(
                       backgroundColor:
-                          Theme.of(context).colorScheme.surfaceVariant,
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                     ),
                   ),
                 ],
@@ -1866,7 +1912,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                                       .withOpacity(0.2)
                                   : Theme.of(context)
                                       .colorScheme
-                                      .surfaceVariant,
+                                      .surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(

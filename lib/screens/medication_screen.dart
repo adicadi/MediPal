@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../utils/app_state.dart';
@@ -5,7 +6,7 @@ import '../models/medication.dart';
 import '../services/notification_service.dart';
 
 class MedicationsScreen extends StatefulWidget {
-  const MedicationsScreen({Key? key}) : super(key: key);
+  const MedicationsScreen({super.key});
 
   @override
   State<MedicationsScreen> createState() => _MedicationsScreenState();
@@ -23,7 +24,9 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addObserver(this); // Register lifecycle observer
-    print('🔄 MedicationsScreen initialized with lifecycle observer');
+    if (kDebugMode) {
+      print('🔄 MedicationsScreen initialized with lifecycle observer');
+    }
   }
 
   @override
@@ -39,7 +42,9 @@ class _MedicationsScreenState extends State<MedicationsScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       // App came back to foreground - reload data
-      print('🔄 App resumed, reloading medications from storage...');
+      if (kDebugMode) {
+        print('🔄 App resumed, reloading medications from storage...');
+      }
       _reloadMedications();
     }
   }
@@ -48,7 +53,9 @@ class _MedicationsScreenState extends State<MedicationsScreen>
   Future<void> _reloadMedications() async {
     final appState = Provider.of<AppState>(context, listen: false);
     await appState.loadUserProfile();
-    print('✅ Medications reloaded: ${appState.medications.length} found');
+    if (kDebugMode) {
+      print('✅ Medications reloaded: ${appState.medications.length} found');
+    }
   }
 
   @override
@@ -162,7 +169,9 @@ class _MedicationsScreenState extends State<MedicationsScreen>
           // PULL-TO-REFRESH: Wrap TabBarView with RefreshIndicator
           return RefreshIndicator(
             onRefresh: () async {
-              print('🔄 Pull-to-refresh triggered');
+              if (kDebugMode) {
+                print('🔄 Pull-to-refresh triggered');
+              }
               await _reloadMedications();
             },
             color: Colors.blue,
@@ -463,7 +472,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                       );
                     }
                   },
-                  activeColor: Colors.green,
+                  activeThumbColor: Colors.green,
                 ),
               ],
             ),
@@ -1291,7 +1300,7 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
   TimeOfDay _selectedTime = const TimeOfDay(hour: 8, minute: 0);
   final Set<int> _selectedDays = {1, 2, 3, 4, 5, 6, 7};
   final TextEditingController _messageController = TextEditingController();
-  int _dosesCount = 1;
+  final int _dosesCount = 1;
 
   @override
   Widget build(BuildContext context) {

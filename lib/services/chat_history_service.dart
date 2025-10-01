@@ -5,7 +5,6 @@ import 'package:path_provider/path_provider.dart';
 import '../screens/chat_screen.dart';
 
 class ChatHistoryService {
-  static const String _chatHistoryKey = 'chat_history';
   static const String _chatSessionsKey = 'chat_sessions';
 
   // Save a chat session

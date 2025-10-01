@@ -237,11 +237,14 @@ class MedicationReminder extends Equatable {
 
   String get daysSummary {
     if (daysOfWeek.length == 7) return 'Daily';
-    if (daysOfWeek.length == 5 && daysOfWeek.every((day) => day <= 5))
+    if (daysOfWeek.length == 5 && daysOfWeek.every((day) => day <= 5)) {
       return 'Weekdays';
+    }
     if (daysOfWeek.length == 2 &&
         daysOfWeek.contains(6) &&
-        daysOfWeek.contains(7)) return 'Weekends';
+        daysOfWeek.contains(7)) {
+      return 'Weekends';
+    }
 
     const dayNames = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return daysOfWeek.map((day) => dayNames[day]).join(', ');

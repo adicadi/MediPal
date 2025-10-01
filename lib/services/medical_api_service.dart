@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class MedicalApiService {
@@ -18,7 +19,9 @@ class MedicalApiService {
         return data['results']?.first;
       }
     } catch (e) {
-      print('Error fetching drug info: $e');
+      if (kDebugMode) {
+        print('Error fetching drug info: $e');
+      }
     }
     return null;
   }
@@ -35,7 +38,9 @@ class MedicalApiService {
         return List<String>.from(data[1] ?? []);
       }
     } catch (e) {
-      print('Error fetching disease symptoms: $e');
+      if (kDebugMode) {
+        print('Error fetching disease symptoms: $e');
+      }
     }
     return [];
   }
@@ -60,7 +65,9 @@ class MedicalApiService {
         return results;
       }
     } catch (e) {
-      print('Error searching conditions: $e');
+      if (kDebugMode) {
+        print('Error searching conditions: $e');
+      }
     }
     return [];
   }

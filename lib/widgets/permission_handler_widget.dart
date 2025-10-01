@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../services/emergency_service.dart';
 
 class PermissionHandlerWidget extends StatefulWidget {

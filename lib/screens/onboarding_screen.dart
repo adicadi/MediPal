@@ -215,7 +215,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant.withOpacity(0.3),
+                color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: colorScheme.outline.withOpacity(0.2),
@@ -464,7 +464,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _hasGenderError
@@ -493,7 +493,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
               if (_hasGenderError) ...[
                 const SizedBox(width: 8),
-                Icon(
+                const Icon(
                   Icons.error,
                   color: Colors.red,
                   size: 16,
@@ -565,8 +565,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           borderRadius: BorderRadius.circular(16),
         ),
         filled: true,
-        fillColor:
-            Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        fillColor: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withOpacity(0.3),
         contentPadding:
             const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       ),
@@ -670,7 +672,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.check_circle,
                           size: 80,
                           color: Colors.green,
@@ -938,11 +940,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         // Show in-context error instead of SnackBar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: const Row(
               children: [
                 Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 12),
-                const Expanded(
+                SizedBox(width: 12),
+                Expanded(
                   child: Text('Please select your gender to continue'),
                 ),
               ],
@@ -986,11 +988,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       // Enhanced error handling
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
+          content: const Row(
             children: [
               Icon(Icons.error, color: Colors.white),
-              const SizedBox(width: 12),
-              const Expanded(
+              SizedBox(width: 12),
+              Expanded(
                 child: Text('Something went wrong. Please try again.'),
               ),
             ],

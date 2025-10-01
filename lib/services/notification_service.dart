@@ -1,7 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/medication.dart';
@@ -31,16 +31,24 @@ class NotificationService {
     await _notifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        print('🔔 Notification response received');
-        print('   Action ID: ${response.actionId}');
-        print('   Payload: ${response.payload}');
+        if (kDebugMode) {
+          print('🔔 Notification response received');
+        }
+        if (kDebugMode) {
+          print('   Action ID: ${response.actionId}');
+        }
+        if (kDebugMode) {
+          print('   Payload: ${response.payload}');
+        }
 
         await _handleAction(response);
       },
     );
 
     _initialized = true;
-    print('✅ NotificationService initialized');
+    if (kDebugMode) {
+      print('✅ NotificationService initialized');
+    }
   }
 
   static Future<void> _handleAction(NotificationResponse response) async {
@@ -54,7 +62,9 @@ class NotificationService {
       final medicationId = data['medicationId'] as String;
       final medicationName = data['medicationName'] as String?;
 
-      print('📋 Processing: $actionId for $medicationId');
+      if (kDebugMode) {
+        print('📋 Processing: $actionId for $medicationId');
+      }
 
       switch (actionId) {
         case 'take_action':
@@ -71,17 +81,23 @@ class NotificationService {
           break;
 
         default:
-          print('📱 Notification body tapped');
+          if (kDebugMode) {
+            print('📱 Notification body tapped');
+          }
           break;
       }
     } catch (e) {
-      print('❌ Error: $e');
+      if (kDebugMode) {
+        print('❌ Error: $e');
+      }
     }
   }
 
   static Future<void> _takeMedication(
       String medicationId, String? medicationName) async {
-    print('✅ Taking medication: $medicationId');
+    if (kDebugMode) {
+      print('✅ Taking medication: $medicationId');
+    }
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -103,19 +119,25 @@ class NotificationService {
               '${medicationName ?? 'Medication'} logged. ${medData['currentQuantity']} remaining.',
             );
 
-            print('✅ Updated quantity: ${medData['currentQuantity']}');
+            if (kDebugMode) {
+              print('✅ Updated quantity: ${medData['currentQuantity']}');
+            }
             break;
           }
         }
       }
     } catch (e) {
-      print('❌ Error updating: $e');
+      if (kDebugMode) {
+        print('❌ Error updating: $e');
+      }
     }
   }
 
   static Future<void> _snoozeMedication(
       String medicationId, String? medicationName) async {
-    print('⏰ Snoozing for 15 minutes');
+    if (kDebugMode) {
+      print('⏰ Snoozing for 15 minutes');
+    }
 
     try {
       final snoozeTime =
@@ -141,7 +163,7 @@ class NotificationService {
         '⏰ Snooze Reminder',
         'Time to take ${medicationName ?? 'your medication'}',
         snoozeTime,
-        NotificationDetails(
+        const NotificationDetails(
           android: AndroidNotificationDetails(
             'medication_reminders',
             'Medication Reminders',
@@ -165,7 +187,9 @@ class NotificationService {
 
       await _showConfirmation('⏰ Snoozed', 'Reminder in 15 minutes');
     } catch (e) {
-      print('❌ Error snoozing: $e');
+      if (kDebugMode) {
+        print('❌ Error snoozing: $e');
+      }
     }
   }
 
@@ -269,12 +293,16 @@ class NotificationService {
           );
           scheduledCount++;
         } catch (e) {
-          print('❌ Error scheduling: $e');
+          if (kDebugMode) {
+            print('❌ Error scheduling: $e');
+          }
         }
       }
     }
 
-    print('✅ Scheduled $scheduledCount reminders for ${medication.name}');
+    if (kDebugMode) {
+      print('✅ Scheduled $scheduledCount reminders for ${medication.name}');
+    }
   }
 
   static Future<void> _scheduleWeeklyNotification({
@@ -366,9 +394,13 @@ class NotificationService {
         }
       }
 
-      print('✅ Cancelled $cancelledCount reminders');
+      if (kDebugMode) {
+        print('✅ Cancelled $cancelledCount reminders');
+      }
     } catch (e) {
-      print('❌ Error cancelling: $e');
+      if (kDebugMode) {
+        print('❌ Error cancelling: $e');
+      }
     }
   }
 
@@ -470,7 +502,9 @@ class NotificationService {
       }),
     );
 
-    print('✅ Test scheduled');
+    if (kDebugMode) {
+      print('✅ Test scheduled');
+    }
   }
 
   static Future<List<PendingNotificationRequest>>

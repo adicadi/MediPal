@@ -39,7 +39,8 @@ class HealthSummaryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: backgroundColor ?? colorScheme.primaryContainer.withOpacity(0.3),
+                  color: backgroundColor ??
+                      colorScheme.primaryContainer.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: isLoading

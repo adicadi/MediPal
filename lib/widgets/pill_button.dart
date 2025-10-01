@@ -31,25 +31,23 @@ class PillButton extends StatelessWidget {
         label: Text(
           text,
           style: theme.textTheme.labelLarge?.copyWith(
-            color: textColor ?? 
-                (isSelected 
-                    ? colorScheme.onPrimary 
+            color: textColor ??
+                (isSelected
+                    ? colorScheme.onPrimary
                     : colorScheme.onPrimaryContainer),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? 
-              (isSelected 
-                  ? colorScheme.primary 
-                  : colorScheme.primaryContainer),
-          foregroundColor: textColor ?? 
-              (isSelected 
-                  ? colorScheme.onPrimary 
+          backgroundColor: backgroundColor ??
+              (isSelected ? colorScheme.primary : colorScheme.primaryContainer),
+          foregroundColor: textColor ??
+              (isSelected
+                  ? colorScheme.onPrimary
                   : colorScheme.onPrimaryContainer),
           elevation: isSelected ? 4 : 2,
-          shadowColor: isSelected 
-              ? colorScheme.primary.withOpacity(0.5) 
+          shadowColor: isSelected
+              ? colorScheme.primary.withOpacity(0.5)
               : colorScheme.shadow.withOpacity(0.2),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(

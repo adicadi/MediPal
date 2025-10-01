@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 
 class NotificationPermissionCard extends StatefulWidget {
-  const NotificationPermissionCard({Key? key}) : super(key: key);
+  const NotificationPermissionCard({super.key});
 
   @override
   State<NotificationPermissionCard> createState() =>

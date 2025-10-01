@@ -1,5 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:personalmedai/screens/medication_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -22,19 +22,27 @@ void main() async {
   try {
     // Load environment variables
     await dotenv.load(fileName: ".env");
-    print('✅ .env loaded successfully');
+    if (kDebugMode) {
+      print('✅ .env loaded successfully');
+    }
   } catch (e) {
-    print('⚠️ Warning: .env file not found: $e');
+    if (kDebugMode) {
+      print('⚠️ Warning: .env file not found: $e');
+    }
   }
 
   try {
     // Initialize timezone database
-    print('🌍 Initializing timezone database...');
+    if (kDebugMode) {
+      print('🌍 Initializing timezone database...');
+    }
     tz.initializeTimeZones();
 
     // Get device's local timezone
     final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-    print('📍 Device timezone: $timeZoneName');
+    if (kDebugMode) {
+      print('📍 Device timezone: $timeZoneName');
+    }
 
     // Handle special cases (e.g., Kiev -> Kyiv)
     final String normalizedTimeZone =
@@ -42,28 +50,42 @@ void main() async {
 
     // Set local location for timezone-aware notifications
     tz.setLocalLocation(tz.getLocation(normalizedTimeZone));
-    print('✅ Timezone set to: ${tz.local}');
+    if (kDebugMode) {
+      print('✅ Timezone set to: ${tz.local}');
+    }
   } catch (e) {
-    print('⚠️ Timezone initialization failed, falling back to UTC: $e');
+    if (kDebugMode) {
+      print('⚠️ Timezone initialization failed, falling back to UTC: $e');
+    }
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('UTC'));
   }
 
   try {
     // Initialize notification service
-    print('🔔 Initializing notification service...');
+    if (kDebugMode) {
+      print('🔔 Initializing notification service...');
+    }
     await NotificationService.initialize();
-    print('✅ Notification service initialized');
+    if (kDebugMode) {
+      print('✅ Notification service initialized');
+    }
 
     // Request notification permissions
     final hasPermission = await NotificationService.requestPermissions();
     if (hasPermission) {
-      print('✅ Notification permissions granted');
+      if (kDebugMode) {
+        print('✅ Notification permissions granted');
+      }
     } else {
-      print('⚠️ Notification permissions denied');
+      if (kDebugMode) {
+        print('⚠️ Notification permissions denied');
+      }
     }
   } catch (e) {
-    print('⚠️ Notification service initialization failed: $e');
+    if (kDebugMode) {
+      print('⚠️ Notification service initialization failed: $e');
+    }
     // App will continue without notifications
   }
 
@@ -82,7 +104,9 @@ class MyApp extends StatelessWidget {
           try {
             return DeepSeekService();
           } catch (e) {
-            print('⚠️ DeepSeekService initialization failed: $e');
+            if (kDebugMode) {
+              print('⚠️ DeepSeekService initialization failed: $e');
+            }
             return null;
           }
         }),
@@ -155,7 +179,7 @@ ThemeData _buildLightTheme() {
     // Input Decoration Theme
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
+      fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: colorScheme.outline),
@@ -308,9 +332,13 @@ class _InitialScreenState extends State<InitialScreen> {
       // Initialize medication reminders after loading profile
       try {
         await appState.initializeNotifications();
-        print('✅ Medication reminders initialized');
+        if (kDebugMode) {
+          print('✅ Medication reminders initialized');
+        }
       } catch (e) {
-        print('⚠️ Could not initialize medication reminders: $e');
+        if (kDebugMode) {
+          print('⚠️ Could not initialize medication reminders: $e');
+        }
       }
 
       setState(() {
@@ -336,7 +364,9 @@ class _InitialScreenState extends State<InitialScreen> {
         }
       }
     } catch (e) {
-      print('Error during app initialization: $e');
+      if (kDebugMode) {
+        print('Error during app initialization: $e');
+      }
 
       // Fallback: show error and allow manual navigation
       if (mounted) {
@@ -470,7 +500,7 @@ class _InitialScreenState extends State<InitialScreen> {
                 textAlign: TextAlign.center,
               ),
             ] else ...[
-              Icon(
+              const Icon(
                 Icons.error_outline,
                 color: Colors.orange,
                 size: 40,

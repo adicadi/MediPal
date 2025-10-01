@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../utils/app_state.dart';
@@ -12,9 +13,7 @@ class DeepSeekService {
   // RESTORED: Working timeout values from old version
   static const Duration _timeout = Duration(seconds: 30); // INCREASED from 20
   static const int _maxRetries = 2;
-  static const Duration _connectTimeout =
-      Duration(seconds: 5); // INCREASED from 3
-  static const Duration _receiveTimeout = Duration(seconds: 25);
+// INCREASED from 3
 
   // RESTORED: Working retry delays with exponential backoff
   static const List<int> _retryDelays = [500, 1500]; // INCREASED from 300, 800
@@ -89,8 +88,12 @@ class DeepSeekService {
     _apiKey = dotenv.env['DEEPSEEK_API_KEY'] ?? '';
     _baseUrl = dotenv.env['DEEPSEEK_BASE_URL'] ?? 'https://api.deepseek.com/v1';
 
-    print("🔑 API Key Loaded: ${_apiKey.isNotEmpty ? "Yes" : "No"}");
-    print("🌍 Base URL: $_baseUrl");
+    if (kDebugMode) {
+      print("🔑 API Key Loaded: ${_apiKey.isNotEmpty ? "Yes" : "No"}");
+    }
+    if (kDebugMode) {
+      print("🌍 Base URL: $_baseUrl");
+    }
 
     if (_apiKey.isEmpty) {
       throw Exception('❌ DeepSeek API key not found in environment variables');
@@ -281,11 +284,13 @@ Thorough analysis with disclaimers. Keep under 500 words.
       if (accumulatedText.isNotEmpty &&
           !accumulatedText.contains(appState.ageAppropriateDisclaimer)) {
         final finalResponse =
-            accumulatedText + '\n\n${appState.ageAppropriateDisclaimer}';
+            '$accumulatedText\n\n${appState.ageAppropriateDisclaimer}';
         yield finalResponse;
       }
     } catch (e) {
-      print('❌ Streaming error: $e');
+      if (kDebugMode) {
+        print('❌ Streaming error: $e');
+      }
       try {
         final response = await sendChatMessage(conversationHistory, appState);
         yield response;
@@ -317,7 +322,7 @@ Thorough analysis with disclaimers. Keep under 500 words.
 
     // Add age-appropriate disclaimer if not already present
     if (!result.contains(appState.ageAppropriateDisclaimer)) {
-      return result + '\n\n${appState.ageAppropriateDisclaimer}';
+      return '$result\n\n${appState.ageAppropriateDisclaimer}';
     }
     return result;
   }
@@ -362,7 +367,7 @@ Thorough analysis with disclaimers. Keep under 500 words.
 
     // Add age-appropriate disclaimer
     if (!result.contains(appState.ageAppropriateDisclaimer)) {
-      return result + '\n\n${appState.ageAppropriateDisclaimer}';
+      return '$result\n\n${appState.ageAppropriateDisclaimer}';
     }
     return result;
   }
@@ -397,7 +402,7 @@ ${appState.ageAppropriateDisclaimer}
 
     // Add age-appropriate disclaimer
     if (!result.contains(appState.ageAppropriateDisclaimer)) {
-      return result + '\n\n${appState.ageAppropriateDisclaimer}';
+      return '$result\n\n${appState.ageAppropriateDisclaimer}';
     }
     return result;
   }
@@ -424,7 +429,7 @@ ${appState.ageAppropriateDisclaimer}
 
     // Add age-appropriate disclaimer
     if (!result.contains(appState.ageAppropriateDisclaimer)) {
-      return result + '\n\n${appState.ageAppropriateDisclaimer}';
+      return '$result\n\n${appState.ageAppropriateDisclaimer}';
     }
     return result;
   }
@@ -488,9 +493,11 @@ ${appState.ageAppropriateDisclaimer}
       } else {
         return await _makeApiCallWithRetry(prompt, appState);
       }
-    } on TimeoutException catch (e) {
-      print(
-          '⏳ $contextMessage: Request timed out after ${_timeout.inSeconds}s');
+    } on TimeoutException {
+      if (kDebugMode) {
+        print(
+            '⏳ $contextMessage: Request timed out after ${_timeout.inSeconds}s');
+      }
       if (isChat && appState != null) {
         final messages = jsonDecode(prompt) as List<dynamic>;
         final lastUserMessage = messages.lastWhere(
@@ -503,11 +510,15 @@ ${appState.ageAppropriateDisclaimer}
       return appState?.getAgeAppropriateErrorMessage() ??
           'The request took longer than expected. Please try again.';
     } on SocketException catch (e) {
-      print('🌐 Network error: ${e.message}');
+      if (kDebugMode) {
+        print('🌐 Network error: ${e.message}');
+      }
       return appState?.getAgeAppropriateErrorMessage() ??
           'Network connection issue. Please check your internet and try again.';
     } catch (e) {
-      print('⚠️ $contextMessage: $e');
+      if (kDebugMode) {
+        print('⚠️ $contextMessage: $e');
+      }
       return appState?.getAgeAppropriateErrorMessage() ??
           'I\'m experiencing technical difficulties. Please try again in a moment.';
     }
@@ -591,12 +602,16 @@ ${appState.ageAppropriateDisclaimer}
 
     while (true) {
       try {
-        print('🔄 API attempt ${attempts + 1}/${_maxRetries + 1}');
+        if (kDebugMode) {
+          print('🔄 API attempt ${attempts + 1}/${_maxRetries + 1}');
+        }
         return await _makeApiCall(prompt, appState);
-      } on TimeoutException catch (e) {
+      } on TimeoutException {
         attempts++;
         if (attempts > _maxRetries) {
-          print('⏳ Max retries reached after ${attempts} attempts');
+          if (kDebugMode) {
+            print('⏳ Max retries reached after $attempts attempts');
+          }
           rethrow;
         }
 
@@ -606,21 +621,29 @@ ${appState.ageAppropriateDisclaimer}
             (delayMs * 0.1 * (DateTime.now().millisecond % 100) / 100).round();
         final finalDelay = delayMs + jitter;
 
-        print(
-            '🔄 Retrying API call... (Attempt $attempts/$_maxRetries) - waiting ${finalDelay}ms');
+        if (kDebugMode) {
+          print(
+              '🔄 Retrying API call... (Attempt $attempts/$_maxRetries) - waiting ${finalDelay}ms');
+        }
         await Future.delayed(Duration(milliseconds: finalDelay));
       } on SocketException catch (e) {
         attempts++;
         if (attempts > _maxRetries) {
-          print('🌐 Network error after ${attempts} attempts: ${e.message}');
+          if (kDebugMode) {
+            print('🌐 Network error after $attempts attempts: ${e.message}');
+          }
           rethrow;
         }
 
         final delayMs = _retryDelays[attempts - 1];
-        print('🌐 Network issue, retrying in ${delayMs}ms...');
+        if (kDebugMode) {
+          print('🌐 Network issue, retrying in ${delayMs}ms...');
+        }
         await Future.delayed(Duration(milliseconds: delayMs));
       } catch (e) {
-        print('❌ Non-retryable error: $e');
+        if (kDebugMode) {
+          print('❌ Non-retryable error: $e');
+        }
         rethrow;
       }
     }

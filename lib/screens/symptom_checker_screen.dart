@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
@@ -24,7 +25,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
   final PageController _pageController = PageController();
 
   List<SymptomQuestion> _questions = [];
-  Map<String, dynamic> _answers = {};
+  final Map<String, dynamic> _answers = {};
   int _currentQuestionIndex = 0;
   bool _isLoading = false;
   String? _assessment;
@@ -52,11 +53,15 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
               .toList();
         });
 
-        print(
-            '📂 Loaded ${_assessmentHistory.length} symptom assessments from cache');
+        if (kDebugMode) {
+          print(
+              '📂 Loaded ${_assessmentHistory.length} symptom assessments from cache');
+        }
       }
     } catch (e) {
-      print('❌ Error loading assessment history: $e');
+      if (kDebugMode) {
+        print('❌ Error loading assessment history: $e');
+      }
     }
   }
 
@@ -67,9 +72,13 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       final historyJson =
           jsonEncode(_assessmentHistory.map((item) => item.toJson()).toList());
       await prefs.setString('symptom_assessment_history', historyJson);
-      print('💾 Saved symptom assessment history to cache');
+      if (kDebugMode) {
+        print('💾 Saved symptom assessment history to cache');
+      }
     } catch (e) {
-      print('❌ Error saving assessment history: $e');
+      if (kDebugMode) {
+        print('❌ Error saving assessment history: $e');
+      }
     }
   }
 
@@ -291,7 +300,8 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
             margin: const EdgeInsets.only(bottom: 8),
             child: LinearProgressIndicator(
               value: (_currentQuestionIndex + 1) / _questions.length,
-              backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+              backgroundColor:
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(
                 Theme.of(context).colorScheme.primary,
               ),
@@ -577,7 +587,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                   decoration: BoxDecoration(
                     color: isActive
                         ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.surfaceVariant,
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                     shape: BoxShape.circle,
                     boxShadow: isActive
                         ? [
@@ -833,10 +843,10 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       // Show save confirmation
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
+          content: const Row(
             children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 12),
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Assessment saved successfully! ✨',
@@ -956,7 +966,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                     icon: const Icon(Icons.close),
                     style: IconButton.styleFrom(
                       backgroundColor:
-                          Theme.of(context).colorScheme.surfaceVariant,
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                     ),
                   ),
                 ],
@@ -1069,7 +1079,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                               decoration: BoxDecoration(
                                 color: Theme.of(context)
                                     .colorScheme
-                                    .surfaceVariant
+                                    .surfaceContainerHighest
                                     .withOpacity(0.3),
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -1231,7 +1241,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                     icon: const Icon(Icons.close),
                     style: IconButton.styleFrom(
                       backgroundColor:
-                          Theme.of(context).colorScheme.surfaceVariant,
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                     ),
                   ),
                 ],
@@ -1247,7 +1257,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                   decoration: BoxDecoration(
                     color: Theme.of(context)
                         .colorScheme
-                        .surfaceVariant
+                        .surfaceContainerHighest
                         .withOpacity(0.3),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
@@ -1525,7 +1535,9 @@ All your assessments are **automatically saved**:
 
   // FIXED: Better state management for assessment generation
   Future<void> _generateAssessment() async {
-    print('🔄 Starting assessment generation...'); // Debug log
+    if (kDebugMode) {
+      print('🔄 Starting assessment generation...');
+    } // Debug log
 
     // FIXED: Set loading state immediately and trigger UI rebuild
     setState(() {
@@ -1537,15 +1549,13 @@ All your assessments are **automatically saved**:
     await Future.delayed(const Duration(milliseconds: 300));
 
     try {
-      print('📝 Creating assessment object...'); // Debug log
+      if (kDebugMode) {
+        print('📝 Creating assessment object...');
+      } // Debug log
 
-      final assessment = SymptomAssessment(
-        answers: _answers,
-        timestamp: DateTime.now(),
-        sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
-      );
-
-      print('🤖 Calling DeepSeek API...'); // Debug log
+      if (kDebugMode) {
+        print('🤖 Calling DeepSeek API...');
+      } // Debug log
 
       final deepSeekService = DeepSeekService();
       final appState = Provider.of<AppState>(context, listen: false);
@@ -1556,8 +1566,9 @@ All your assessments are **automatically saved**:
         appState,
       );
 
-      print(
-          '✅ Assessment received: ${result.substring(0, 50)}...'); // Debug log
+      if (kDebugMode) {
+        print('✅ Assessment received: ${result.substring(0, 50)}...');
+      } // Debug log
 
       // FIXED: Update state properly
       if (mounted) {
@@ -1567,9 +1578,13 @@ All your assessments are **automatically saved**:
         });
       }
 
-      print('✅ Assessment generation complete!'); // Debug log
+      if (kDebugMode) {
+        print('✅ Assessment generation complete!');
+      } // Debug log
     } catch (e) {
-      print('❌ Assessment generation error: $e'); // Debug log
+      if (kDebugMode) {
+        print('❌ Assessment generation error: $e');
+      } // Debug log
 
       if (mounted) {
         setState(() {

@@ -9,13 +9,13 @@ class MedicationReminderCard extends StatelessWidget {
   final VoidCallback? onTakeDose;
 
   const MedicationReminderCard({
-    Key? key,
+    super.key,
     required this.medication,
     this.onEdit,
     this.onDelete,
     this.onToggleReminders,
     this.onTakeDose,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +90,7 @@ class MedicationReminderCard extends StatelessWidget {
                 Switch(
                   value: medication.remindersEnabled,
                   onChanged: onToggleReminders,
-                  activeColor: Colors.green,
+                  activeThumbColor: Colors.green,
                 ),
               ],
             ),

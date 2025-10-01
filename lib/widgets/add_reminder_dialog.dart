@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/medication.dart';
 
 class AddReminderDialog extends StatefulWidget {
-  const AddReminderDialog({Key? key}) : super(key: key);
+  const AddReminderDialog({super.key});
 
   @override
   State<AddReminderDialog> createState() => _AddReminderDialogState();
@@ -26,11 +26,11 @@ class _AddReminderDialogState extends State<AddReminderDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              Row(
+              const Row(
                 children: [
-                  const Icon(Icons.alarm_add, color: Colors.blue, size: 28),
-                  const SizedBox(width: 12),
-                  const Text(
+                  Icon(Icons.alarm_add, color: Colors.blue, size: 28),
+                  SizedBox(width: 12),
+                  Text(
                     'Add Reminder',
                     style: TextStyle(
                       fontSize: 22,
@@ -166,10 +166,10 @@ class _AddReminderDialogState extends State<AddReminderDialog> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
+                      child: const Text('Cancel'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -200,12 +200,12 @@ class _AddReminderDialogState extends State<AddReminderDialog> {
 
                         Navigator.pop(context, reminder);
                       },
-                      child: const Text('Add Reminder'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
+                      child: const Text('Add Reminder'),
                     ),
                   ),
                 ],

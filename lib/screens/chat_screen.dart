@@ -449,7 +449,7 @@ How can I help you today? Remember, I provide information to support your health
         decoration: BoxDecoration(
           color: appState.isMinor
               ? Colors.orange.shade50
-              : colorScheme.surfaceVariant,
+              : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(18).copyWith(
             bottomLeft: const Radius.circular(4),
           ),
@@ -830,7 +830,7 @@ How can I help you today? Remember, I provide information to support your health
 
   Future<void> _exportCurrentChat() async {
     if (_messages.length <= 1) return;
-    final sessionName = 'Current_Chat';
+    const sessionName = 'Current_Chat';
     final filePath =
         await ChatHistoryService.exportChatToFile(_messages, sessionName);
     _showExportSuccess(filePath);
@@ -946,7 +946,7 @@ class ChatBubble extends StatelessWidget {
                     : colorScheme.primary)
                 : (appState.isMinor
                     ? Colors.orange.shade50
-                    : colorScheme.surfaceVariant),
+                    : colorScheme.surfaceContainerHighest),
             borderRadius: BorderRadius.circular(18).copyWith(
               bottomRight: message.isUser ? const Radius.circular(4) : null,
               bottomLeft: message.isUser ? null : const Radius.circular(4),
@@ -1081,7 +1081,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
         decoration: BoxDecoration(
           color: widget.appState.isMinor
               ? Colors.orange.shade50
-              : colorScheme.surfaceVariant,
+              : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(18)
               .copyWith(bottomLeft: const Radius.circular(4)),
           border: widget.appState.isMinor

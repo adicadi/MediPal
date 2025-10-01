@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -83,7 +84,9 @@ class EmergencyButton extends StatelessWidget {
         return;
       }
     } catch (e) {
-      print('Error checking permissions: $e');
+      if (kDebugMode) {
+        print('Error checking permissions: $e');
+      }
     }
 
     // Show loading dialog
@@ -599,13 +602,13 @@ class EmergencyButton extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (context) => const AlertDialog(
         content: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(),
-            const SizedBox(width: 16),
-            const Expanded(child: Text('Opening phone dialer...')),
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Expanded(child: Text('Opening phone dialer...')),
           ],
         ),
       ),
@@ -739,7 +742,9 @@ class EmergencyButton extends StatelessWidget {
         );
       }
     } catch (e) {
-      print('Error copying to clipboard: $e');
+      if (kDebugMode) {
+        print('Error copying to clipboard: $e');
+      }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -752,125 +757,6 @@ class EmergencyButton extends StatelessWidget {
   }
 
   // DEBUG: Test phone dialer functionality
-  void _testPhoneDialer(BuildContext context) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text('Testing phone dialer...'),
-          ],
-        ),
-      ),
-    );
-
-    final results = await EmergencyService.testPhoneDialer();
-
-    if (context.mounted) {
-      Navigator.pop(context); // Close loading
-
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Phone Dialer Test Results'),
-          content: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.6,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ...results.entries.map(
-                    (entry) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '${entry.key}: ${entry.value}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                _testSpecificNumber(context, '112');
-              },
-              child: const Text('Test 112'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
 
   // DEBUG: Test specific number
-  void _testSpecificNumber(BuildContext context, String testNumber) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(width: 16),
-            Expanded(child: Text('Testing $testNumber...')),
-          ],
-        ),
-      ),
-    );
-
-    final results = await EmergencyService.debugPhoneDialer(testNumber);
-
-    if (context.mounted) {
-      Navigator.pop(context); // Close loading
-
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Debug Results: $testNumber'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: results.entries
-                  .map(
-                    (entry) => Text('${entry.key}: ${entry.value}',
-                        style: const TextStyle(fontSize: 12)),
-                  )
-                  .toList(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-            if (results['can_launch_url'] == true)
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _attemptEmergencyCall(context, testNumber);
-                },
-                child: const Text('Try Call'),
-              ),
-          ],
-        ),
-      );
-    }
-  }
 }
