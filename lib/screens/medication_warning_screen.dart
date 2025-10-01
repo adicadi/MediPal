@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:personalmedai/models/medication.dart';
-import 'package:personalmedai/screens/medication_screen.dart';
+import 'package:medipal/models/medication.dart';
+import 'package:medipal/screens/medication_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';

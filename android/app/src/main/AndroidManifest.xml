@@ -49,7 +49,7 @@
     </queries>
 
     <application
-        android:label="PersonalMedAI"
+        android:label="MediPal"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true"
