@@ -12,7 +12,8 @@ class MedicationsScreen extends StatefulWidget {
 }
 
 class _MedicationsScreenState extends State<MedicationsScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  // Added WidgetsBindingObserver
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -21,13 +22,33 @@ class _MedicationsScreenState extends State<MedicationsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addObserver(this); // Register lifecycle observer
+    print('🔄 MedicationsScreen initialized with lifecycle observer');
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Unregister observer
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  // AUTO-RELOAD: Listen for app lifecycle changes
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // App came back to foreground - reload data
+      print('🔄 App resumed, reloading medications from storage...');
+      _reloadMedications();
+    }
+  }
+
+  // Reload medications from SharedPreferences
+  Future<void> _reloadMedications() async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    await appState.loadUserProfile();
+    print('✅ Medications reloaded: ${appState.medications.length} found');
   }
 
   @override
@@ -39,38 +60,74 @@ class _MedicationsScreenState extends State<MedicationsScreen>
           preferredSize: const Size.fromHeight(120),
           child: Column(
             children: [
-              // Search bar
+              // Search bar with manual refresh button
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search medications...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              setState(() {
-                                _searchController.clear();
-                                _searchQuery = '';
-                              });
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search medications...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    setState(() {
+                                      _searchController.clear();
+                                      _searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value.toLowerCase();
+                          });
+                        },
+                      ),
                     ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value.toLowerCase();
-                    });
-                  },
+                    const SizedBox(width: 8),
+                    // Manual refresh button
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () async {
+                        await _reloadMedications();
+
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.check_circle,
+                                      color: Colors.white, size: 20),
+                                  SizedBox(width: 12),
+                                  Text('✅ Medications refreshed'),
+                                ],
+                              ),
+                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      tooltip: 'Refresh',
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.blue.withOpacity(0.1),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               // Tabs
@@ -87,8 +144,8 @@ class _MedicationsScreenState extends State<MedicationsScreen>
             ],
           ),
         ),
-        actions: const [
-          /*IconButton(
+        actions: [
+          IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddMedicationDialog(context),
             tooltip: 'Add Medication',
@@ -97,18 +154,27 @@ class _MedicationsScreenState extends State<MedicationsScreen>
             icon: const Icon(Icons.settings),
             onPressed: () => _showSettingsDialog(context),
             tooltip: 'Settings',
-          ),*/
+          ),
         ],
       ),
       body: Consumer<AppState>(
         builder: (context, appState, child) {
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _buildAllMedicationsTab(appState),
-              _buildActiveMedicationsTab(appState),
-              _buildRefillNeededTab(appState),
-            ],
+          // PULL-TO-REFRESH: Wrap TabBarView with RefreshIndicator
+          return RefreshIndicator(
+            onRefresh: () async {
+              print('🔄 Pull-to-refresh triggered');
+              await _reloadMedications();
+            },
+            color: Colors.blue,
+            backgroundColor: Colors.white,
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildAllMedicationsTab(appState),
+                _buildActiveMedicationsTab(appState),
+                _buildRefillNeededTab(appState),
+              ],
+            ),
           );
         },
       ),
@@ -125,19 +191,27 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     final medications = _filterMedications(appState.medications);
 
     if (medications.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.medication_outlined,
-        title: _searchQuery.isEmpty
-            ? 'No medications added yet'
-            : 'No medications found',
-        subtitle: _searchQuery.isEmpty
-            ? 'Add your first medication to get started'
-            : 'Try a different search term',
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height - 300,
+          child: _buildEmptyState(
+            icon: Icons.medication_outlined,
+            title: _searchQuery.isEmpty
+                ? 'No medications added yet'
+                : 'No medications found',
+            subtitle: _searchQuery.isEmpty
+                ? 'Add your first medication to get started'
+                : 'Try a different search term',
+          ),
+        ),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
+      physics:
+          const AlwaysScrollableScrollPhysics(), // Required for pull-to-refresh
       itemCount: medications.length,
       itemBuilder: (context, index) {
         final medication = medications[index];
@@ -151,15 +225,23 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     final activeMeds = _filterMedications(appState.medicationsWithReminders);
 
     if (activeMeds.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.alarm_off,
-        title: 'No active reminders',
-        subtitle: 'Enable reminders for your medications',
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height - 300,
+          child: _buildEmptyState(
+            icon: Icons.alarm_off,
+            title: 'No active reminders',
+            subtitle: 'Enable reminders for your medications',
+          ),
+        ),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
+      physics:
+          const AlwaysScrollableScrollPhysics(), // Required for pull-to-refresh
       itemCount: activeMeds.length,
       itemBuilder: (context, index) {
         final medication = activeMeds[index];
@@ -173,61 +255,73 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     final refillMeds = _filterMedications(appState.medicationsNeedingRefill);
 
     if (refillMeds.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.check_circle_outline,
-        title: 'All stocked up!',
-        subtitle: 'No medications need refilling',
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height - 300,
+          child: _buildEmptyState(
+            icon: Icons.check_circle_outline,
+            title: 'All stocked up!',
+            subtitle: 'No medications need refilling',
+          ),
+        ),
       );
     }
 
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.orange[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.orange[300]!),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.warning_amber, color: Colors.orange[700], size: 32),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${refillMeds.length} Medication${refillMeds.length > 1 ? 's' : ''} Need Refilling',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange[900],
-                        fontSize: 16,
+    return CustomScrollView(
+      physics:
+          const AlwaysScrollableScrollPhysics(), // Required for pull-to-refresh
+      slivers: [
+        SliverToBoxAdapter(
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange[300]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber, color: Colors.orange[700], size: 32),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${refillMeds.length} Medication${refillMeds.length > 1 ? 's' : ''} Need Refilling',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[900],
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Contact your pharmacy to refill',
-                      style: TextStyle(
-                        color: Colors.orange[800],
-                        fontSize: 13,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Contact your pharmacy to refill',
+                        style: TextStyle(
+                          color: Colors.orange[800],
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: refillMeds.length,
-            itemBuilder: (context, index) {
-              final medication = refillMeds[index];
-              return _buildMedicationCard(medication, appState);
-            },
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final medication = refillMeds[index];
+                return _buildMedicationCard(medication, appState);
+              },
+              childCount: refillMeds.length,
+            ),
           ),
         ),
       ],
@@ -910,7 +1004,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            /*ListTile(
+            ListTile(
               leading: const Icon(Icons.timer),
               title: const Text('30-Second Test'),
               subtitle: const Text('Schedule notification in 30 seconds'),
@@ -928,7 +1022,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                   );
                 }
               },
-            ),*/
+            ),
             ListTile(
               leading: const Icon(Icons.alarm),
               title: const Text('Check Alarm Permission'),
