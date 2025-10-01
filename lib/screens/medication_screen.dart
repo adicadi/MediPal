@@ -87,8 +87,8 @@ class _MedicationsScreenState extends State<MedicationsScreen>
             ],
           ),
         ),
-        actions: [
-          IconButton(
+        actions: const [
+          /*IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddMedicationDialog(context),
             tooltip: 'Add Medication',
@@ -97,7 +97,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
             icon: const Icon(Icons.settings),
             onPressed: () => _showSettingsDialog(context),
             tooltip: 'Settings',
-          ),
+          ),*/
         ],
       ),
       body: Consumer<AppState>(
@@ -910,24 +910,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.notifications),
-              title: const Text('Test Notification'),
-              subtitle: const Text('Send a test notification'),
-              onTap: () async {
-                await NotificationService.showTestNotification();
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('✅ Test notification sent!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              },
-            ),
-            ListTile(
+            /*ListTile(
               leading: const Icon(Icons.timer),
               title: const Text('30-Second Test'),
               subtitle: const Text('Schedule notification in 30 seconds'),
@@ -945,7 +928,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                   );
                 }
               },
-            ),
+            ),*/
             ListTile(
               leading: const Icon(Icons.alarm),
               title: const Text('Check Alarm Permission'),

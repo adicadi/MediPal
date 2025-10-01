@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:personalmedai/models/medication.dart';
+import 'package:personalmedai/screens/medication_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
@@ -357,6 +358,21 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MedicationsScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.alarm),
+            tooltip: 'Set Reminders',
+            style: IconButton.styleFrom(
+              backgroundColor: colorScheme.primaryContainer.withOpacity(0.5),
+            ),
+          ),
           // Enhanced history button with count
           Badge(
             isLabelVisible: _analysisHistory.isNotEmpty,

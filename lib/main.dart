@@ -98,7 +98,7 @@ class MyApp extends StatelessWidget {
           '/onboarding': (context) => const OnboardingScreen(),
           '/chat': (context) => const ChatScreen(),
           '/symptoms': (context) => const SymptomCheckerScreen(),
-          '/medications': (context) => const MedicationsScreen(),
+          '/medications': (context) => const MedicationWarningScreen(),
         },
         debugShowCheckedModeBanner: false,
       ),
