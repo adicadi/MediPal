@@ -9,6 +9,10 @@
 
 MediPal is an intelligent Flutter-based personal health assistant app that provides AI-powered health insights, symptom assessment, medication management, and real-time health consultations. Designed with safety and accessibility in mind, MediPal helps users monitor their health, analyze symptoms, manage medications, and get personalized health recommendations through an intuitive and secure interface.
 
+![HomeScreen](Screenshots/HomeScreen.jpeg)
+![Symptoms_Checker](Screenshots/Symptom_Checker.jpeg)
+![Medication Interaction](Screenshots/MedicationWarning.jpeg)
+![ChatScreen](Screenshots/Chat.jpeg)
 ---
 
 ## 📱 Features
