@@ -82,18 +82,18 @@ class ChatHistoryService {
       List<ChatMessage> messages, String sessionName) async {
     final directory = await getApplicationDocumentsDirectory();
     final fileName =
-        'PersonalMedAI_Chat_${sessionName}_${DateTime.now().millisecondsSinceEpoch}.txt';
+        'MediPal_Chat_${sessionName}_${DateTime.now().millisecondsSinceEpoch}.txt';
     final file = File('${directory.path}/$fileName');
 
     final buffer = StringBuffer();
-    buffer.writeln('PersonalMedAI Chat Export');
+    buffer.writeln('MediPal Chat Export');
     buffer.writeln('Session: $sessionName');
     buffer.writeln('Exported: ${DateTime.now()}');
     buffer.writeln('=' * 50);
     buffer.writeln();
 
     for (final message in messages) {
-      final sender = message.isUser ? 'You' : 'PersonalMedAI';
+      final sender = message.isUser ? 'You' : 'MediPal';
       final time = _formatTime(message.timestamp);
       buffer.writeln('[$time] $sender:');
       buffer.writeln(message.text);

@@ -1324,7 +1324,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           ),
           const SizedBox(height: 20),
           Text(
-            'PersonalMedAI is Analyzing...',
+            'MediPal is Analyzing...',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,

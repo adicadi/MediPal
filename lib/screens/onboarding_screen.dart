@@ -189,7 +189,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             const SizedBox(height: 32),
 
             Text(
-              'PersonalMedAI',
+              'MediPal',
               style: theme.textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: colorScheme.primary,
@@ -700,7 +700,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             const SizedBox(height: 32),
 
             Text(
-              'Welcome to PersonalMedAI!',
+              'Welcome to MediPal!',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: colorScheme.primary,
@@ -769,7 +769,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: ElevatedButton.icon(
                 onPressed: _completeOnboarding,
                 icon: const Icon(Icons.rocket_launch),
-                label: const Text('Start Using PersonalMedAI'),
+                label: const Text('Start Using MediPal'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,

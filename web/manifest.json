@@ -1,6 +1,6 @@
 {
-    "name": "personalmedai",
-    "short_name": "personalmedai",
+    "name": "MediPal",
+    "short_name": "MediPal",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

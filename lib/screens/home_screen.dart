@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'PersonalMedAI',
+                'MediPal',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -446,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
         HealthSummaryCard(
           title: "AI Health Insights",
           content: "Get personalized health recommendations",
-          subtitle: "Powered by PersonalMedAI",
+          subtitle: "Powered by MediPal",
           icon: Icons.insights,
           isLoading: _isGettingInsights,
           onTap: () => _getHealthInsights(context),
@@ -690,7 +690,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               subtitle: const Text(
-                'PersonalMedAI v1.0.0',
+                'MediPal v1.0.0',
                 overflow: TextOverflow.ellipsis,
               ),
               onTap: () => _showAboutDialog(context),
@@ -1612,7 +1612,7 @@ ${appState.ageAppropriateDisclaimer}
             SizedBox(width: 8),
             Expanded(
               child: Text(
-                'About PersonalMedAI',
+                'About MediPal',
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -1627,7 +1627,7 @@ ${appState.ageAppropriateDisclaimer}
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('PersonalMedAI v1.0.0'),
+                Text('MediPal v1.0.0'),
                 SizedBox(height: 8),
                 Text(
                     'Your personal AI health assistant powered by advanced language models.'),

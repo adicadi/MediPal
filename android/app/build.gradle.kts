@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.personalmedai"
+    namespace = "com.example.MediPal"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

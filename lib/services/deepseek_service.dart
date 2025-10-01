@@ -24,7 +24,7 @@ class DeepSeekService {
       'minor':
           'Hi there! 🌟 I\'m here to help you learn about staying healthy! Remember to always ask a trusted adult if you have health questions!',
       'adult':
-          'Hello! I\'m PersonalMedAI, your health assistant. How can I help you today? 😊',
+          'Hello! I\'m MediPal, your health assistant. How can I help you today? 😊',
     },
     'hi': {
       'minor':
@@ -170,7 +170,7 @@ Is there something else I can help you with today?
   // OPTIMIZED: Dramatically simplified system prompts
   String _getAgeAppropriateSystemPrompt(AppState appState) {
     final basePrompt = '''
-You are PersonalMedAI for ${appState.userName}, Age: ${appState.userAge}, Gender: ${appState.userGender}
+You are MediPal for ${appState.userName}, Age: ${appState.userAge}, Gender: ${appState.userGender}
 ''';
 
     if (appState.isMinor) {
@@ -540,7 +540,7 @@ ${appState.ageAppropriateDisclaimer}
         'role': 'system',
         'content': appState != null
             ? _getAgeAppropriateSystemPrompt(appState)
-            : 'You are PersonalMedAI, a helpful medical AI. Keep responses concise and include medical disclaimers.'
+            : 'You are MediPal, a helpful medical AI. Keep responses concise and include medical disclaimers.'
       });
     }
 

@@ -112,7 +112,7 @@ class MyApp extends StatelessWidget {
         }),
       ],
       child: MaterialApp(
-        title: 'PersonalMedAI',
+        title: 'MediPal',
         theme: _buildLightTheme(),
         darkTheme: _buildDarkTheme(),
         themeMode: ThemeMode.system,
@@ -460,7 +460,7 @@ class _InitialScreenState extends State<InitialScreen> {
             const SizedBox(height: 32),
 
             Text(
-              'PersonalMedAI',
+              'MediPal',
               style: theme.textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: colorScheme.primary,

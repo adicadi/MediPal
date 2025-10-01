@@ -111,7 +111,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     if (appState.isMinor) {
       return '''👋 Hi ${appState.userName.isNotEmpty ? appState.userName : 'there'}! 🌟
 
-I'm PersonalMedAI, and I'm here to help you learn about staying healthy! But remember - **always talk to your parents, guardians, or other trusted adults about health questions.**
+I'm MediPal, and I'm here to help you learn about staying healthy! But remember - **always talk to your parents, guardians, or other trusted adults about health questions.**
 
 I can help you learn about:
 • 🏃‍♀️ Fun ways to stay active and strong
@@ -123,7 +123,7 @@ What would you like to learn about today? And don't forget - if you ever don't f
     } else {
       return '''👋 Hello ${appState.userName.isNotEmpty ? appState.userName : 'there'}! 
 
-I'm PersonalMedAI, your personal health assistant. I'm here to help you with health questions, symptom analysis, medication information, and wellness tips.
+I'm MediPal, your personal health assistant. I'm here to help you with health questions, symptom analysis, medication information, and wellness tips.
 
 **I can assist with:**
 • Medical questions and symptom guidance
@@ -158,8 +158,8 @@ How can I help you today? Remember, I provide information to support your health
                 Text(_showHistory
                     ? 'Chat History'
                     : appState.isMinor
-                        ? 'PersonalMedAI - Young User'
-                        : 'PersonalMedAI Chat'),
+                        ? 'MediPal - Young User'
+                        : 'MediPal Chat'),
                 if (!_showHistory) ...[
                   Row(
                     children: [
@@ -481,7 +481,7 @@ How can I help you today? Remember, I provide information to support your health
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'PersonalMedAI is typing',
+                  'MediPal is typing',
                   style: TextStyle(
                     fontStyle: FontStyle.italic,
                     fontSize: 12,
@@ -858,19 +858,19 @@ How can I help you today? Remember, I provide information to support your health
     if (messages.length <= 1) return;
 
     final buffer = StringBuffer();
-    buffer.writeln('PersonalMedAI Chat - $sessionName');
+    buffer.writeln('MediPal Chat - $sessionName');
     buffer.writeln('Exported: ${DateTime.now()}');
     buffer.writeln('=' * 30);
     buffer.writeln();
 
     for (final message in messages) {
-      final sender = message.isUser ? 'You' : 'PersonalMedAI';
+      final sender = message.isUser ? 'You' : 'MediPal';
       buffer.writeln('$sender: ${message.text}');
       buffer.writeln();
     }
 
     await Share.share(buffer.toString(),
-        subject: 'PersonalMedAI Chat - $sessionName');
+        subject: 'MediPal Chat - $sessionName');
   }
 
   void _clearCurrentChat() {
@@ -1092,7 +1092,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'PersonalMedAI is typing',
+              'MediPal is typing',
               style: TextStyle(
                 fontStyle: FontStyle.italic,
                 fontSize: 13,

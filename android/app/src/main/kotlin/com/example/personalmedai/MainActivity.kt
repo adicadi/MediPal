@@ -1,4 +1,4 @@
-package com.example.personalmedai
+package com.example.MediPal
 
 import io.flutter.embedding.android.FlutterActivity
 
