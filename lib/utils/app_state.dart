@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
+import '../models/medication.dart'; // Import the external Medication model
 import 'dart:convert';
 
 class AppState extends ChangeNotifier {
@@ -14,8 +17,8 @@ class AppState extends ChangeNotifier {
   final List<String> _selectedSymptoms = [];
   String _selectedSeverity = '';
   final List<Medication> _medications = [
-    const Medication(name: 'Aspirin', dosage: '81mg', frequency: 'Daily'),
-    const Medication(name: 'Lisinopril', dosage: '10mg', frequency: 'Daily'),
+    Medication.fromLegacy('Aspirin', '81mg', 'Daily'),
+    Medication.fromLegacy('Lisinopril', '10mg', 'Daily'),
   ];
   String _symptomAnalysis = '';
   String _medicationInteractionResult = '';
@@ -48,6 +51,22 @@ class AppState extends ChangeNotifier {
   bool get isMinor => _userAge > 0 && _userAge < 18;
   bool get isYoungAdult => _userAge >= 18 && _userAge < 25;
   bool get isAdult => _userAge >= 25;
+
+  // NEW: Medication reminder getters
+  List<Medication> get medicationsNeedingRefill {
+    return _medications.where((med) => med.needsRefill).toList();
+  }
+
+  List<Medication> get medicationsWithReminders {
+    return _medications
+        .where((med) => med.remindersEnabled && med.reminders.isNotEmpty)
+        .toList();
+  }
+
+  int get totalActiveReminders {
+    return _medications.where((med) => med.remindersEnabled).fold(
+        0, (sum, med) => sum + med.reminders.where((r) => r.enabled).length);
+  }
 
   // NEW: Get personalized greeting with time awareness
   String get personalizedGreeting {
@@ -154,7 +173,6 @@ class AppState extends ChangeNotifier {
   bool shouldFilterContent(String content) {
     if (!isMinor) return false;
 
-    // Keywords that might be inappropriate for minors
     final sensitiveKeywords = [
       'sexual',
       'pregnancy',
@@ -278,18 +296,119 @@ Your health and safety are the top priority. 🏥
     }
   }
 
-  // Medication management (existing)
+  // ENHANCED: Medication management with smart reminders
   void addMedication(Medication medication) {
     _medications.add(medication);
     _saveMedications();
     notifyListeners();
   }
 
-  void removeMedication(int index) {
+  void removeMedication(int index) async {
     if (index >= 0 && index < _medications.length) {
+      final medication = _medications[index];
+
+      // Cancel all notifications for this medication
+      await NotificationService.cancelMedicationReminders(medication.id);
+
       _medications.removeAt(index);
       _saveMedications();
       notifyListeners();
+    }
+  }
+
+  // NEW: Update medication with reminders
+  Future<void> updateMedicationWithReminders(
+      int index, Medication updatedMedication) async {
+    if (index >= 0 && index < _medications.length) {
+      _medications[index] = updatedMedication;
+
+      // Schedule notifications if enabled
+      if (updatedMedication.remindersEnabled) {
+        await NotificationService.scheduleMedicationReminders(
+            updatedMedication);
+      } else {
+        await NotificationService.cancelMedicationReminders(
+            updatedMedication.id);
+      }
+
+      await _saveMedications();
+      notifyListeners();
+    }
+  }
+
+  // NEW: Take medication dose (reduce quantity)
+  Future<void> takeMedicationDose(String medicationId) async {
+    final index = _medications.indexWhere((med) => med.id == medicationId);
+    if (index != -1) {
+      final medication = _medications[index];
+      final updatedMedication = medication.copyWith(
+        currentQuantity:
+            (medication.currentQuantity - 1).clamp(0, medication.totalQuantity),
+      );
+
+      _medications[index] = updatedMedication;
+
+      // Check if refill reminder is needed
+      if (updatedMedication.needsRefill) {
+        await NotificationService.scheduleRefillReminder(updatedMedication);
+      }
+
+      await _saveMedications();
+      notifyListeners();
+    }
+  }
+
+  // NEW: Initialize notification system
+  Future<void> initializeNotifications() async {
+    await NotificationService.initialize();
+    await NotificationService.requestPermissions();
+
+    // Schedule all active medication reminders
+    for (final medication in medicationsWithReminders) {
+      await NotificationService.scheduleMedicationReminders(medication);
+    }
+  }
+
+  // NEW: Toggle all reminders for a medication
+  Future<void> toggleMedicationReminders(
+      String medicationId, bool enabled) async {
+    final index = _medications.indexWhere((med) => med.id == medicationId);
+    if (index != -1) {
+      final medication = _medications[index];
+      final updatedMedication = medication.copyWith(remindersEnabled: enabled);
+      await updateMedicationWithReminders(index, updatedMedication);
+    }
+  }
+
+  // NEW: Add reminder to medication
+  Future<void> addReminderToMedication(
+      String medicationId, MedicationReminder reminder) async {
+    final index = _medications.indexWhere((med) => med.id == medicationId);
+    if (index != -1) {
+      final medication = _medications[index];
+      final updatedReminders =
+          List<MedicationReminder>.from(medication.reminders)..add(reminder);
+      final updatedMedication = medication.copyWith(
+        reminders: updatedReminders,
+        remindersEnabled: true, // Auto-enable when adding reminder
+      );
+      await updateMedicationWithReminders(index, updatedMedication);
+    }
+  }
+
+  // NEW: Remove reminder from medication
+  Future<void> removeReminderFromMedication(
+      String medicationId, String reminderId) async {
+    final index = _medications.indexWhere((med) => med.id == medicationId);
+    if (index != -1) {
+      final medication = _medications[index];
+      final updatedReminders =
+          medication.reminders.where((r) => r.id != reminderId).toList();
+      final updatedMedication = medication.copyWith(
+        reminders: updatedReminders,
+        remindersEnabled: updatedReminders.isNotEmpty,
+      );
+      await updateMedicationWithReminders(index, updatedMedication);
     }
   }
 
@@ -362,10 +481,13 @@ Is there something else I can help you with today?
       'recommended_steps': isMinor ? '12,000' : '10,000',
       'activity_level': 'Moderate',
 
-      // Medication data
+      // Medication data with reminders
       'medications_count': _medications.length,
       'medications': _medications.map((m) => m.name).toList(),
       'medication_details': _medications.map((m) => m.toMap()).toList(),
+      'medications_with_reminders': medicationsWithReminders.length,
+      'total_active_reminders': totalActiveReminders,
+      'medications_needing_refill': medicationsNeedingRefill.length,
 
       // Symptom data
       'last_symptom_check': _symptomAnalysis.isNotEmpty ? 'Recent' : 'Never',
@@ -398,13 +520,20 @@ Is there something else I can help you with today?
       }
     }
 
-    // Medication factor
+    // Medication factor with reminder bonus
     if (_medications.isEmpty) {
       score += 10;
     } else if (_medications.length <= 2) {
       score += 5;
+      // Bonus for having reminders set up
+      if (medicationsWithReminders.length == _medications.length) {
+        score += 3;
+      }
     } else if (_medications.length <= 5) {
       score += 0;
+      if (medicationsWithReminders.length >= _medications.length * 0.8) {
+        score += 2;
+      }
     } else {
       score -= 5;
     }
@@ -419,6 +548,11 @@ Is there something else I can help you with today?
     // Chat activity (positive engagement)
     if (_chatMessages.length > 5) {
       score += 2; // Engaged in health monitoring
+    }
+
+    // Medication adherence factor
+    if (totalActiveReminders > 0) {
+      score += 3; // Proactive health management
     }
 
     return '${score.clamp(40, 100)}/100';
@@ -447,6 +581,9 @@ Is there something else I can help you with today?
 
       await _loadMedications();
       await _loadChatHistory();
+
+      // Initialize notifications after loading profile
+      await initializeNotifications();
 
       notifyListeners();
     } catch (e) {
@@ -545,10 +682,13 @@ Is there something else I can help you with today?
     _userGender = '';
     _medications.clear();
 
+    // Cancel all notifications
+    await NotificationService.cancelAllMedicationNotifications();
+
     // Add back default medications
     _medications.addAll([
-      const Medication(name: 'Aspirin', dosage: '81mg', frequency: 'Daily'),
-      const Medication(name: 'Lisinopril', dosage: '10mg', frequency: 'Daily'),
+      Medication.fromLegacy('Aspirin', '81mg', 'Daily'),
+      Medication.fromLegacy('Lisinopril', '10mg', 'Daily'),
     ]);
 
     // Clear SharedPreferences
@@ -578,50 +718,6 @@ Is there something else I can help you with today?
     if (isMinor) return 'strict';
     if (isYoungAdult) return 'moderate';
     return 'standard';
-  }
-}
-
-// Existing Medication class (unchanged but enhanced)
-class Medication extends Equatable {
-  final String name;
-  final String dosage;
-  final String frequency;
-
-  const Medication({
-    required this.name,
-    required this.dosage,
-    required this.frequency,
-  });
-
-  @override
-  List<Object?> get props => [name, dosage, frequency];
-
-  @override
-  String toString() => '$name $dosage';
-
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'dosage': dosage,
-      'frequency': frequency,
-    };
-  }
-
-  factory Medication.fromMap(Map<String, dynamic> map) {
-    return Medication(
-      name: map['name'] ?? '',
-      dosage: map['dosage'] ?? '',
-      frequency: map['frequency'] ?? '',
-    );
-  }
-
-  // NEW: Get medication display string
-  String get displayString => '$name $dosage ($frequency)';
-
-  // NEW: Check if this is an essential medication
-  bool get isEssential {
-    final essentialMeds = ['insulin', 'epipen', 'inhaler', 'nitroglycerin'];
-    return essentialMeds.any((med) => name.toLowerCase().contains(med));
   }
 }
 

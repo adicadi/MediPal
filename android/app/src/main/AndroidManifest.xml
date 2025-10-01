@@ -15,6 +15,12 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
+
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <!-- Query intents for Android 11+ -->
     <queries>
         <!-- Phone calling intents -->
@@ -48,6 +54,21 @@
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true"
         android:usesCleartextTraffic="true">
+
+
+        <receiver 
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" 
+            android:exported="false" />
+        
+        <receiver 
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver" 
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
+
         
         <activity
             android:name=".MainActivity"
