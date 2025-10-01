@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:personalmedai/models/medication.dart';
+import 'package:personalmedai/screens/medication_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
@@ -20,7 +22,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   final TextEditingController _medicationController = TextEditingController();
   final TextEditingController _dosageController = TextEditingController();
   final TextEditingController _frequencyController = TextEditingController();
-
   bool _showAddForm = false;
   final _formKey = GlobalKey<FormState>();
 
@@ -40,10 +41,8 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     super.initState();
     _initializeAnimations();
     _loadAnalysisHistory();
-    // FIXED: Don't auto-check on init, let user trigger when ready
   }
 
-  // FIXED: Override didChangeDependencies to check cache when returning to screen
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -61,7 +60,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-
     _addFormAnimation = CurvedAnimation(
       parent: _addFormAnimationController!,
       curve: Curves.easeInOut,
@@ -83,7 +81,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     try {
       final prefs = await SharedPreferences.getInstance();
       final historyJson = prefs.getString('medication_analysis_history');
-
       if (historyJson != null) {
         final List<dynamic> historyList = jsonDecode(historyJson);
         setState(() {
@@ -91,7 +88,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
               .map((item) => MedicationAnalysisHistory.fromJson(item))
               .toList();
         });
-
         print(
             '📂 Loaded ${_analysisHistory.length} analysis records from cache');
       }
@@ -114,7 +110,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   }
 
   // ENHANCED: More robust medication hash generation
-  String _generateMedicationHash(List<Medication> medications) {
+  String _generateMedicationHash(List medications) {
     if (medications.length < 2) return '';
 
     // Create a sorted list of medication strings for consistent hashing
@@ -129,16 +125,13 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 
     final combinedString = medicationStrings.join('::');
     final hash = combinedString.hashCode.toString();
-
     print('🔍 Generated medication hash: $hash');
     print('📋 For medications: ${medicationStrings.join(' + ')}');
-
     return hash;
   }
 
   // FIXED: Enhanced cache finding with better matching
-  MedicationAnalysisHistory? _findExistingAnalysis(
-      List<Medication> medications) {
+  MedicationAnalysisHistory? _findExistingAnalysis(List medications) {
     if (medications.length < 2) return null;
 
     final targetHash = _generateMedicationHash(medications);
@@ -148,8 +141,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     for (int i = 0; i < _analysisHistory.length; i++) {
       final analysis = _analysisHistory[i];
       print(
-          '  - Cache $i: hash=${analysis.medicationHash}, meds=${analysis.medications.map((m) => m.name).join(", ")}');
-
+          ' - Cache $i: hash=${analysis.medicationHash}, meds=${analysis.medications.map((m) => m.name).join(", ")}');
       if (analysis.medicationHash == targetHash) {
         print('✅ Found matching cache at index $i');
         return analysis;
@@ -163,7 +155,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   // FIXED: More reliable cache checking
   Future<void> _checkInteractionsWithSmartCache() async {
     final appState = Provider.of<AppState>(context, listen: false);
-
     print('🔄 Checking interactions with smart cache...');
     print(
         '💊 Current medications: ${appState.medications.map((m) => m.name).join(', ')}');
@@ -268,7 +259,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 
   String _formatCacheAge(DateTime timestamp) {
     final difference = DateTime.now().difference(timestamp);
-
     if (difference.inMinutes < 1) {
       return 'just now';
     } else if (difference.inMinutes < 60) {
@@ -293,7 +283,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   Future<void> _performNewAnalysis() async {
     final appState = Provider.of<AppState>(context, listen: false);
     final deepSeekService =
-        Provider.of<DeepSeekService?>(context, listen: false);
+        Provider.of<DeepSeekService>(context, listen: false);
 
     if (appState.medications.length < 2) {
       appState.setMedicationInteractionResult('');
@@ -312,10 +302,8 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     setState(() {});
 
     try {
-      final appState = Provider.of<AppState>(context, listen: false);
       final medicationNames =
           appState.medications.map((med) => med.toString()).toList();
-
       print('🔄 Starting new analysis for: ${medicationNames.join(', ')}');
 
       final result = await deepSeekService.checkMedicationInteractions(
@@ -347,7 +335,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       });
 
       await _saveAnalysisHistory();
-
       print('✅ New analysis completed and cached');
     } catch (e) {
       print('❌ Error during analysis: $e');
@@ -371,6 +358,21 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MedicationsScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.alarm),
+            tooltip: 'Set Reminders',
+            style: IconButton.styleFrom(
+              backgroundColor: colorScheme.primaryContainer.withOpacity(0.5),
+            ),
+          ),
           // Enhanced history button with count
           Badge(
             isLabelVisible: _analysisHistory.isNotEmpty,
@@ -412,7 +414,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   _buildInteractionAnalysisSection(
                       appState, colorScheme, theme, context),
                 ],
-
                 const SizedBox(height: 32),
               ],
             ),
@@ -457,7 +458,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                 child: _buildAnalysisContent(
                     appState, colorScheme, theme, context),
               ),
-
               const SizedBox(height: 20),
 
               // Action buttons with cache options
@@ -698,7 +698,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             ),
           ],
         ),
-
         const SizedBox(height: 8),
 
         // Secondary actions
@@ -1268,8 +1267,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   width: 60,
                   child: CircularProgressIndicator(
                     strokeWidth: 4,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+                    valueColor: AlwaysStoppedAnimation(Colors.blue.shade600),
                   ),
                 ),
                 Icon(
@@ -1346,7 +1344,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   height: 8,
                   child: CircularProgressIndicator(
                     strokeWidth: 1.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor: AlwaysStoppedAnimation(Colors.white),
                   ),
                 )
               : null,
@@ -1516,13 +1514,17 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     _frequencyController.clear();
   }
 
-  // FIXED: Better medication addition handling
+  // FIXED: Enhanced medication addition with proper constructor
   void _addMedication() {
     if (!_formKey.currentState!.validate()) return;
 
     final appState = Provider.of<AppState>(context, listen: false);
 
+    // FIXED: Use the enhanced Medication constructor with required parameters
     final medication = Medication(
+      id: DateTime.now()
+          .millisecondsSinceEpoch
+          .toString(), // Generate unique ID
       name: _medicationController.text.trim(),
       dosage: _dosageController.text.trim().isEmpty
           ? 'Not specified'
@@ -1530,19 +1532,20 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       frequency: _frequencyController.text.trim().isEmpty
           ? 'As needed'
           : _frequencyController.text.trim(),
+      currentQuantity: 30, // Default starting quantity
+      createdAt: DateTime.now(), // Current timestamp
     );
 
     print('➕ Adding medication: ${medication.name}');
-
     appState.addMedication(medication);
-
     _clearForm();
+
     setState(() {
       _showAddForm = false;
       _addFormAnimationController?.reverse();
     });
 
-    // Check cache after adding - but don't clear existing results unless medications changed significantly
+    // Check cache after adding
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInteractionsWithSmartCache();
     });
@@ -1580,7 +1583,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 
   void _copyResult(String result) async {
     await Clipboard.setData(ClipboardData(text: result));
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
@@ -1826,43 +1828,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   ),
                 ),
               ] else ...[
-                // Debug info
-                /*Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Debug Info:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Colors.blue.shade700,
-                        ),
-                      ),
-                      Text(
-                        'Current Hash: $_currentMedicationHash',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.blue.shade600),
-                      ),
-                      Text(
-                        'Last Hash: $_lastAnalysisHash',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.blue.shade600),
-                      ),
-                      Text(
-                        'Is Cached: $_isResultFromCache',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.blue.shade600),
-                      ),
-                    ],
-                  ),
-                ),*/
                 const SizedBox(height: 12),
                 Expanded(
                   child: ListView.builder(
@@ -2082,7 +2047,7 @@ Analysis results are **automatically cached**:
 ## 🎯 Cache Benefits
 
 - **Instant results** for repeated checks
-- **Reduced API usage** saves costs  
+- **Reduced API usage** saves costs
 - **Offline access** to past analyses
 - **Smart detection** of medication changes
 
@@ -2179,7 +2144,7 @@ This tool provides **general information only**. Always consult your healthcare 
 
 // History model class with enhanced functionality
 class MedicationAnalysisHistory {
-  final List<Medication> medications;
+  final List medications;
   final String result;
   final DateTime timestamp;
   final String medicationHash;
@@ -2208,9 +2173,12 @@ class MedicationAnalysisHistory {
       MedicationAnalysisHistory(
         medications: (json['medications'] as List)
             .map((m) => Medication(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
                   name: m['name'],
                   dosage: m['dosage'],
                   frequency: m['frequency'],
+                  currentQuantity: 30,
+                  createdAt: DateTime.now(),
                 ))
             .toList(),
         result: json['result'],

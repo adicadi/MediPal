@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:personalmedai/screens/medication_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart'; // Use flutter_timezone instead of flutter_native_timezone
 import 'utils/app_state.dart';
 import 'services/deepseek_service.dart';
 import 'services/onboarding_service.dart';
+import 'services/notification_service.dart'; // Import your notification service
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/chat_screen.dart';
@@ -11,6 +16,7 @@ import 'screens/symptom_checker_screen.dart';
 import 'screens/medication_warning_screen.dart';
 
 void main() async {
+  // CRITICAL: Ensure Flutter is initialized before any async operations
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
@@ -19,7 +25,46 @@ void main() async {
     print('✅ .env loaded successfully');
   } catch (e) {
     print('⚠️ Warning: .env file not found: $e');
-    // Continue without .env for now
+  }
+
+  try {
+    // Initialize timezone database
+    print('🌍 Initializing timezone database...');
+    tz.initializeTimeZones();
+
+    // Get device's local timezone
+    final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+    print('📍 Device timezone: $timeZoneName');
+
+    // Handle special cases (e.g., Kiev -> Kyiv)
+    final String normalizedTimeZone =
+        timeZoneName == "Europe/Kiev" ? "Europe/Kyiv" : timeZoneName;
+
+    // Set local location for timezone-aware notifications
+    tz.setLocalLocation(tz.getLocation(normalizedTimeZone));
+    print('✅ Timezone set to: ${tz.local}');
+  } catch (e) {
+    print('⚠️ Timezone initialization failed, falling back to UTC: $e');
+    tz.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('UTC'));
+  }
+
+  try {
+    // Initialize notification service
+    print('🔔 Initializing notification service...');
+    await NotificationService.initialize();
+    print('✅ Notification service initialized');
+
+    // Request notification permissions
+    final hasPermission = await NotificationService.requestPermissions();
+    if (hasPermission) {
+      print('✅ Notification permissions granted');
+    } else {
+      print('⚠️ Notification permissions denied');
+    }
+  } catch (e) {
+    print('⚠️ Notification service initialization failed: $e');
+    // App will continue without notifications
   }
 
   runApp(const MyApp());
@@ -38,7 +83,6 @@ class MyApp extends StatelessWidget {
             return DeepSeekService();
           } catch (e) {
             print('⚠️ DeepSeekService initialization failed: $e');
-            // Return null for now
             return null;
           }
         }),
@@ -157,7 +201,6 @@ ThemeData _buildDarkTheme() {
     // AppBar Theme
     appBarTheme: AppBarTheme(
       elevation: 0,
-      centerTitle: false,
       backgroundColor: colorScheme.surface,
       foregroundColor: colorScheme.onSurface,
       surfaceTintColor: Colors.transparent,
@@ -257,6 +300,18 @@ class _InitialScreenState extends State<InitialScreen> {
       // Load user profile first
       final appState = Provider.of<AppState>(context, listen: false);
       await appState.loadUserProfile();
+
+      setState(() {
+        _status = 'Setting up notifications...';
+      });
+
+      // Initialize medication reminders after loading profile
+      try {
+        await appState.initializeNotifications();
+        print('✅ Medication reminders initialized');
+      } catch (e) {
+        print('⚠️ Could not initialize medication reminders: $e');
+      }
 
       setState(() {
         _status = 'Checking onboarding status...';
