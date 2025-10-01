@@ -9,15 +9,16 @@
 
 MediPal is an intelligent Flutter-based personal health assistant app that provides AI-powered health insights, symptom assessment, medication management, and real-time health consultations. Designed with safety and accessibility in mind, MediPal helps users monitor their health, analyze symptoms, manage medications, and get personalized health recommendations through an intuitive and secure interface.
 
-!## 📱 Screenshots
+## 📱 Screenshots
+
 
 <div align="center">
-<img src = "Screenshots/FirstScreen.jpeg" alt="OnBoarding Screen" width="200" style="margin: 5px;">
-  <img src="Screenshots/HomeScreen.jpeg" alt="Home Screen" width="200" style="margin: 5px;">
-  <img src="Screenshots/Symptom_Checker.jpeg" alt="Symptom Checker" width="200" style="margin: 5px;">
-  <img src="Screenshots/MedicationWarning.jpeg" alt="Medication Interaction" width="200" style="margin: 5px;">
-  <img src="Screenshots/Medications.jpeg" alt="Medication Reminder" width="200" style="margin: 5px;">
-  <img src="Screenshots/Chat.jpeg" alt="Chat Screen" width="200" style="margin: 5px;">
+  <img src="Screenshots/FirstScreen.jpeg" alt="Onboarding Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/HomeScreen.jpeg" alt="Home Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/Symptom_Checker.jpeg" alt="Symptom Checker" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/MedicationWarning.jpeg" alt="Medication Interaction" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/Medications.jpeg" alt="Medication Management" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/Chat.jpeg" alt="Chat Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
 </div>
 
 ---
