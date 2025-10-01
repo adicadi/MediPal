@@ -306,9 +306,9 @@ copies or substantial portions of the Software.
 
 ### Get Help
 
-- 📧 **Email**: support@medipal.app
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/your-username/medipal/issues)
-- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/your-username/medipal/discussions)
+- 📧 **Email**: adicadi158+medipal@gmail.com
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/adicadi/medipal/issues)
+- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/adicadi/medipal/discussions)
 
 ### Medical Disclaimer
 
