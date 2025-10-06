@@ -253,35 +253,43 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     setState(() {});
   }
 
-  // NEW: Show cache success notification
+  // UPDATED: Show cache success notification - NOW USES THEME COLORS
   void _showCacheSuccessNotification(DateTime cacheTime) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        final colorScheme = Theme.of(context).colorScheme;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.flash_on, color: Colors.white, size: 20),
+                Icon(Icons.flash_on, color: colorScheme.onTertiary, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
+                      Text(
                         'Instant Cache Result ⚡',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onTertiary,
+                        ),
                       ),
                       Text(
                         'Loaded from ${_formatCacheAge(cacheTime)}',
-                        style: const TextStyle(fontSize: 12),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onTertiary.withOpacity(0.8),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            backgroundColor: Colors.green.shade600,
+            backgroundColor: colorScheme.tertiary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -289,7 +297,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             duration: const Duration(seconds: 3),
             action: SnackBarAction(
               label: 'Refresh',
-              textColor: Colors.white,
+              textColor: colorScheme.onTertiary,
               onPressed: () => _forceCheckInteractions(),
             ),
           ),
@@ -440,7 +448,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Enhanced Safety Notice
+                // UPDATED: Enhanced Safety Notice - NOW USES THEME COLORS
                 _buildSafetyNotice(theme, colorScheme),
                 const SizedBox(height: 24),
 
@@ -463,6 +471,86 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           );
         },
       ),
+    );
+  }
+
+  // UPDATED: Safety notice now uses theme colors instead of hardcoded orange
+  Widget _buildSafetyNotice(ThemeData theme, ColorScheme colorScheme) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 800),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  colorScheme.errorContainer
+                      .withOpacity(0.7), // Theme-based warning color
+                  colorScheme.errorContainer.withOpacity(0.3),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: colorScheme.error.withOpacity(0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.error.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.error.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.security,
+                    color: colorScheme.error,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Safety First!',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Always consult your healthcare provider or pharmacist before starting, stopping, or changing medications.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -556,7 +644,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           ],
         ),
 
-        // Cache indicator
+        // UPDATED: Cache indicator now uses theme colors
         if (_isResultFromCache) ...[
           const SizedBox(height: 12),
           Container(
@@ -564,25 +652,25 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.green.shade100,
-                  Colors.green.shade50,
+                  colorScheme.tertiary.withOpacity(0.3),
+                  colorScheme.tertiary.withOpacity(0.1),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.green.withOpacity(0.3),
+                color: colorScheme.tertiary.withOpacity(0.3),
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.flash_on, color: Colors.green.shade700, size: 16),
+                Icon(Icons.flash_on, color: colorScheme.tertiary, size: 16),
                 const SizedBox(width: 6),
                 Text(
                   'Instant Cache Result ⚡',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.green.shade700,
+                    color: colorScheme.tertiary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -676,6 +764,297 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     );
   }
 
+  // UPDATED: Loading state now uses theme colors instead of hardcoded blue
+  Widget _buildLoadingState(ColorScheme colorScheme, ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            colorScheme.primaryContainer.withOpacity(0.7),
+            colorScheme.primaryContainer.withOpacity(0.3),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 60,
+            width: 60,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  height: 60,
+                  width: 60,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 4,
+                    valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+                  ),
+                ),
+                Icon(
+                  Icons.psychology,
+                  color: colorScheme.primary,
+                  size: 24,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'MediPal is Analyzing...',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onPrimaryContainer,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Checking for potential drug interactions',
+            style: TextStyle(
+              fontSize: 14,
+              color: colorScheme.onPrimaryContainer.withOpacity(0.8),
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This may take 10-30 seconds',
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.onPrimaryContainer.withOpacity(0.6),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          _buildAnalysisSteps(colorScheme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalysisSteps(ColorScheme colorScheme) {
+    return Column(
+      children: [
+        _buildProgressStep('Processing medications...', true, colorScheme),
+        const SizedBox(height: 8),
+        _buildProgressStep('Checking database...', true, colorScheme),
+        const SizedBox(height: 8),
+        _buildProgressStep('Analyzing interactions...', false, colorScheme),
+        const SizedBox(height: 8),
+        _buildProgressStep('Generating report...', false, colorScheme),
+      ],
+    );
+  }
+
+  Widget _buildProgressStep(
+      String text, bool isActive, ColorScheme colorScheme) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: isActive ? colorScheme.primary : colorScheme.outline,
+            shape: BoxShape.circle,
+          ),
+          child: isActive
+              ? const SizedBox(
+                  width: 8,
+                  height: 8,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : null,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: isActive
+                  ? colorScheme.onPrimaryContainer
+                  : colorScheme.onPrimaryContainer.withOpacity(0.6),
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPendingState(ColorScheme colorScheme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.hourglass_empty,
+            color: colorScheme.onSurface.withOpacity(0.6),
+            size: 32,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Analysis Pending',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Click the start button to check for interactions.',
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.onSurface.withOpacity(0.6),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // UPDATED: Result display now uses theme colors
+  Widget _buildInteractionResultWithMarkdown(
+    BuildContext context,
+    String result,
+    ColorScheme colorScheme,
+    ThemeData theme,
+  ) {
+    final isNoInteraction = _isNoInteractionResult(result);
+    final resultColor =
+        isNoInteraction ? colorScheme.tertiary : colorScheme.error;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            (isNoInteraction
+                    ? colorScheme.tertiaryContainer
+                    : colorScheme.errorContainer)
+                .withOpacity(0.7),
+            (isNoInteraction
+                    ? colorScheme.tertiaryContainer
+                    : colorScheme.errorContainer)
+                .withOpacity(0.3),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: resultColor.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: resultColor.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: resultColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  isNoInteraction ? Icons.check_circle : Icons.warning,
+                  color: resultColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  isNoInteraction
+                      ? 'No Significant Interactions Found'
+                      : 'Potential Drug Interaction Detected',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isNoInteraction
+                        ? colorScheme.onTertiaryContainer
+                        : colorScheme.onErrorContainer,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colorScheme.surface.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: resultColor.withOpacity(0.2),
+              ),
+            ),
+            child: SelectionArea(
+              child: SingleChildScrollView(
+                child: TexMarkdown(
+                  result,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isNoInteractionResult(String result) {
+    final lowerResult = result.toLowerCase();
+    return lowerResult.contains('no significant') ||
+        lowerResult.contains('no interactions') ||
+        lowerResult.contains('safe') ||
+        lowerResult.contains('no major') ||
+        lowerResult.contains('no concerning');
+  }
+
   // FIXED: Enhanced action buttons with better logic
   Widget _buildAnalysisActionButtons(
       AppState appState, ColorScheme colorScheme, BuildContext context) {
@@ -765,84 +1144,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildSafetyNotice(ThemeData theme, ColorScheme colorScheme) {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 800),
-      tween: Tween(begin: 0.0, end: 1.0),
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.orange.shade50,
-                  Colors.orange.shade100.withOpacity(0.5),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.orange.shade200),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.orange.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade200,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.security,
-                    color: Colors.orange.shade700,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Safety First!',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: Colors.orange.shade700,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Always consult your healthcare provider or pharmacist before starting, stopping, or changing medications.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.orange.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -1257,13 +1558,14 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                     ],
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete, size: 16, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Remove', style: TextStyle(color: Colors.red)),
+                      Icon(Icons.delete, size: 16, color: Colors.red.shade600),
+                      const SizedBox(width: 8),
+                      Text('Remove',
+                          style: TextStyle(color: Colors.red.shade600)),
                     ],
                   ),
                 ),
@@ -1273,283 +1575,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
         );
       },
     );
-  }
-
-  Widget _buildLoadingState(ColorScheme colorScheme, ThemeData theme) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.blue.shade50,
-            Colors.blue.shade50,
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blue.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 60,
-            width: 60,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  height: 60,
-                  width: 60,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 4,
-                    valueColor: AlwaysStoppedAnimation(Colors.blue.shade600),
-                  ),
-                ),
-                Icon(
-                  Icons.psychology,
-                  color: Colors.blue.shade600,
-                  size: 24,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'MediPal is Analyzing...',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue.shade800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Checking for potential drug interactions',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.blue.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'This may take 10-30 seconds',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.blue.shade500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          _buildAnalysisSteps(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnalysisSteps() {
-    return Column(
-      children: [
-        _buildProgressStep('Processing medications...', true),
-        const SizedBox(height: 8),
-        _buildProgressStep('Checking database...', true),
-        const SizedBox(height: 8),
-        _buildProgressStep('Analyzing interactions...', false),
-        const SizedBox(height: 8),
-        _buildProgressStep('Generating report...', false),
-      ],
-    );
-  }
-
-  Widget _buildProgressStep(String text, bool isActive) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: isActive ? Colors.blue.shade600 : Colors.blue.shade200,
-            shape: BoxShape.circle,
-          ),
-          child: isActive
-              ? const SizedBox(
-                  width: 8,
-                  height: 8,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1.5,
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
-                  ),
-                )
-              : null,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              color: isActive ? Colors.blue.shade700 : Colors.blue.shade400,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPendingState(ColorScheme colorScheme) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.hourglass_empty,
-            color: Colors.grey.shade600,
-            size: 32,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Analysis Pending',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
-            ),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Click the start button to check for interactions.',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInteractionResultWithMarkdown(
-    BuildContext context,
-    String result,
-    ColorScheme colorScheme,
-    ThemeData theme,
-  ) {
-    final isNoInteraction = _isNoInteractionResult(result);
-    final resultColor = isNoInteraction ? Colors.green : Colors.orange;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            resultColor.shade50,
-            resultColor.shade50,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: resultColor.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: resultColor.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: resultColor.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  isNoInteraction ? Icons.check_circle : Icons.warning,
-                  color: resultColor.shade700,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  isNoInteraction
-                      ? 'No Significant Interactions Found'
-                      : 'Potential Drug Interaction Detected',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: resultColor.shade800,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: resultColor.withOpacity(0.2),
-              ),
-            ),
-            child: SelectionArea(
-              child: SingleChildScrollView(
-                child: TexMarkdown(
-                  result,
-                  style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool _isNoInteractionResult(String result) {
-    final lowerResult = result.toLowerCase();
-    return lowerResult.contains('no significant') ||
-        lowerResult.contains('no interactions') ||
-        lowerResult.contains('safe') ||
-        lowerResult.contains('no major') ||
-        lowerResult.contains('no concerning');
   }
 
   void _clearForm() {
@@ -1600,7 +1625,8 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            Icon(Icons.check_circle,
+                color: Theme.of(context).colorScheme.onTertiary),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -1610,14 +1636,14 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             ),
           ],
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: Theme.of(context).colorScheme.tertiary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
         action: SnackBarAction(
           label: 'Undo',
-          textColor: Colors.white,
+          textColor: Theme.of(context).colorScheme.onTertiary,
           onPressed: () {
             appState.removeMedication(appState.medications.length - 1);
             _checkInteractionsWithSmartCache();
@@ -1628,14 +1654,15 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   }
 
   void _copyResult(String result) async {
+    final colorScheme = Theme.of(context).colorScheme;
     await Clipboard.setData(ClipboardData(text: result));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(Icons.copy, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(
+            Icon(Icons.copy, color: colorScheme.onPrimary),
+            const SizedBox(width: 12),
+            const Expanded(
               child: Text(
                 'Analysis copied to clipboard',
                 overflow: TextOverflow.ellipsis,
@@ -1643,7 +1670,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             ),
           ],
         ),
-        backgroundColor: Colors.blue,
+        backgroundColor: colorScheme.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1653,13 +1680,14 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   }
 
   void _editMedication(BuildContext context, int index) {
+    final colorScheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(Icons.construction, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(
+            Icon(Icons.construction, color: colorScheme.onSecondary),
+            const SizedBox(width: 12),
+            const Expanded(
               child: Text(
                 'Edit feature coming soon!',
                 overflow: TextOverflow.ellipsis,
@@ -1667,7 +1695,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             ),
           ],
         ),
-        backgroundColor: Colors.orange,
+        backgroundColor: colorScheme.secondary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1686,11 +1714,11 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning, color: Colors.red),
-            SizedBox(width: 8),
-            Expanded(
+            Icon(Icons.warning, color: Theme.of(context).colorScheme.error),
+            const SizedBox(width: 8),
+            const Expanded(
               child: Text(
                 'Remove Medication',
                 overflow: TextOverflow.ellipsis,
@@ -1725,7 +1753,8 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                 SnackBar(
                   content: Row(
                     children: [
-                      const Icon(Icons.delete, color: Colors.white),
+                      Icon(Icons.delete,
+                          color: Theme.of(context).colorScheme.onError),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -1735,7 +1764,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                       ),
                     ],
                   ),
-                  backgroundColor: Colors.red,
+                  backgroundColor: Theme.of(context).colorScheme.error,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1744,8 +1773,8 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             child: const Text('Remove'),
           ),
@@ -1818,9 +1847,10 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                         _saveAnalysisHistory();
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Cache cleared for testing'),
-                            backgroundColor: Colors.orange,
+                          SnackBar(
+                            content: const Text('Cache cleared for testing'),
+                            backgroundColor:
+                                Theme.of(context).colorScheme.secondary,
                           ),
                         );
                       },
@@ -1847,14 +1877,20 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                         Icon(
                           Icons.history,
                           size: 64,
-                          color: Colors.grey.shade400,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.4),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No analysis history yet',
                           style:
                               Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: Colors.grey.shade600,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withOpacity(0.6),
                                   ),
                           textAlign: TextAlign.center,
                           overflow: TextOverflow.ellipsis,
@@ -1863,7 +1899,10 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                         Text(
                           'Analyze medication interactions to build your cache history',
                           style: TextStyle(
-                            color: Colors.grey.shade500,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 2,
@@ -2030,11 +2069,11 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(Icons.restore, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(
+            Icon(Icons.restore, color: Theme.of(context).colorScheme.onPrimary),
+            const SizedBox(width: 12),
+            const Expanded(
               child: Text(
                 'Analysis result loaded from history ⚡',
                 overflow: TextOverflow.ellipsis,
@@ -2042,7 +2081,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             ),
           ],
         ),
-        backgroundColor: Colors.blue,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -2058,11 +2097,12 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.help_outline, color: Colors.blue),
-            SizedBox(width: 8),
-            Expanded(
+            Icon(Icons.help_outline,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            const Expanded(
               child: Text(
                 'Medication Interaction Checker',
                 overflow: TextOverflow.ellipsis,
@@ -2128,11 +2168,12 @@ This tool provides **general information only**. Always consult your healthcare 
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.local_pharmacy, color: Colors.green),
-            SizedBox(width: 8),
-            Expanded(
+            Icon(Icons.local_pharmacy,
+                color: Theme.of(context).colorScheme.tertiary),
+            const SizedBox(width: 8),
+            const Expanded(
               child: Text(
                 'Pharmacist Tips',
                 overflow: TextOverflow.ellipsis,
