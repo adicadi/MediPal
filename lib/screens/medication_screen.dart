@@ -14,7 +14,6 @@ class MedicationsScreen extends StatefulWidget {
 
 class _MedicationsScreenState extends State<MedicationsScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  // Added WidgetsBindingObserver
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -23,7 +22,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    WidgetsBinding.instance.addObserver(this); // Register lifecycle observer
+    WidgetsBinding.instance.addObserver(this);
     if (kDebugMode) {
       print('🔄 MedicationsScreen initialized with lifecycle observer');
     }
@@ -31,17 +30,15 @@ class _MedicationsScreenState extends State<MedicationsScreen>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this); // Unregister observer
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  // AUTO-RELOAD: Listen for app lifecycle changes
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // App came back to foreground - reload data
       if (kDebugMode) {
         print('🔄 App resumed, reloading medications from storage...');
       }
@@ -49,7 +46,6 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     }
   }
 
-  // Reload medications from SharedPreferences
   Future<void> _reloadMedications() async {
     final appState = Provider.of<AppState>(context, listen: false);
     await appState.loadUserProfile();
@@ -60,92 +56,83 @@ class _MedicationsScreenState extends State<MedicationsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('My Medications'),
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Medications',
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(120),
+          preferredSize: const Size.fromHeight(100),
           child: Column(
             children: [
-              // Search bar with manual refresh button
+              // Simplified search bar
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search medications...',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    setState(() {
-                                      _searchController.clear();
-                                      _searchQuery = '';
-                                    });
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value.toLowerCase();
-                          });
-                        },
-                      ),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search medications...',
+                    hintStyle:
+                        TextStyle(color: colorScheme.onSurface.withAlpha(128)),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: colorScheme.onSurface.withAlpha(153),
+                      size: 20,
                     ),
-                    const SizedBox(width: 8),
-                    // Manual refresh button
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () async {
-                        await _reloadMedications();
-
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Row(
-                                children: [
-                                  Icon(Icons.check_circle,
-                                      color: Colors.white, size: 20),
-                                  SizedBox(width: 12),
-                                  Text('✅ Medications refreshed'),
-                                ],
-                              ),
-                              backgroundColor: Colors.green,
-                              behavior: SnackBarBehavior.floating,
-                              duration: Duration(seconds: 2),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(
+                              Icons.clear,
+                              color: colorScheme.onSurface.withAlpha(153),
+                              size: 20,
                             ),
-                          );
-                        }
-                      },
-                      tooltip: 'Refresh',
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.blue.withOpacity(0.1),
-                      ),
+                            onPressed: () {
+                              setState(() {
+                                _searchController.clear();
+                                _searchQuery = '';
+                              });
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor:
+                        colorScheme.surfaceContainerHighest.withAlpha(128),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
                     ),
-                  ],
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value.toLowerCase();
+                    });
+                  },
                 ),
               ),
-              // Tabs
+              // Minimal tabs
               TabBar(
                 controller: _tabController,
+                indicatorColor: colorScheme.primary,
+                indicatorWeight: 2,
+                labelColor: colorScheme.primary,
+                unselectedLabelColor: colorScheme.onSurface.withAlpha(153),
+                labelStyle:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 tabs: const [
-                  Tab(text: 'All', icon: Icon(Icons.medication, size: 20)),
-                  Tab(text: 'Active', icon: Icon(Icons.alarm_on, size: 20)),
-                  Tab(
-                      text: 'Refill',
-                      icon: Icon(Icons.warning_amber, size: 20)),
+                  Tab(text: 'All'),
+                  Tab(text: 'Active'),
+                  Tab(text: 'Refill'),
                 ],
               ),
             ],
@@ -153,29 +140,18 @@ class _MedicationsScreenState extends State<MedicationsScreen>
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: Icon(Icons.add, color: colorScheme.onSurface),
             onPressed: () => _showAddMedicationDialog(context),
-            tooltip: 'Add Medication',
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => _showSettingsDialog(context),
-            tooltip: 'Settings',
           ),
         ],
       ),
       body: Consumer<AppState>(
         builder: (context, appState, child) {
-          // PULL-TO-REFRESH: Wrap TabBarView with RefreshIndicator
           return RefreshIndicator(
             onRefresh: () async {
-              if (kDebugMode) {
-                print('🔄 Pull-to-refresh triggered');
-              }
               await _reloadMedications();
             },
-            color: Colors.blue,
-            backgroundColor: Colors.white,
+            color: colorScheme.primary,
             child: TabBarView(
               controller: _tabController,
               children: [
@@ -187,40 +163,34 @@ class _MedicationsScreenState extends State<MedicationsScreen>
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddMedicationDialog(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Medication'),
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        elevation: 2,
+        child: const Icon(Icons.add, size: 24),
       ),
     );
   }
 
-  // Tab 1: All Medications
   Widget _buildAllMedicationsTab(AppState appState) {
     final medications = _filterMedications(appState.medications);
 
     if (medications.isEmpty) {
-      return SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height - 300,
-          child: _buildEmptyState(
-            icon: Icons.medication_outlined,
-            title: _searchQuery.isEmpty
-                ? 'No medications added yet'
-                : 'No medications found',
-            subtitle: _searchQuery.isEmpty
-                ? 'Add your first medication to get started'
-                : 'Try a different search term',
-          ),
-        ),
+      return _buildEmptyState(
+        icon: Icons.medication_outlined,
+        title: _searchQuery.isEmpty
+            ? 'No medications yet'
+            : 'No medications found',
+        subtitle: _searchQuery.isEmpty
+            ? 'Add your first medication'
+            : 'Try a different search term',
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      physics:
-          const AlwaysScrollableScrollPhysics(), // Required for pull-to-refresh
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: medications.length,
       itemBuilder: (context, index) {
         final medication = medications[index];
@@ -229,28 +199,20 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     );
   }
 
-  // Tab 2: Active Reminders
   Widget _buildActiveMedicationsTab(AppState appState) {
     final activeMeds = _filterMedications(appState.medicationsWithReminders);
 
     if (activeMeds.isEmpty) {
-      return SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height - 300,
-          child: _buildEmptyState(
-            icon: Icons.alarm_off,
-            title: 'No active reminders',
-            subtitle: 'Enable reminders for your medications',
-          ),
-        ),
+      return _buildEmptyState(
+        icon: Icons.notifications_none,
+        title: 'No active reminders',
+        subtitle: 'Enable reminders for medications',
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      physics:
-          const AlwaysScrollableScrollPhysics(), // Required for pull-to-refresh
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: activeMeds.length,
       itemBuilder: (context, index) {
         final medication = activeMeds[index];
@@ -259,68 +221,49 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     );
   }
 
-  // Tab 3: Refill Needed
   Widget _buildRefillNeededTab(AppState appState) {
     final refillMeds = _filterMedications(appState.medicationsNeedingRefill);
 
     if (refillMeds.isEmpty) {
-      return SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height - 300,
-          child: _buildEmptyState(
-            icon: Icons.check_circle_outline,
-            title: 'All stocked up!',
-            subtitle: 'No medications need refilling',
-          ),
-        ),
+      return _buildEmptyState(
+        icon: Icons.check_circle_outline,
+        title: 'All stocked up',
+        subtitle: 'No refills needed',
       );
     }
 
     return CustomScrollView(
-      physics:
-          const AlwaysScrollableScrollPhysics(), // Required for pull-to-refresh
+      physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
-        SliverToBoxAdapter(
-          child: Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange[300]!),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.warning_amber, color: Colors.orange[700], size: 32),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${refillMeds.length} Medication${refillMeds.length > 1 ? 's' : ''} Need Refilling',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange[900],
-                          fontSize: 16,
-                        ),
+        if (refillMeds.isNotEmpty)
+          SliverToBoxAdapter(
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.amber.withAlpha(38),
+                borderRadius: BorderRadius.circular(12),
+                border:
+                    Border.all(color: Colors.amber.withAlpha(128), width: 1),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.amber[800], size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '${refillMeds.length} medication${refillMeds.length > 1 ? 's' : ''} need refilling',
+                      style: TextStyle(
+                        color: Colors.amber[800],
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Contact your pharmacy to refill',
-                        style: TextStyle(
-                          color: Colors.orange[800],
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           sliver: SliverList(
@@ -337,62 +280,51 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     );
   }
 
-  // Medication Card Widget
+  // Minimal medication card
   Widget _buildMedicationCard(Medication medication, AppState appState) {
+    final colorScheme = Theme.of(context).colorScheme;
     final index = appState.medications.indexOf(medication);
 
     return Card(
-      elevation: 3,
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      color: colorScheme.surfaceContainerLowest,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: medication.needsRefill
-              ? Colors.orange.withOpacity(0.5)
-              : Colors.transparent,
-          width: 2,
+              ? Colors.amber.withAlpha(128)
+              : colorScheme.outline.withAlpha(51),
+          width: 1,
         ),
       ),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: medication.isEssential
-                    ? [Colors.red[50]!, Colors.red[100]!]
-                    : [Colors.blue[50]!, Colors.blue[100]!],
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-            ),
-            child: Row(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row
+            Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: medication.isEssential
+                        ? Colors.red.withAlpha(51)
+                        : colorScheme.primary.withAlpha(51),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     medication.isEssential
                         ? Icons.local_hospital
                         : Icons.medication,
-                    color: medication.isEssential ? Colors.red : Colors.blue,
-                    size: 28,
+                    color: medication.isEssential
+                        ? Colors.red
+                        : colorScheme.primary,
+                    size: 20,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,9 +334,10 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                           Expanded(
                             child: Text(
                               medication.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -413,19 +346,17 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                           if (medication.isEssential)
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(10),
+                                color: Colors.red.withAlpha(204),
+                                borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Text(
-                                'ESSENTIAL',
+                                'Essential',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
@@ -435,8 +366,8 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                       Text(
                         '${medication.dosage} • ${medication.frequency}',
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
+                          fontSize: 13,
+                          color: colorScheme.onSurface.withAlpha(153),
                         ),
                       ),
                     ],
@@ -445,195 +376,134 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                 Switch(
                   value: medication.remindersEnabled,
                   onChanged: (value) async {
-                    // Check permission before enabling reminders
                     if (value) {
                       final hasPermission =
                           await _ensureExactAlarmPermission(context);
-                      if (!hasPermission) {
-                        return; // Don't enable if permission denied
-                      }
+                      if (!hasPermission) return;
                     }
 
                     await appState.toggleMedicationReminders(
-                      medication.id,
-                      value,
-                    );
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            value
-                                ? '✅ Reminders enabled'
-                                : '⏸️ Reminders paused',
-                          ),
-                          backgroundColor: value ? Colors.green : Colors.orange,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
+                        medication.id, value);
                   },
-                  activeThumbColor: Colors.green,
+                  activeColor: colorScheme.primary,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ],
             ),
-          ),
 
-          // Body
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Quantity Status
-                _buildQuantityBar(medication),
+            const SizedBox(height: 16),
 
-                if (medication.reminders.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  _buildRemindersList(medication),
-                ],
+            // Quantity indicator
+            _buildQuantityIndicator(medication, colorScheme),
 
-                if (medication.needsRefill) ...[
-                  const SizedBox(height: 12),
-                  _buildRefillAlert(medication),
-                ],
+            if (medication.reminders.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildRemindersInfo(medication, colorScheme),
+            ],
 
-                if (medication.notes != null &&
-                    medication.notes!.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  _buildNotes(medication),
-                ],
+            if (medication.needsRefill) ...[
+              const SizedBox(height: 12),
+              _buildRefillNotice(medication),
+            ],
 
-                const SizedBox(height: 16),
-                _buildActionButtons(medication, appState, index),
-              ],
-            ),
-          ),
-        ],
+            if (medication.notes?.isNotEmpty == true) ...[
+              const SizedBox(height: 12),
+              _buildNotes(medication, colorScheme),
+            ],
+
+            const SizedBox(height: 16),
+            _buildActionButtons(medication, appState, index, colorScheme),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildQuantityBar(Medication medication) {
-    final percentage = (medication.currentQuantity / medication.totalQuantity);
-    Color statusColor;
+  Widget _buildQuantityIndicator(
+      Medication medication, ColorScheme colorScheme) {
+    final percentage = medication.currentQuantity / medication.totalQuantity;
+    Color indicatorColor;
 
     if (medication.needsRefill) {
-      statusColor = Colors.red;
+      indicatorColor = Colors.red;
     } else if (medication.isRunningLow) {
-      statusColor = Colors.orange;
+      indicatorColor = Colors.amber;
     } else {
-      statusColor = Colors.green;
+      indicatorColor = Colors.green;
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              '💊 Quantity',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        Expanded(
+          child: Container(
+            height: 4,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(2),
+              color: colorScheme.surfaceContainerHighest,
             ),
-            Text(
-              '${medication.currentQuantity}/${medication.totalQuantity}',
-              style: TextStyle(
-                color: statusColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: percentage,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(2),
+                  color: indicatorColor,
+                ),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: percentage,
-            backgroundColor: Colors.grey[200],
-            color: statusColor,
-            minHeight: 10,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(width: 8),
         Text(
-          '${medication.daysUntilEmpty} days remaining',
+          '${medication.currentQuantity}/${medication.totalQuantity}',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+            color: indicatorColor,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildRemindersList(Medication medication) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildRemindersInfo(Medication medication, ColorScheme colorScheme) {
+    return Row(
       children: [
-        const Text(
-          '⏰ Reminders',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        Icon(
+          Icons.schedule,
+          size: 14,
+          color: colorScheme.primary,
         ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: medication.reminders.map((reminder) {
-            return Chip(
-              avatar: Icon(
-                reminder.enabled
-                    ? Icons.notifications_active
-                    : Icons.notifications_off,
-                size: 18,
-                color: reminder.enabled ? Colors.blue : Colors.grey,
-              ),
-              label: Text(
-                '${reminder.formattedTime} (${reminder.daysSummary})',
-                style: const TextStyle(fontSize: 12),
-              ),
-              backgroundColor:
-                  reminder.enabled ? Colors.blue[50] : Colors.grey[200],
-              deleteIcon: const Icon(Icons.edit, size: 18),
-              onDeleted: () => _editReminder(medication, reminder),
-            );
-          }).toList(),
+        const SizedBox(width: 6),
+        Text(
+          '${medication.reminders.length} reminder${medication.reminders.length > 1 ? 's' : ''} set',
+          style: TextStyle(
+            fontSize: 12,
+            color: colorScheme.primary,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildRefillAlert(Medication medication) {
+  Widget _buildRefillNotice(Medication medication) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.orange[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange[300]!),
+        color: Colors.amber.withAlpha(51),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange[700]),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Refill Needed!',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange[900],
-                  ),
-                ),
-                Text(
-                  'Only ${medication.currentQuantity} pills remaining',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.orange[800],
-                  ),
-                ),
-              ],
+          Icon(Icons.info, color: Colors.amber[800], size: 16),
+          const SizedBox(width: 8),
+          Text(
+            'Refill needed',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.amber[800],
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -641,22 +511,29 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     );
   }
 
-  Widget _buildNotes(Medication medication) {
+  Widget _buildNotes(Medication medication, ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
+        color: colorScheme.surfaceContainerHighest.withAlpha(128),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.note_outlined, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 8),
+          Icon(
+            Icons.note,
+            size: 14,
+            color: colorScheme.onSurface.withAlpha(153),
+          ),
+          const SizedBox(width: 6),
           Expanded(
             child: Text(
               medication.notes!,
-              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              style: TextStyle(
+                fontSize: 12,
+                color: colorScheme.onSurface.withAlpha(179),
+              ),
             ),
           ),
         ],
@@ -664,44 +541,43 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     );
   }
 
-  Widget _buildActionButtons(
-      Medication medication, AppState appState, int index) {
+  Widget _buildActionButtons(Medication medication, AppState appState,
+      int index, ColorScheme colorScheme) {
     return Row(
       children: [
         Expanded(
           flex: 2,
-          child: ElevatedButton.icon(
+          child: FilledButton.icon(
             onPressed: () => _takeDose(medication.id, appState),
-            icon: const Icon(Icons.check_circle, size: 20),
+            icon: const Icon(Icons.check, size: 16),
             label: const Text('Take Dose'),
-            style: ElevatedButton.styleFrom(
+            style: FilledButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              textStyle:
+                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ),
         ),
         const SizedBox(width: 8),
         IconButton(
           onPressed: () => _showAddReminderDialog(medication),
-          icon: const Icon(Icons.alarm_add),
-          color: Colors.blue,
-          tooltip: 'Add Reminder',
+          icon: const Icon(Icons.alarm_add, size: 18),
+          color: colorScheme.onSurface.withAlpha(153),
+          visualDensity: VisualDensity.compact,
         ),
         IconButton(
           onPressed: () => _editMedication(medication, index, appState),
-          icon: const Icon(Icons.edit),
-          color: Colors.blue,
-          tooltip: 'Edit',
+          icon: const Icon(Icons.edit, size: 18),
+          color: colorScheme.onSurface.withAlpha(153),
+          visualDensity: VisualDensity.compact,
         ),
         IconButton(
           onPressed: () => _confirmDelete(medication, index, appState),
-          icon: const Icon(Icons.delete_outline),
-          color: Colors.red,
-          tooltip: 'Delete',
+          icon: const Icon(Icons.delete_outline, size: 18),
+          color: Colors.red.withAlpha(179),
+          visualDensity: VisualDensity.compact,
         ),
       ],
     );
@@ -712,20 +588,26 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     required String title,
     required String subtitle,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 80, color: Colors.grey[400]),
+            Icon(
+              icon,
+              size: 64,
+              color: colorScheme.onSurface.withAlpha(102),
+            ),
             const SizedBox(height: 16),
             Text(
               title,
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface.withAlpha(153),
               ),
               textAlign: TextAlign.center,
             ),
@@ -734,12 +616,12 @@ class _MedicationsScreenState extends State<MedicationsScreen>
               subtitle,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[600],
+                color: colorScheme.onSurface.withAlpha(128),
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
+            FilledButton.icon(
               onPressed: () => _showAddMedicationDialog(context),
               icon: const Icon(Icons.add),
               label: const Text('Add Medication'),
@@ -750,7 +632,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     );
   }
 
-  // Helper Methods
+  // Helper methods remain the same...
   List<Medication> _filterMedications(List<Medication> medications) {
     if (_searchQuery.isEmpty) return medications;
     return medications
@@ -760,156 +642,61 @@ class _MedicationsScreenState extends State<MedicationsScreen>
         .toList();
   }
 
-  // NEW: Check and request exact alarm permission
   Future<bool> _ensureExactAlarmPermission(BuildContext context) async {
-    // Check if permission is already granted
     final canSchedule = await NotificationService.canScheduleExactAlarms();
+    if (canSchedule) return true;
 
-    if (canSchedule) {
-      return true;
-    }
-
-    // Show dialog explaining why permission is needed
     final shouldRequest = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.alarm, color: Colors.blue),
-            SizedBox(width: 12),
-            Text('Permission Required'),
-          ],
-        ),
+        title: const Text('Permission Required'),
         content: const Text(
-          'To schedule medication reminders at exact times, this app needs permission to set alarms.\n\n'
-          'This ensures you never miss a dose!\n\n'
-          'You will be redirected to settings to enable "Alarms & reminders".',
+          'To schedule medication reminders at exact times, this app needs permission to set alarms.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
             child: const Text('Grant Permission'),
           ),
         ],
       ),
     );
 
-    if (shouldRequest != true) {
-      return false;
-    }
+    if (shouldRequest != true) return false;
 
-    // Request the permission (opens system settings)
     final granted = await NotificationService.requestExactAlarmPermission();
-
-    if (!granted && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            '⚠️ Permission denied. Reminders may not work at exact times.',
-          ),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 4),
-        ),
-      );
-    }
-
     return granted;
   }
 
   Future<void> _takeDose(String medicationId, AppState appState) async {
     await appState.takeMedicationDose(medicationId);
-
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 12),
-              Expanded(child: Text('✅ Dose taken! Quantity updated.')),
-            ],
-          ),
-          backgroundColor: Colors.green,
+        const SnackBar(
+          content: Text('Dose taken successfully'),
           behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: 'UNDO',
-            textColor: Colors.white,
-            onPressed: () {
-              // Implement undo if needed
-            },
-          ),
         ),
       );
     }
   }
 
   Future<void> _showAddReminderDialog(Medication medication) async {
-    // First ensure we have permission
     final hasPermission = await _ensureExactAlarmPermission(context);
+    if (!hasPermission) return;
 
-    if (!hasPermission) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Cannot add reminder without alarm permission'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-
-    // Continue with reminder dialog
     final result = await showDialog<MedicationReminder>(
       context: context,
       builder: (context) => _AddReminderDialog(),
     );
 
     if (result != null && mounted) {
-      try {
-        final appState = Provider.of<AppState>(context, listen: false);
-        await appState.addReminderToMedication(medication.id, result);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Reminder added successfully!'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('❌ Error adding reminder: ${e.toString()}'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
+      final appState = Provider.of<AppState>(context, listen: false);
+      await appState.addReminderToMedication(medication.id, result);
     }
-  }
-
-  void _editReminder(Medication medication, MedicationReminder reminder) {
-    // Implement edit reminder functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Edit reminder feature coming soon!'),
-        backgroundColor: Colors.orange,
-      ),
-    );
   }
 
   void _editMedication(Medication medication, int index, AppState appState) {
@@ -923,17 +710,15 @@ class _MedicationsScreenState extends State<MedicationsScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Medication?'),
-        content: Text(
-          'Are you sure you want to delete ${medication.name}? This will remove all reminders.',
-        ),
+        content: Text('Are you sure you want to delete ${medication.name}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete'),
           ),
         ],
@@ -942,31 +727,19 @@ class _MedicationsScreenState extends State<MedicationsScreen>
 
     if (confirmed == true && mounted) {
       appState.removeMedication(index);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${medication.name} deleted'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
     }
   }
 
-  Future<void> _showAddMedicationDialog(
-    BuildContext context, {
-    Medication? existingMedication,
-    int? index,
-  }) async {
+  Future<void> _showAddMedicationDialog(BuildContext context,
+      {Medication? existingMedication, int? index}) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => _AddMedicationDialog(
-        existingMedication: existingMedication,
-      ),
+      builder: (context) =>
+          _AddMedicationDialog(existingMedication: existingMedication),
     );
 
     if (result != null && mounted) {
       final appState = Provider.of<AppState>(context, listen: false);
-
       final medication = Medication(
         id: existingMedication?.id ??
             DateTime.now().millisecondsSinceEpoch.toString(),
@@ -988,95 +761,11 @@ class _MedicationsScreenState extends State<MedicationsScreen>
       } else {
         appState.addMedication(medication);
       }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              existingMedication != null
-                  ? '✅ ${medication.name} updated'
-                  : '✅ ${medication.name} added',
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
     }
-  }
-
-  void _showSettingsDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Medication Settings'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.timer),
-              title: const Text('30-Second Test'),
-              subtitle: const Text('Schedule notification in 30 seconds'),
-              onTap: () async {
-                await NotificationService.scheduleTestNotificationIn30Seconds();
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                          '✅ Notification scheduled for 30 seconds from now. Close the app and wait!'),
-                      backgroundColor: Colors.green,
-                      duration: Duration(seconds: 4),
-                    ),
-                  );
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.alarm),
-              title: const Text('Check Alarm Permission'),
-              subtitle: const Text('Verify exact alarm permission'),
-              onTap: () async {
-                final canSchedule =
-                    await NotificationService.canScheduleExactAlarms();
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        canSchedule
-                            ? '✅ Exact alarm permission granted'
-                            : '⚠️ Exact alarm permission not granted',
-                      ),
-                      backgroundColor:
-                          canSchedule ? Colors.green : Colors.orange,
-                    ),
-                  );
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.history),
-              title: const Text('View History'),
-              subtitle: const Text('Coming soon'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
   }
 }
 
-// Add Medication Dialog
+// Simplified Add Medication Dialog
 class _AddMedicationDialog extends StatefulWidget {
   final Medication? existingMedication;
 
@@ -1142,19 +831,16 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                 Text(
                   widget.existingMedication != null
                       ? 'Edit Medication'
-                      : 'Add New Medication',
+                      : 'Add Medication',
                   style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      fontSize: 20, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
-                    labelText: 'Medication Name *',
+                    labelText: 'Name',
                     hintText: 'e.g., Aspirin',
-                    prefixIcon: Icon(Icons.medication),
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) =>
@@ -1167,8 +853,8 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                       child: TextFormField(
                         controller: _dosageController,
                         decoration: const InputDecoration(
-                          labelText: 'Dosage *',
-                          hintText: 'e.g., 81mg',
+                          labelText: 'Dosage',
+                          hintText: '81mg',
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) =>
@@ -1180,8 +866,8 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                       child: TextFormField(
                         controller: _frequencyController,
                         decoration: const InputDecoration(
-                          labelText: 'Frequency *',
-                          hintText: 'e.g., Daily',
+                          labelText: 'Frequency',
+                          hintText: 'Daily',
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) =>
@@ -1220,8 +906,8 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                 TextFormField(
                   controller: _refillThresholdController,
                   decoration: const InputDecoration(
-                    labelText: 'Refill Alert Threshold',
-                    hintText: 'Alert when pills <= this number',
+                    labelText: 'Refill Threshold',
+                    hintText: 'Alert when pills reach this number',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
@@ -1231,17 +917,18 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                   controller: _notesController,
                   decoration: const InputDecoration(
                     labelText: 'Notes (Optional)',
-                    hintText: 'e.g., Take with food',
+                    hintText: 'Take with food',
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 16),
                 SwitchListTile(
-                  title: const Text('Mark as Essential'),
-                  subtitle: const Text('Higher priority notifications'),
+                  title: const Text('Essential Medication'),
+                  subtitle: const Text('Higher priority'),
                   value: _isEssential,
                   onChanged: (value) => setState(() => _isEssential = value),
+                  contentPadding: EdgeInsets.zero,
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -1255,11 +942,11 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                     const SizedBox(width: 12),
                     Expanded(
                       flex: 2,
-                      child: ElevatedButton(
+                      child: FilledButton(
                         onPressed: _save,
-                        child: Text(
-                          widget.existingMedication != null ? 'Update' : 'Add',
-                        ),
+                        child: Text(widget.existingMedication != null
+                            ? 'Update'
+                            : 'Add'),
                       ),
                     ),
                   ],
@@ -1290,7 +977,7 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
   }
 }
 
-// Add Reminder Dialog
+// Simplified Add Reminder Dialog
 class _AddReminderDialog extends StatefulWidget {
   @override
   State<_AddReminderDialog> createState() => _AddReminderDialogState();
@@ -1300,7 +987,6 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
   TimeOfDay _selectedTime = const TimeOfDay(hour: 8, minute: 0);
   final Set<int> _selectedDays = {1, 2, 3, 4, 5, 6, 7};
   final TextEditingController _messageController = TextEditingController();
-  final int _dosesCount = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -1315,18 +1001,15 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
             children: [
               const Text(
                 'Add Reminder',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 24),
-              const Text('Reminder Time',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Time', style: TextStyle(fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
               InkWell(
                 onTap: () async {
                   final time = await showTimePicker(
-                    context: context,
-                    initialTime: _selectedTime,
-                  );
+                      context: context, initialTime: _selectedTime);
                   if (time != null) {
                     setState(() => _selectedTime = time);
                   }
@@ -1343,9 +1026,7 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
                       Text(
                         _formatTime(_selectedTime),
                         style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            fontSize: 16, fontWeight: FontWeight.w500),
                       ),
                       const Icon(Icons.access_time),
                     ],
@@ -1353,12 +1034,10 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('Repeat On',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Days', style: TextStyle(fontWeight: FontWeight.w500)),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
-                runSpacing: 8,
                 children: [
                   _buildDayChip('Mon', 1),
                   _buildDayChip('Tue', 2),
@@ -1374,7 +1053,7 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
                 controller: _messageController,
                 decoration: const InputDecoration(
                   labelText: 'Custom Message (Optional)',
-                  hintText: 'e.g., Take with food',
+                  hintText: 'Take with food',
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 2,
@@ -1391,13 +1070,13 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     flex: 2,
-                    child: ElevatedButton(
+                    child: FilledButton(
                       onPressed: () {
                         if (_selectedDays.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Please select at least one day'),
-                            ),
+                                content:
+                                    Text('Please select at least one day')),
                           );
                           return;
                         }
@@ -1411,7 +1090,7 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
                               ? null
                               : _messageController.text.trim(),
                           createdAt: DateTime.now(),
-                          dosesCount: _dosesCount,
+                          dosesCount: 1,
                         );
 
                         Navigator.pop(context, reminder);
@@ -1442,12 +1121,6 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
           }
         });
       },
-      selectedColor: Colors.blue,
-      checkmarkColor: Colors.white,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.black,
-        fontWeight: FontWeight.w600,
-      ),
     );
   }
 
