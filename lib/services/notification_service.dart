@@ -382,13 +382,31 @@ class NotificationService {
 
   static Future<void> cancelMedicationReminders(String medicationId) async {
     try {
+      await initialize();
       final pendingNotifications =
           await _notifications.pendingNotificationRequests();
 
       int cancelledCount = 0;
       for (final notification in pendingNotifications) {
-        if (notification.payload?.contains('medication:$medicationId') ==
-            true) {
+        final payload = notification.payload;
+        if (payload == null) continue;
+
+        bool shouldCancel = false;
+        try {
+          final data = jsonDecode(payload);
+          if (data is Map<String, dynamic>) {
+            final type = data['type'] as String?;
+            final id = data['medicationId'] as String?;
+            if (type == 'medication' && id == medicationId) {
+              shouldCancel = true;
+            }
+          }
+        } catch (_) {
+          // Fallback for any legacy payload formats.
+          shouldCancel = payload.contains('medication:$medicationId');
+        }
+
+        if (shouldCancel) {
           await _notifications.cancel(notification.id);
           cancelledCount++;
         }
