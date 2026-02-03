@@ -404,7 +404,11 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Medication Warnings'),
+        title: const Text(
+          'Medication Warnings',
+          overflow: TextOverflow.ellipsis,
+        ),
+        centerTitle: false,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -477,81 +481,72 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 
   // UPDATED: Safety notice now uses theme colors instead of hardcoded orange
   Widget _buildSafetyNotice(ThemeData theme, ColorScheme colorScheme) {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 800),
-      tween: Tween(begin: 0.0, end: 1.0),
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            colorScheme.errorContainer
+                .withValues(alpha: 0.7), // Theme-based warning color
+            colorScheme.errorContainer.withValues(alpha: 0.3),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.error.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.error.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  colorScheme.errorContainer
-                      .withValues(alpha: 0.7), // Theme-based warning color
-                  colorScheme.errorContainer.withValues(alpha: 0.3),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: colorScheme.error.withValues(alpha: 0.3)),
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.error.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: colorScheme.error.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
+            child: Icon(
+              Icons.security,
+              color: colorScheme.error,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: colorScheme.error.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
+                Text(
+                  'Safety First!',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colorScheme.onErrorContainer,
+                    fontWeight: FontWeight.bold,
                   ),
-                  child: Icon(
-                    Icons.security,
-                    color: colorScheme.error,
-                    size: 20,
-                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Safety First!',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: colorScheme.onErrorContainer,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Always consult your healthcare provider or pharmacist before starting, stopping, or changing medications.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onErrorContainer,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                const SizedBox(height: 4),
+                Text(
+                  'Always consult your healthcare provider or pharmacist before starting, stopping, or changing medications.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onErrorContainer,
+                    fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -2011,16 +2006,6 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Hash: ${analysis.medicationHash}',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.5),
-                                ),
-                              ),
                               Text(
                                 _formatCacheAge(analysis.timestamp),
                                 style: TextStyle(

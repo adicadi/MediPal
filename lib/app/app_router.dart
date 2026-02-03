@@ -5,7 +5,8 @@ import '../screens/home_screen.dart';
 import '../screens/chat_screen.dart';
 import '../screens/symptom_checker_screen.dart';
 import '../screens/medication_warning_screen.dart';
-import '../screens/wearable_settings_screen.dart';
+import '../screens/wearable_screen.dart';
+import '../screens/settings_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
   '/home': (context) => const HomeScreen(),
@@ -13,5 +14,6 @@ final Map<String, WidgetBuilder> appRoutes = {
   '/chat': (context) => const ChatScreen(),
   '/symptoms': (context) => const SymptomCheckerScreen(),
   '/medications': (context) => const MedicationWarningScreen(),
-  '/wearables': (context) => const WearableSettingsScreen(),
+  '/wearables': (context) => const WearableScreen(),
+  '/settings': (context) => const SettingsScreen(),
 };

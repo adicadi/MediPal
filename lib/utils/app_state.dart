@@ -30,6 +30,7 @@ class AppState extends ChangeNotifier {
   // Chat history support
   final List<ChatMessage> _chatMessages = [];
   WearableSummary? _wearableSummary;
+  List<WearableSummary> _wearableHistory = [];
 
   // Getters - existing
   String get userName => _userName;
@@ -50,6 +51,8 @@ class AppState extends ChangeNotifier {
   // Getters - chat
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
   WearableSummary? get wearableSummary => _wearableSummary;
+  List<WearableSummary> get wearableHistory =>
+      List.unmodifiable(_wearableHistory);
 
   // NEW: Age-based content restrictions
   bool get isMinor => _userAge > 0 && _userAge < 18;
@@ -628,6 +631,7 @@ Is there something else I can help you with today?
       await _loadMedications();
       await _loadChatHistory();
       _wearableSummary = await WearableCacheService.loadSummary();
+      _wearableHistory = await WearableCacheService.loadHistory();
 
       // Initialize notifications after loading profile
       await initializeNotifications();
@@ -643,8 +647,95 @@ Is there something else I can help you with today?
     if (summary != null) {
       _wearableSummary = summary;
       await WearableCacheService.saveSummary(summary);
+      await WearableCacheService.upsertHistory(summary);
+      _wearableHistory = await WearableCacheService.loadHistory();
       notifyListeners();
     }
+  }
+
+  double? get stepsTrendPercent {
+    final today = _wearableSummary;
+    if (today == null || today.stepsToday == null) return null;
+
+    final history = _wearableHistory;
+    if (history.isEmpty) return null;
+
+    final todayKey = _dayKey(today.updatedAt);
+    final previous = history
+        .where((item) =>
+            _dayKey(item.updatedAt) != todayKey &&
+            item.stepsToday != null)
+        .toList();
+    if (previous.isEmpty) return null;
+
+    final last7 = previous.length > 7
+        ? previous.sublist(previous.length - 7)
+        : previous;
+    final avg = last7
+            .map((e) => e.stepsToday!)
+            .reduce((a, b) => a + b) /
+        last7.length;
+    if (avg == 0) return null;
+
+    return ((today.stepsToday! - avg) / avg) * 100.0;
+  }
+
+  double? get sleepTrendPercent {
+    final today = _wearableSummary;
+    if (today == null || today.sleepHours == null) return null;
+
+    final history = _wearableHistory;
+    if (history.isEmpty) return null;
+
+    final todayKey = _dayKey(today.updatedAt);
+    final previous = history
+        .where((item) =>
+            _dayKey(item.updatedAt) != todayKey &&
+            item.sleepHours != null)
+        .toList();
+    if (previous.isEmpty) return null;
+
+    final last7 = previous.length > 7
+        ? previous.sublist(previous.length - 7)
+        : previous;
+    final avg =
+        last7.map((e) => e.sleepHours!).reduce((a, b) => a + b) / last7.length;
+    if (avg == 0) return null;
+
+    return ((today.sleepHours! - avg) / avg) * 100.0;
+  }
+
+  double? get restingHrTrendPercent {
+    final today = _wearableSummary;
+    if (today == null || today.restingHeartRate == null) return null;
+
+    final history = _wearableHistory;
+    if (history.isEmpty) return null;
+
+    final todayKey = _dayKey(today.updatedAt);
+    final previous = history
+        .where((item) =>
+            _dayKey(item.updatedAt) != todayKey &&
+            item.restingHeartRate != null)
+        .toList();
+    if (previous.isEmpty) return null;
+
+    final last7 = previous.length > 7
+        ? previous.sublist(previous.length - 7)
+        : previous;
+    final avg = last7
+            .map((e) => e.restingHeartRate!)
+            .reduce((a, b) => a + b) /
+        last7.length;
+    if (avg == 0) return null;
+
+    return ((today.restingHeartRate! - avg) / avg) * 100.0;
+  }
+
+  String _dayKey(DateTime time) {
+    return '${time.year.toString().padLeft(4, '0')}-'
+        '${time.month.toString().padLeft(2, '0')}-'
+        '${time.day.toString().padLeft(2, '0')}';
   }
 
   String get wearableSummaryPrompt {

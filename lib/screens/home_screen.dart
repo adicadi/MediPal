@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Profile',
           ),
           IconButton(
-            onPressed: () => _showSettingsDialog(context),
+            onPressed: () => Navigator.pushNamed(context, '/settings'),
             icon: const Icon(Icons.settings),
             tooltip: 'Settings',
           ),
@@ -446,14 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ]);
     } else {
       cards.addAll([
-        HealthSummaryCard(
-          title: "AI Health Insights",
-          content: "Get personalized health recommendations",
-          subtitle: "Powered by MediPal",
-          icon: Icons.insights,
-          isLoading: _isGettingInsights,
-          onTap: () => _getHealthInsights(context),
-        ),
+        _buildInsightsCard(appState),
         HealthSummaryCard(
           title: "Medications",
           content: appState.medications.isNotEmpty
@@ -488,8 +481,44 @@ class _HomeScreenState extends State<HomeScreen> {
     return cards;
   }
 
+  Widget _buildInsightsCard(AppState appState) {
+    final meds = appState.medications.length;
+    final trend = appState.stepsTrendPercent;
+    final refillCount = appState.medicationsNeedingRefill.length;
+    final remindersEnabled = appState.totalActiveReminders;
+
+    String content;
+    if (meds == 0) {
+      content = 'Add medications and connect wearables for smarter insights';
+    } else {
+      content = remindersEnabled > 0
+          ? 'Medication routine looks set up'
+          : 'Consider enabling reminders';
+      if (refillCount > 0) {
+        content = '$content • $refillCount refill alert(s)';
+      }
+    }
+
+    String subtitle = meds > 0
+        ? '$meds medication${meds == 1 ? '' : 's'} tracked'
+        : 'No medications tracked';
+    if (trend != null) {
+      subtitle = '$subtitle • ${_formatTrend(trend)} steps vs 7d';
+    }
+
+    return HealthSummaryCard(
+      title: "AI Health Insights",
+      content: content,
+      subtitle: subtitle,
+      icon: Icons.insights,
+      isLoading: _isGettingInsights,
+      onTap: () => _getHealthInsights(context),
+    );
+  }
+
   Widget _buildWearableSummaryCard(AppState appState) {
     final summary = appState.wearableSummary;
+    final trend = appState.stepsTrendPercent;
     final content = summary == null || summary.isEmpty
         ? 'No wearable data yet'
         : _formatWearableSummary(summary);
@@ -500,7 +529,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return HealthSummaryCard(
       title: 'Wearable Insights',
       content: content,
-      subtitle: subtitle,
+      subtitle: trend == null
+          ? subtitle
+          : '$subtitle • ${_formatTrend(trend)} steps vs 7d',
       icon: Icons.watch,
       onTap: () => Navigator.pushNamed(context, '/wearables'),
     );
@@ -529,6 +560,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
     return '${time.month}/${time.day} $hour:$minute';
+  }
+
+  String _formatTrend(double value) {
+    final sign = value >= 0 ? '+' : '';
+    return '$sign${value.toStringAsFixed(0)}%';
   }
 
   Widget _buildPersonalizedTipsSection(
@@ -670,103 +706,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showSettingsDialog(BuildContext context) {
-    showBlurDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.settings, color: Colors.blue),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Settings',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text(
-                'Edit Profile',
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: const Text(
-                'Update your personal information',
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _showProfileDialog(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.watch),
-              title: const Text(
-                'Wearables',
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: const Text(
-                'Health Connect and smartwatch data',
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/wearables');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.notifications),
-              title: const Text(
-                'Notifications',
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: const Text(
-                'Coming soon',
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () => _showComingSoonDialog(context, 'Notifications'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.security),
-              title: const Text(
-                'Privacy',
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: const Text(
-                'Coming soon',
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () => _showComingSoonDialog(context, 'Privacy Settings'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.info),
-              title: const Text(
-                'About',
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: const Text(
-                'MediPal v1.0.0',
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () => _showAboutDialog(context),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _getHealthInsights(BuildContext context,
       {bool showDialog = true}) async {
@@ -1704,104 +1643,6 @@ ${appState.ageAppropriateDisclaimer}
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
-    Navigator.pop(context);
-    showBlurDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.psychology, color: Colors.blue),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'About MediPal',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.5,
-          ),
-          child: const SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('MediPal v1.0.0'),
-                SizedBox(height: 8),
-                Text(
-                    'Your personal AI health assistant powered by advanced language models.'),
-                SizedBox(height: 16),
-                Text('Features:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('• Age-appropriate health guidance'),
-                Text('• AI-powered symptom analysis'),
-                Text('• Medication interaction checking'),
-                Text('• Location-based emergency numbers'),
-                Text('• Personalized health insights and tips'),
-                Text('• 24/7 AI chat support'),
-                Text('• Safe mode for young users'),
-                SizedBox(height: 16),
-                Text(
-                  '⚠️ This app provides information only and does not replace professional medical advice.',
-                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showComingSoonDialog(BuildContext context, String feature) {
-    showBlurDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          feature,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.construction, size: 48, color: Colors.orange),
-            const SizedBox(height: 16),
-            Text(
-              '$feature is coming soon!',
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'We are working hard to bring you this feature.',
-              style: TextStyle(fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // FIXED: Separate ProfileEditDialog widget to handle TextEditingController properly
