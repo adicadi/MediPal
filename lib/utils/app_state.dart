@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/notification_service.dart';
 import '../models/medication.dart'; // Import the external Medication model
 import 'dart:convert';
+import '../models/wearable_summary.dart';
+import '../services/wearable_cache_service.dart';
+import '../services/wearable_health_service.dart';
 
 class AppState extends ChangeNotifier {
   // User profile data (enhanced for onboarding)
@@ -26,6 +29,7 @@ class AppState extends ChangeNotifier {
 
   // Chat history support
   final List<ChatMessage> _chatMessages = [];
+  WearableSummary? _wearableSummary;
 
   // Getters - existing
   String get userName => _userName;
@@ -45,6 +49,7 @@ class AppState extends ChangeNotifier {
 
   // Getters - chat
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
+  WearableSummary? get wearableSummary => _wearableSummary;
 
   // NEW: Age-based content restrictions
   bool get isMinor => _userAge > 0 && _userAge < 18;
@@ -138,6 +143,44 @@ class AppState extends ChangeNotifier {
       '🥗 Eat a balanced diet with fruits and vegetables',
     ];
 
+    final wearable = _wearableSummary;
+    if (wearable != null && !wearable.isEmpty) {
+      final steps = wearable.stepsToday;
+      final sleepHours = wearable.sleepHours;
+      final activeMinutes = wearable.activeMinutesToday;
+      final restingHr = wearable.restingHeartRate;
+
+      if (steps != null) {
+        if (steps < 4000) {
+          baseTips.add('👟 Try a short walk today to boost your step count');
+        } else if (steps < 8000) {
+          baseTips.add('✅ You’re close to 8k steps—one more walk can get you there');
+        } else {
+          baseTips.add('🎉 Great job staying active—keep it up!');
+        }
+      }
+
+      if (activeMinutes != null && activeMinutes < 20) {
+        baseTips.add('⏱️ Aim for 20–30 active minutes to support heart health');
+      }
+
+      if (sleepHours != null) {
+        if (sleepHours < 7) {
+          baseTips.add('🌙 Try to get 7–9 hours of sleep for better recovery');
+        } else if (sleepHours > 9.5) {
+          baseTips.add('🛌 Too much sleep can be tiring—aim for a consistent schedule');
+        }
+      }
+
+      if (restingHr != null && restingHr > 80) {
+        baseTips.add('❤️ Elevated resting HR can relate to stress—try breathing exercises');
+      }
+    }
+
+    if (_medications.isNotEmpty && medicationsWithReminders.isEmpty) {
+      baseTips.add('⏰ Consider enabling medication reminders for consistency');
+    }
+
     if (isMinor) {
       return [
         '🏃‍♀️ Stay active with fun activities and sports',
@@ -146,6 +189,10 @@ class AppState extends ChangeNotifier {
         '🥕 Try new healthy foods - make it fun!',
         '😴 Kids need 9-11 hours of sleep each night',
         '🌟 Always tell an adult if you don\'t feel well',
+        if (wearable?.stepsToday != null && wearable!.stepsToday! < 4000)
+          '👟 Try a fun walk or game to move more today',
+        if (wearable?.sleepHours != null && wearable!.sleepHours! < 8)
+          '🌙 Try a calmer bedtime routine for better sleep',
       ];
     } else if (isYoungAdult) {
       return [
@@ -580,6 +627,7 @@ Is there something else I can help you with today?
 
       await _loadMedications();
       await _loadChatHistory();
+      _wearableSummary = await WearableCacheService.loadSummary();
 
       // Initialize notifications after loading profile
       await initializeNotifications();
@@ -588,6 +636,46 @@ Is there something else I can help you with today?
     } catch (e) {
       if (kDebugMode) print('Error loading user profile: $e');
     }
+  }
+
+  Future<void> refreshWearableSummary() async {
+    final summary = await WearableHealthService.fetchAndCacheSummary();
+    if (summary != null) {
+      _wearableSummary = summary;
+      await WearableCacheService.saveSummary(summary);
+      notifyListeners();
+    }
+  }
+
+  String get wearableSummaryPrompt {
+    final summary = _wearableSummary;
+    if (summary == null || summary.isEmpty) return '';
+
+    final parts = <String>[];
+    if (summary.stepsToday != null) {
+      parts.add('steps today: ${summary.stepsToday}');
+    }
+    if (summary.activeMinutesToday != null) {
+      parts.add('active minutes today: ${summary.activeMinutesToday}');
+    }
+    if (summary.avgHeartRate != null) {
+      parts.add('avg HR: ${summary.avgHeartRate!.toStringAsFixed(0)} bpm');
+    }
+    if (summary.restingHeartRate != null) {
+      parts.add('resting HR: ${summary.restingHeartRate!.toStringAsFixed(0)} bpm');
+    }
+    if (summary.sleepHours != null) {
+      parts.add('sleep: ${summary.sleepHours!.toStringAsFixed(1)} hrs');
+    }
+    if (summary.sleepEfficiency != null) {
+      parts.add('sleep efficiency: ${summary.sleepEfficiency!.toStringAsFixed(0)}%');
+    }
+    if (summary.stressScore != null) {
+      parts.add('stress score: ${summary.stressScore!.toStringAsFixed(0)}');
+    }
+
+    final summaryLine = parts.join(', ');
+    return 'Wearable summary (aggregates only, privacy sandboxed): $summaryLine. Do not infer or request raw wearable data.';
   }
 
   Future<void> _saveMedications() async {

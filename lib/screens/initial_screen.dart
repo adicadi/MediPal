@@ -31,6 +31,7 @@ class _InitialScreenState extends State<InitialScreen> {
 
       final appState = Provider.of<AppState>(context, listen: false);
       await appState.loadUserProfile();
+      await appState.refreshWearableSummary();
 
       setState(() {
         _status = 'Setting up notifications...';

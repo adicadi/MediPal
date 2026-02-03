@@ -5,6 +5,7 @@ import '../utils/app_state.dart';
 import '../widgets/health_summary_card.dart';
 import '../services/emergency_service.dart';
 import '../utils/blur_dialog.dart';
+import '../models/wearable_summary.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -417,6 +418,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Widget> _buildAgeAppropriateHealthCards(AppState appState) {
     List<Widget> cards = [];
 
+    cards.add(_buildWearableSummaryCard(appState));
+
     if (appState.isMinor) {
       cards.addAll([
         HealthSummaryCard(
@@ -483,6 +486,49 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return cards;
+  }
+
+  Widget _buildWearableSummaryCard(AppState appState) {
+    final summary = appState.wearableSummary;
+    final content = summary == null || summary.isEmpty
+        ? 'No wearable data yet'
+        : _formatWearableSummary(summary);
+    final subtitle = summary == null
+        ? 'Connect Health Connect to get data'
+        : 'Last updated: ${_formatWearableTime(summary.updatedAt)}';
+
+    return HealthSummaryCard(
+      title: 'Wearable Insights',
+      content: content,
+      subtitle: subtitle,
+      icon: Icons.watch,
+      onTap: () => Navigator.pushNamed(context, '/wearables'),
+    );
+  }
+
+  String _formatWearableSummary(WearableSummary summary) {
+    final parts = <String>[];
+    if (summary.stepsToday != null) {
+      parts.add('${summary.stepsToday} steps');
+    }
+    final sleepHours = summary.sleepHours;
+    if (sleepHours != null) {
+      parts.add('${sleepHours.toStringAsFixed(1)} hrs sleep');
+    }
+    final avgHeartRate = summary.avgHeartRate;
+    if (avgHeartRate != null) {
+      parts.add('${avgHeartRate.toStringAsFixed(0)} bpm');
+    }
+    if (parts.isEmpty) {
+      return 'No wearable data yet';
+    }
+    return parts.join(' • ');
+  }
+
+  String _formatWearableTime(DateTime time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '${time.month}/${time.day} $hour:$minute';
   }
 
   Widget _buildPersonalizedTipsSection(
@@ -660,6 +706,21 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.watch),
+              title: const Text(
+                'Wearables',
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: const Text(
+                'Health Connect and smartwatch data',
+                overflow: TextOverflow.ellipsis,
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/wearables');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.notifications),
               title: const Text(
                 'Notifications',
@@ -740,7 +801,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _generateAgeAppropriateInsights(AppState appState) {
+    final wearable = appState.wearableSummary;
+    final meds = appState.medications;
+    final refillCount = appState.medicationsNeedingRefill.length;
+    final remindersEnabled = appState.totalActiveReminders;
+
     if (appState.isMinor) {
+      final steps = wearable?.stepsToday;
+      final sleep = wearable?.sleepHours;
       return '''
 Hi ${appState.userName}! 🌟
 
@@ -757,14 +825,57 @@ Here are some special health tips just for you:
 🧠 **Talk to Adults:** Always remember to tell a trusted adult if you don't feel well or have questions about your health.
 
 Remember: You're doing great by learning about staying healthy! Keep up the good work! 💪
+${steps != null ? '\n👟 **Steps today:** $steps steps' : ''}
+${sleep != null ? '\n😴 **Sleep last night:** ${sleep.toStringAsFixed(1)} hours' : ''}
       ''';
     } else {
+      final lines = <String>[];
+      if (wearable != null && !wearable.isEmpty) {
+        if (wearable.stepsToday != null) {
+          lines.add('• Steps today: ${wearable.stepsToday}');
+        }
+        if (wearable.activeMinutesToday != null) {
+          lines.add('• Active minutes: ${wearable.activeMinutesToday}');
+        }
+        if (wearable.avgHeartRate != null) {
+          lines.add(
+              '• Avg heart rate: ${wearable.avgHeartRate!.toStringAsFixed(0)} bpm');
+        }
+        if (wearable.restingHeartRate != null) {
+          lines.add(
+              '• Resting HR: ${wearable.restingHeartRate!.toStringAsFixed(0)} bpm');
+        }
+        if (wearable.sleepHours != null) {
+          lines.add(
+              '• Sleep: ${wearable.sleepHours!.toStringAsFixed(1)} hrs');
+        }
+        if (wearable.sleepEfficiency != null) {
+          lines.add(
+              '• Sleep efficiency: ${wearable.sleepEfficiency!.toStringAsFixed(0)}%');
+        }
+      }
+
+      final medLine = meds.isNotEmpty
+          ? '• Medications tracked: ${meds.length}'
+          : '• No medications tracked yet';
+      final refillLine =
+          refillCount > 0 ? '• Refill alerts: $refillCount medication(s)' : '';
+      final reminderLine = remindersEnabled > 0
+          ? '• Active reminders: $remindersEnabled'
+          : '• Reminders: not set';
+
       return '''
 Hello ${appState.userName}! 
 
 Based on your health profile, here are personalized insights:
 
-💊 **Medications:** You're tracking ${appState.medications.length} medication${appState.medications.length != 1 ? 's' : ''}. Great job staying organized!
+**Today’s summary**
+${lines.isEmpty ? '• Wearable data not available yet' : lines.join('\n')}
+
+**Medications**
+$medLine
+$reminderLine
+${refillLine.isNotEmpty ? refillLine : ''}
 
 ${appState.isYoungAdult ? '''
 🎓 **Young Adult Focus:**
