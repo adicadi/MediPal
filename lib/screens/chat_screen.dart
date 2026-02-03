@@ -790,6 +790,10 @@ How can I help you today? Remember, I provide information to support your health
         sessionId: _currentSessionId,
         replaceIfExists: true,
       );
+      if (mounted) {
+        await Provider.of<AppState>(context, listen: false)
+            .refreshChatSessionsCount();
+      }
     });
   }
 

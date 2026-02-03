@@ -7,6 +7,7 @@ import 'dart:convert';
 import '../models/wearable_summary.dart';
 import '../services/wearable_cache_service.dart';
 import '../services/wearable_health_service.dart';
+import '../services/chat_history_service.dart';
 
 class AppState extends ChangeNotifier {
   // User profile data (enhanced for onboarding)
@@ -29,6 +30,7 @@ class AppState extends ChangeNotifier {
 
   // Chat history support
   final List<ChatMessage> _chatMessages = [];
+  int _chatSessionsCount = 0;
   WearableSummary? _wearableSummary;
   List<WearableSummary> _wearableHistory = [];
 
@@ -50,6 +52,7 @@ class AppState extends ChangeNotifier {
 
   // Getters - chat
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
+  int get chatSessionsCount => _chatSessionsCount;
   WearableSummary? get wearableSummary => _wearableSummary;
   List<WearableSummary> get wearableHistory =>
       List.unmodifiable(_wearableHistory);
@@ -632,6 +635,8 @@ Is there something else I can help you with today?
       await _loadChatHistory();
       _wearableSummary = await WearableCacheService.loadSummary();
       _wearableHistory = await WearableCacheService.loadHistory();
+      _chatSessionsCount =
+          (await ChatHistoryService.getChatSessions()).length;
 
       // Initialize notifications after loading profile
       await initializeNotifications();
@@ -651,6 +656,12 @@ Is there something else I can help you with today?
       _wearableHistory = await WearableCacheService.loadHistory();
       notifyListeners();
     }
+  }
+
+  Future<void> refreshChatSessionsCount() async {
+    _chatSessionsCount =
+        (await ChatHistoryService.getChatSessions()).length;
+    notifyListeners();
   }
 
   double? get stepsTrendPercent {

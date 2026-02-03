@@ -187,8 +187,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         _getAgeAppropriateSubtitle(appState),
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color:
-                              colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                          color: colorScheme.onPrimaryContainer
+                              .withValues(alpha: 0.8),
                         ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 2,
@@ -277,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
           colorScheme,
         ),
         _buildQuickStat(
-          appState.symptomAnalysis.isNotEmpty ? '1' : '0',
+          '${appState.chatSessionsCount}',
           'Consultations',
           Icons.chat,
           colorScheme,
@@ -460,16 +460,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         HealthSummaryCard(
           title: "AI Consultations",
-          content: appState.symptomAnalysis.isNotEmpty
+          content: appState.chatSessionsCount > 0
               ? "Recent consultation available"
               : "No recent consultations",
-          subtitle: appState.symptomAnalysis.isNotEmpty
-              ? "Tap to view last analysis"
+          subtitle: appState.chatSessionsCount > 0
+              ? "Tap to view chat history"
               : "Start your first consultation",
           icon: Icons.psychology,
           onTap: () {
-            if (appState.symptomAnalysis.isNotEmpty) {
-              _showLastConsultation(context, appState.symptomAnalysis);
+            if (appState.chatSessionsCount > 0) {
+              Navigator.pushNamed(context, '/chat');
             } else {
               Navigator.pushNamed(context, '/chat');
             }
@@ -706,7 +706,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
   Future<void> _getHealthInsights(BuildContext context,
       {bool showDialog = true}) async {
     final appState = Provider.of<AppState>(context, listen: false);
@@ -785,8 +784,7 @@ ${sleep != null ? '\n😴 **Sleep last night:** ${sleep.toStringAsFixed(1)} hour
               '• Resting HR: ${wearable.restingHeartRate!.toStringAsFixed(0)} bpm');
         }
         if (wearable.sleepHours != null) {
-          lines.add(
-              '• Sleep: ${wearable.sleepHours!.toStringAsFixed(1)} hrs');
+          lines.add('• Sleep: ${wearable.sleepHours!.toStringAsFixed(1)} hrs');
         }
         if (wearable.sleepEfficiency != null) {
           lines.add(
@@ -1161,7 +1159,8 @@ ${appState.ageAppropriateDisclaimer}
       showBlurDialog(
         context: context,
         builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Row(
             children: [
               Icon(Icons.emergency, color: Colors.red),
@@ -1600,49 +1599,6 @@ ${appState.ageAppropriateDisclaimer}
       ),
     );
   }
-
-  void _showLastConsultation(BuildContext context, String analysis) {
-    showBlurDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.psychology, color: Colors.blue),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Last Consultation',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.6,
-          ),
-          child: SingleChildScrollView(
-            child: SelectionArea(child: Text(analysis)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/chat');
-            },
-            child: const Text('New Chat'),
-          ),
-        ],
-      ),
-    );
-  }
-
 }
 
 // FIXED: Separate ProfileEditDialog widget to handle TextEditingController properly
