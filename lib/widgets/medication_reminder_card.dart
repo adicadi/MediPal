@@ -26,7 +26,7 @@ class MedicationReminderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: medication.needsRefill
-              ? Colors.orange.withOpacity(0.5)
+              ? Colors.orange.withValues(alpha: 0.5)
               : Colors.transparent,
           width: 2,
         ),

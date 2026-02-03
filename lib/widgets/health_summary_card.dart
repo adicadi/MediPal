@@ -40,7 +40,7 @@ class HealthSummaryCard extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: backgroundColor ??
-                      colorScheme.primaryContainer.withOpacity(0.3),
+                      colorScheme.primaryContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: isLoading
@@ -75,7 +75,7 @@ class HealthSummaryCard extends StatelessWidget {
                     Text(
                       isLoading ? 'Loading...' : content,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.8),
+                        color: colorScheme.onSurface.withValues(alpha: 0.8),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -85,7 +85,7 @@ class HealthSummaryCard extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withOpacity(0.6),
+                          color: colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -99,7 +99,7 @@ class HealthSummaryCard extends StatelessWidget {
               if (onTap != null && !isLoading)
                 Icon(
                   Icons.chevron_right,
-                  color: colorScheme.onSurface.withOpacity(0.5),
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
                   size: 20,
                 ),
             ],
@@ -155,7 +155,7 @@ class HealthStatusCard extends StatelessWidget {
                     child: Text(
                       title,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.8),
+                        color: colorScheme.onSurface.withValues(alpha: 0.8),
                       ),
                     ),
                   ),
@@ -174,7 +174,7 @@ class HealthStatusCard extends StatelessWidget {
                 Text(
                   trend!,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurface.withOpacity(0.6),
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],

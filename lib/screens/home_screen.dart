@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../utils/app_state.dart';
 import '../widgets/health_summary_card.dart';
 import '../services/emergency_service.dart';
+import '../utils/blur_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.1),
+                color: colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -65,29 +66,28 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           await _getHealthInsights(context, showDialog: false);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Row(
-                  children: [
-                    Icon(Icons.refresh, color: Colors.white),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Health data refreshed',
-                        overflow: TextOverflow.ellipsis,
-                      ),
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.refresh, color: Colors.white),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Health data refreshed',
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                ),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                  ),
+                ],
               ),
-            );
-          }
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          );
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -159,8 +159,8 @@ class _HomeScreenState extends State<HomeScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              colorScheme.primaryContainer.withOpacity(0.8),
-              colorScheme.secondaryContainer.withOpacity(0.6),
+              colorScheme.primaryContainer.withValues(alpha: 0.8),
+              colorScheme.secondaryContainer.withValues(alpha: 0.6),
             ],
           ),
         ),
@@ -187,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         _getAgeAppropriateSubtitle(appState),
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color:
-                              colorScheme.onPrimaryContainer.withOpacity(0.8),
+                              colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
                         ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 2,
@@ -199,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.2),
+                    color: colorScheme.primary.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Icon(
@@ -595,7 +595,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(
             icon,
             size: 16,
-            color: colorScheme.onPrimaryContainer.withOpacity(0.7),
+            color: colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
           ),
           const SizedBox(width: 4),
           Expanded(
@@ -604,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: colorScheme.onPrimaryContainer.withOpacity(0.8),
+                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
@@ -618,14 +618,14 @@ class _HomeScreenState extends State<HomeScreen> {
   // FIXED: Profile dialog using separate widget to avoid TextEditingController disposal issues
   void _showProfileDialog(BuildContext context) {
     final appState = Provider.of<AppState>(context, listen: false);
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => ProfileEditDialog(appState: appState),
     );
   }
 
   void _showSettingsDialog(BuildContext context) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -719,24 +719,22 @@ class _HomeScreenState extends State<HomeScreen> {
       await Future.delayed(const Duration(seconds: 2));
       final insights = _generateAgeAppropriateInsights(appState);
 
-      if (mounted) {
-        setState(() {
-          _isGettingInsights = false;
-        });
+      if (!context.mounted) return;
+      setState(() {
+        _isGettingInsights = false;
+      });
 
-        if (showDialog) {
-          _showInsightsDialog(context, insights, appState);
-        }
+      if (showDialog) {
+        _showInsightsDialog(context, insights, appState);
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isGettingInsights = false;
-        });
+      if (!context.mounted) return;
+      setState(() {
+        _isGettingInsights = false;
+      });
 
-        if (showDialog) {
-          _showErrorDialog(context, appState.getAgeAppropriateErrorMessage());
-        }
+      if (showDialog) {
+        _showErrorDialog(context, appState.getAgeAppropriateErrorMessage());
       }
     }
   }
@@ -790,7 +788,7 @@ ${appState.ageAppropriateDisclaimer}
 
   void _showInsightsDialog(
       BuildContext context, String insights, AppState appState) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -839,7 +837,7 @@ ${appState.ageAppropriateDisclaimer}
   }
 
   void _showErrorDialog(BuildContext context, String message) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -867,7 +865,7 @@ ${appState.ageAppropriateDisclaimer}
   }
 
   void _showPersonalizedHealthTips(BuildContext context, AppState appState) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -943,7 +941,7 @@ ${appState.ageAppropriateDisclaimer}
   }
 
   void _showMinorChatInfo(BuildContext context) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1017,7 +1015,7 @@ ${appState.ageAppropriateDisclaimer}
   }
 
   void _showMinorGuidance(BuildContext context) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1089,7 +1087,7 @@ ${appState.ageAppropriateDisclaimer}
   // ENHANCED: Minor emergency info with location-based emergency numbers
   void _showMinorEmergencyInfo(BuildContext context) async {
     // Show loading dialog
-    showDialog(
+    showBlurDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const AlertDialog(
@@ -1107,118 +1105,115 @@ ${appState.ageAppropriateDisclaimer}
     try {
       final emergencyNumbers = await EmergencyService.getEmergencyNumbers();
 
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading dialog
 
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Row(
-              children: [
-                Icon(Icons.emergency, color: Colors.red),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Emergency Help',
-                    overflow: TextOverflow.ellipsis,
+      showBlurDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.emergency, color: Colors.red),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Emergency Help',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.6,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '🚨 If there\'s an emergency in ${emergencyNumbers.countryName}:',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.red),
                   ),
-                ),
-              ],
-            ),
-            content: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.6,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '🚨 If there\'s an emergency in ${emergencyNumbers.countryName}:',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.red),
+                  const SizedBox(height: 8),
+                  const Text('1. Find a trusted adult RIGHT AWAY'),
+                  const Text(
+                      '2. If no adult is around, call the emergency number below'),
+                  const Text('3. Stay calm and ask for help'),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red[300]!),
                     ),
-                    const SizedBox(height: 8),
-                    const Text('1. Find a trusted adult RIGHT AWAY'),
-                    const Text(
-                        '2. If no adult is around, call the emergency number below'),
-                    const Text('3. Stay calm and ask for help'),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red[300]!),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            '📞 Emergency Number for ${emergencyNumbers.countryName}:',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                    child: Column(
+                      children: [
+                        Text(
+                          '📞 Emergency Number for ${emergencyNumbers.countryName}:',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          emergencyNumbers.emergency,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            emergencyNumbers.emergency,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      '🌟 You did the right thing by learning about safety!',
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '🌟 You did the right thing by learning about safety!',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('I understand'),
-              ),
-            ],
           ),
-        );
-      }
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('I understand'),
+            ),
+          ],
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        // Show generic emergency info if location fails
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Emergency Help'),
-            content: const Text(
-                'If there\'s an emergency:\n\n1. Find a trusted adult RIGHT AWAY\n2. Call your local emergency number\n3. Stay calm and ask for help'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('I understand'),
-              ),
-            ],
-          ),
-        );
-      }
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      // Show generic emergency info if location fails
+      showBlurDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Emergency Help'),
+          content: const Text(
+              'If there\'s an emergency:\n\n1. Find a trusted adult RIGHT AWAY\n2. Call your local emergency number\n3. Stay calm and ask for help'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('I understand'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
   // ENHANCED: Emergency info with location-based emergency numbers
   void _showEmergencyInfo(BuildContext context) async {
     // Show loading dialog first
-    showDialog(
+    showBlurDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const AlertDialog(
@@ -1238,18 +1233,16 @@ ${appState.ageAppropriateDisclaimer}
       final emergencyNumbers = await EmergencyService.getEmergencyNumbers();
 
       // Close loading dialog
-      if (mounted) {
-        Navigator.pop(context);
+      if (!context.mounted) return;
+      Navigator.pop(context);
 
-        // Show emergency info with local numbers
-        _showEmergencyInfoDialog(context, emergencyNumbers);
-      }
+      // Show emergency info with local numbers
+      _showEmergencyInfoDialog(context, emergencyNumbers);
     } catch (e) {
       // Close loading dialog and show error
-      if (mounted) {
-        Navigator.pop(context);
-        _showEmergencyInfoDialog(context, null);
-      }
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      _showEmergencyInfoDialog(context, null);
     }
   }
 
@@ -1268,7 +1261,7 @@ ${appState.ageAppropriateDisclaimer}
           countryCode: 'INTL',
         );
 
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1501,7 +1494,7 @@ ${appState.ageAppropriateDisclaimer}
 
     if (cleanNumber.isNotEmpty) {
       // For now, show the number to dial
-      showDialog(
+      showBlurDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Emergency Call'),
@@ -1521,7 +1514,7 @@ ${appState.ageAppropriateDisclaimer}
   void _showManualCountrySelection(BuildContext context) {
     Navigator.pop(context); // Close emergency dialog
 
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select Country'),
@@ -1559,7 +1552,7 @@ ${appState.ageAppropriateDisclaimer}
   }
 
   void _showLastConsultation(BuildContext context, String analysis) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1602,7 +1595,7 @@ ${appState.ageAppropriateDisclaimer}
 
   void _showAboutDialog(BuildContext context) {
     Navigator.pop(context);
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1661,7 +1654,7 @@ ${appState.ageAppropriateDisclaimer}
   }
 
   void _showComingSoonDialog(BuildContext context, String feature) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1882,13 +1875,13 @@ class _ProfileEditDialogState extends State<ProfileEditDialog> {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? colorScheme.primary.withOpacity(0.1)
+              ? colorScheme.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
                 ? colorScheme.primary
-                : colorScheme.outline.withOpacity(0.3),
+                : colorScheme.outline.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -1898,7 +1891,7 @@ class _ProfileEditDialogState extends State<ProfileEditDialog> {
               icon,
               color: isSelected
                   ? colorScheme.primary
-                  : colorScheme.onSurface.withOpacity(0.7),
+                  : colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             const SizedBox(height: 4),
             Text(
@@ -1908,7 +1901,7 @@ class _ProfileEditDialogState extends State<ProfileEditDialog> {
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color: isSelected
                     ? colorScheme.primary
-                    : colorScheme.onSurface.withOpacity(0.7),
+                    : colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ],

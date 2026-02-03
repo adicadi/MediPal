@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/emergency_service.dart';
 import '../utils/app_state.dart';
+import '../utils/blur_dialog.dart';
 
 class EmergencyButton extends StatelessWidget {
   const EmergencyButton({super.key});
@@ -79,6 +80,7 @@ class EmergencyButton extends StatelessWidget {
       LocationPermission permission = await Geolocator.checkPermission();
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
+      if (!context.mounted) return;
       if (permission == LocationPermission.denied || !serviceEnabled) {
         _showPermissionDialog(context, appState);
         return;
@@ -89,8 +91,9 @@ class EmergencyButton extends StatelessWidget {
       }
     }
 
+    if (!context.mounted) return;
     // Show loading dialog
-    showDialog(
+    showBlurDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
@@ -152,7 +155,7 @@ class EmergencyButton extends StatelessWidget {
 
   void _showMinorEmergencyDialog(
       BuildContext context, EmergencyNumbers emergencyNumbers) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Row(
@@ -239,7 +242,7 @@ class EmergencyButton extends StatelessWidget {
 
   void _showAdultEmergencyDialog(
       BuildContext context, EmergencyNumbers emergencyNumbers) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
@@ -331,7 +334,7 @@ class EmergencyButton extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              border: Border.all(color: color.withOpacity(0.3)),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -382,7 +385,7 @@ class EmergencyButton extends StatelessWidget {
 
   void _showTelehealthOptions(BuildContext context, AppState appState) {
     if (appState.isMinor) {
-      showDialog(
+      showBlurDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Ask a Trusted Adult'),
@@ -402,7 +405,7 @@ class EmergencyButton extends StatelessWidget {
         ),
       );
     } else {
-      showDialog(
+      showBlurDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Telehealth Options'),
@@ -440,7 +443,7 @@ class EmergencyButton extends StatelessWidget {
   }
 
   void _showPermissionDialog(BuildContext context, AppState appState) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Row(
@@ -520,7 +523,7 @@ class EmergencyButton extends StatelessWidget {
   }
 
   void _showLocationServicesDialog(BuildContext context) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Enable Location Services'),
@@ -547,7 +550,7 @@ class EmergencyButton extends StatelessWidget {
   // ENHANCED: Complete phone dialer implementation with fallbacks
   void _callEmergency(BuildContext context, String number) {
     // Show confirmation before calling
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Emergency Call'),
@@ -599,7 +602,7 @@ class EmergencyButton extends StatelessWidget {
   Future<void> _attemptEmergencyCall(
       BuildContext context, String number) async {
     // Show calling dialog
-    showDialog(
+    showBlurDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const AlertDialog(
@@ -646,7 +649,7 @@ class EmergencyButton extends StatelessWidget {
 
   // ENHANCED: Manual dial dialog with copy-to-clipboard functionality
   void _showManualDialDialog(BuildContext context, String number) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Row(

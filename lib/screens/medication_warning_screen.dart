@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'dart:convert';
 import '../utils/app_state.dart';
+import '../utils/blur_dialog.dart';
 import '../services/deepseek_service.dart';
 
 class MedicationWarningScreen extends StatefulWidget {
@@ -281,7 +282,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                         'Loaded from ${_formatCacheAge(cacheTime)}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: colorScheme.onTertiary.withOpacity(0.8),
+                          color: colorScheme.onTertiary.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -421,7 +422,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             icon: const Icon(Icons.alarm),
             tooltip: 'Set Reminders',
             style: IconButton.styleFrom(
-              backgroundColor: colorScheme.primaryContainer.withOpacity(0.5),
+              backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
             ),
           ),
           // Enhanced history button with count
@@ -489,17 +490,17 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
               gradient: LinearGradient(
                 colors: [
                   colorScheme.errorContainer
-                      .withOpacity(0.7), // Theme-based warning color
-                  colorScheme.errorContainer.withOpacity(0.3),
+                      .withValues(alpha: 0.7), // Theme-based warning color
+                  colorScheme.errorContainer.withValues(alpha: 0.3),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: colorScheme.error.withOpacity(0.3)),
+              border: Border.all(color: colorScheme.error.withValues(alpha: 0.3)),
               boxShadow: [
                 BoxShadow(
-                  color: colorScheme.error.withOpacity(0.1),
+                  color: colorScheme.error.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -511,7 +512,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: colorScheme.error.withOpacity(0.2),
+                    color: colorScheme.error.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -567,8 +568,8 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              colorScheme.primaryContainer.withOpacity(0.1),
-              colorScheme.secondaryContainer.withOpacity(0.1),
+              colorScheme.primaryContainer.withValues(alpha: 0.1),
+              colorScheme.secondaryContainer.withValues(alpha: 0.1),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -609,7 +610,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.2),
+                color: colorScheme.primary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -634,7 +635,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   Text(
                     'AI-powered medication safety check',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(0.7),
+                      color: colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -652,13 +653,13 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  colorScheme.tertiary.withOpacity(0.3),
-                  colorScheme.tertiary.withOpacity(0.1),
+                  colorScheme.tertiary.withValues(alpha: 0.3),
+                  colorScheme.tertiary.withValues(alpha: 0.1),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: colorScheme.tertiary.withOpacity(0.3),
+                color: colorScheme.tertiary.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -717,21 +718,21 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            colorScheme.primaryContainer.withOpacity(0.2),
-            colorScheme.primaryContainer.withOpacity(0.1),
+            colorScheme.primaryContainer.withValues(alpha: 0.2),
+            colorScheme.primaryContainer.withValues(alpha: 0.1),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
+              color: colorScheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -753,7 +754,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           Text(
             'Click "Start Analysis" below to check for drug interactions',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface.withOpacity(0.7),
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -772,17 +773,17 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            colorScheme.primaryContainer.withOpacity(0.7),
-            colorScheme.primaryContainer.withOpacity(0.3),
+            colorScheme.primaryContainer.withValues(alpha: 0.7),
+            colorScheme.primaryContainer.withValues(alpha: 0.3),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.primary.withOpacity(0.3)),
+        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.primary.withOpacity(0.1),
+            color: colorScheme.primary.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -827,7 +828,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             'Checking for potential drug interactions',
             style: TextStyle(
               fontSize: 14,
-              color: colorScheme.onPrimaryContainer.withOpacity(0.8),
+              color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
               fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,
@@ -837,7 +838,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             'This may take 10-30 seconds',
             style: TextStyle(
               fontSize: 12,
-              color: colorScheme.onPrimaryContainer.withOpacity(0.6),
+              color: colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
             ),
             textAlign: TextAlign.center,
           ),
@@ -892,7 +893,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
               fontSize: 12,
               color: isActive
                   ? colorScheme.onPrimaryContainer
-                  : colorScheme.onPrimaryContainer.withOpacity(0.6),
+                  : colorScheme.onPrimaryContainer.withValues(alpha: 0.6),
               fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -906,15 +907,15 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
           Icon(
             Icons.hourglass_empty,
-            color: colorScheme.onSurface.withOpacity(0.6),
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
             size: 32,
           ),
           const SizedBox(height: 12),
@@ -922,7 +923,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             'Analysis Pending',
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface.withOpacity(0.7),
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
@@ -932,7 +933,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             'Click the start button to check for interactions.',
             style: TextStyle(
               fontSize: 12,
-              color: colorScheme.onSurface.withOpacity(0.6),
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -963,20 +964,20 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             (isNoInteraction
                     ? colorScheme.tertiaryContainer
                     : colorScheme.errorContainer)
-                .withOpacity(0.7),
+                .withValues(alpha: 0.7),
             (isNoInteraction
                     ? colorScheme.tertiaryContainer
                     : colorScheme.errorContainer)
-                .withOpacity(0.3),
+                .withValues(alpha: 0.3),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: resultColor.withOpacity(0.3)),
+        border: Border.all(color: resultColor.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: resultColor.withOpacity(0.1),
+            color: resultColor.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -991,7 +992,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: resultColor.withOpacity(0.2),
+                  color: resultColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -1022,10 +1023,10 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: colorScheme.surface.withOpacity(0.8),
+              color: colorScheme.surface.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: resultColor.withOpacity(0.2),
+                color: resultColor.withValues(alpha: 0.2),
               ),
             ),
             child: SelectionArea(
@@ -1213,7 +1214,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest
-                            .withOpacity(0.3),
+                            .withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Form(
@@ -1348,7 +1349,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                       Text(
                         '${appState.medications.length} medication${appState.medications.length != 1 ? 's' : ''} added',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withOpacity(0.7),
+                          color: colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1392,15 +1393,15 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                  colorScheme.surfaceContainerHighest.withOpacity(0.1),
+                  colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: colorScheme.outline.withOpacity(0.2),
+                color: colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: Column(
@@ -1408,7 +1409,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withOpacity(0.5),
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Icon(
@@ -1431,7 +1432,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                 Text(
                   'Add your medications to check for potential interactions and get personalized safety insights',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurface.withOpacity(0.7),
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 3,
@@ -1489,13 +1490,13 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   gradient: LinearGradient(
                     colors: [
                       colorScheme.primaryContainer,
-                      colorScheme.primaryContainer.withOpacity(0.7),
+                      colorScheme.primaryContainer.withValues(alpha: 0.7),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: colorScheme.primary.withOpacity(0.2),
+                      color: colorScheme.primary.withValues(alpha: 0.2),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -1520,7 +1521,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
               margin: const EdgeInsets.only(top: 4),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -1535,7 +1536,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             trailing: PopupMenuButton<String>(
               icon: Icon(
                 Icons.more_vert,
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1656,6 +1657,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   void _copyResult(String result) async {
     final colorScheme = Theme.of(context).colorScheme;
     await Clipboard.setData(ClipboardData(text: result));
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -1708,7 +1710,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     final appState = Provider.of<AppState>(context, listen: false);
     final medication = appState.medications[index];
 
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
@@ -1785,7 +1787,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 
   // FIXED: Enhanced analysis history with current medication highlighting
   void _showAnalysisHistory(BuildContext context) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
@@ -1831,7 +1833,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withOpacity(0.7),
+                                        .withValues(alpha: 0.7),
                                   ),
                         ),
                       ],
@@ -1880,7 +1882,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.4),
+                              .withValues(alpha: 0.4),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -1890,7 +1892,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withOpacity(0.6),
+                                        .withValues(alpha: 0.6),
                                   ),
                           textAlign: TextAlign.center,
                           overflow: TextOverflow.ellipsis,
@@ -1902,7 +1904,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withOpacity(0.5),
+                                .withValues(alpha: 0.5),
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 2,
@@ -1929,7 +1931,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                             ? Theme.of(context)
                                 .colorScheme
                                 .primaryContainer
-                                .withOpacity(0.3)
+                                .withValues(alpha: 0.3)
                             : null,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -1948,7 +1950,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                                   ? Theme.of(context)
                                       .colorScheme
                                       .primary
-                                      .withOpacity(0.2)
+                                      .withValues(alpha: 0.2)
                                   : Theme.of(context)
                                       .colorScheme
                                       .surfaceContainerHighest,
@@ -2016,7 +2018,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
-                                      .withOpacity(0.5),
+                                      .withValues(alpha: 0.5),
                                 ),
                               ),
                               Text(
@@ -2026,7 +2028,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
-                                      .withOpacity(0.6),
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
                             ],
@@ -2091,7 +2093,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   }
 
   void _showHelpDialog(BuildContext context) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
@@ -2162,7 +2164,7 @@ This tool provides **general information only**. Always consult your healthcare 
   }
 
   void _showPharmacistAdvice(BuildContext context) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(

@@ -119,7 +119,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: isCompleted || isActive
                       ? colorScheme.primary
-                      : colorScheme.outline.withOpacity(0.3),
+                      : colorScheme.outline.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(4),
                 ),
               );
@@ -129,7 +129,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           Text(
             'Step ${_currentPage + 1} of 3',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface.withOpacity(0.6),
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -172,7 +172,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: colorScheme.primary.withOpacity(0.3),
+                          color: colorScheme.primary.withValues(alpha: 0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -203,7 +203,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 Text(
                   'Your Personal Health Assistant',
                   style: theme.textTheme.titleLarge?.copyWith(
-                    color: colorScheme.onSurface.withOpacity(0.8),
+                    color: colorScheme.onSurface.withValues(alpha: 0.8),
                     fontWeight: FontWeight.w500,
                   ),
                   textAlign: TextAlign.center,
@@ -215,10 +215,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: colorScheme.outline.withOpacity(0.2),
+                      color: colorScheme.outline.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Column(
@@ -306,7 +306,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withOpacity(0.3),
+                      color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -328,7 +328,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   Text(
                     'This helps us provide personalized health recommendations',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(0.7),
+                      color: colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -344,7 +344,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         _makeFieldsOptional ? 'Detailed Setup' : 'Quick Setup'),
                     style: TextButton.styleFrom(
                       backgroundColor:
-                          colorScheme.primaryContainer.withOpacity(0.5),
+                          colorScheme.primaryContainer.withValues(alpha: 0.5),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                       shape: RoundedRectangleBorder(
@@ -472,13 +472,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
                             colors: [
-                              Colors.green.withOpacity(0.2),
-                              Colors.green.withOpacity(0.1),
+                              Colors.green.withValues(alpha: 0.2),
+                              Colors.green.withValues(alpha: 0.1),
                             ],
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.green.withOpacity(0.3),
+                              color: Colors.green.withValues(alpha: 0.3),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -499,7 +499,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                 value: value,
                                 strokeWidth: 3,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.green.withOpacity(0.3),
+                                  Colors.green.withValues(alpha: 0.3),
                                 ),
                                 backgroundColor: Colors.transparent,
                               ),
@@ -529,7 +529,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     return Text(
                       'Hi ${appState.userName}! 👋\n\nYou\'re all set to start your personalized health journey with AI-powered insights and recommendations.',
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.8),
+                        color: colorScheme.onSurface.withValues(alpha: 0.8),
                         height: 1.5,
                       ),
                       textAlign: TextAlign.center,
@@ -544,13 +544,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        colorScheme.primaryContainer.withOpacity(0.3),
-                        colorScheme.secondaryContainer.withOpacity(0.2),
+                        colorScheme.primaryContainer.withValues(alpha: 0.3),
+                        colorScheme.secondaryContainer.withValues(alpha: 0.2),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: colorScheme.outline.withOpacity(0.2),
+                      color: colorScheme.outline.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Column(
@@ -623,7 +623,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: colorScheme.primary.withOpacity(0.1),
+            color: colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -647,7 +647,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: colorScheme.onSurface.withOpacity(0.7),
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
                   fontSize: 12,
                 ),
               ),
@@ -663,12 +663,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _hasGenderError
-              ? Colors.red.withOpacity(0.8)
-              : colorScheme.outline.withOpacity(0.2),
+              ? Colors.red.withValues(alpha: 0.8)
+              : colorScheme.outline.withValues(alpha: 0.2),
           width: _hasGenderError ? 2 : 1,
         ),
       ),
@@ -762,7 +762,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         fillColor: Theme.of(context)
             .colorScheme
             .surfaceContainerHighest
-            .withOpacity(0.3),
+            .withValues(alpha: 0.3),
         contentPadding:
             const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       ),
@@ -842,13 +842,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? colorScheme.primary.withOpacity(0.1)
+              ? colorScheme.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
                 ? colorScheme.primary
-                : colorScheme.outline.withOpacity(0.3),
+                : colorScheme.outline.withValues(alpha: 0.3),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -858,7 +858,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               icon,
               color: isSelected
                   ? colorScheme.primary
-                  : colorScheme.onSurface.withOpacity(0.7),
+                  : colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             const SizedBox(height: 4),
             Text(
@@ -868,7 +868,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color: isSelected
                     ? colorScheme.primary
-                    : colorScheme.onSurface.withOpacity(0.7),
+                    : colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -954,10 +954,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       appState.setUserGender(_selectedGender);
 
       await Future.delayed(const Duration(milliseconds: 1200));
+      if (!mounted) return;
       HapticFeedback.mediumImpact();
 
       _navigateToPage(2);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(

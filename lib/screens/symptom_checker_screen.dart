@@ -8,6 +8,7 @@ import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:medipal/utils/app_state.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/blur_dialog.dart';
 import '../models/symptom_checker_models.dart';
 import '../services/symptom_checker_service.dart';
 import '../services/deepseek_service.dart';
@@ -175,7 +176,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                                       color: Theme.of(context)
                                           .colorScheme
                                           .primaryContainer
-                                          .withOpacity(0.5),
+                                          .withValues(alpha: 0.5),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Icon(
@@ -198,7 +199,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface
-                                          .withOpacity(0.6),
+                                          .withValues(alpha: 0.6),
                                     ),
                                   ),
                                   trailing: IconButton(
@@ -314,7 +315,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
             'Question ${_currentQuestionIndex + 1} of ${_questions.length}',
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -330,52 +331,57 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
 
           // Options list
           Expanded(
-            child: ListView.builder(
-              itemCount: question.options.length,
-              itemBuilder: (context, index) {
-                final option = question.options[index];
-                final isSelected = _answers[question.id] == option;
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: Card(
-                    elevation: isSelected ? 4 : 1,
-                    color: isSelected
-                        ? Theme.of(context)
-                            .colorScheme
-                            .primaryContainer
-                            .withOpacity(0.3)
-                        : null,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: isSelected
-                          ? BorderSide(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 2,
-                            )
-                          : BorderSide.none,
-                    ),
-                    child: ListTile(
-                      title: Text(
-                        option,
-                        style: TextStyle(
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                      leading: Radio<String>(
-                        value: option,
-                        groupValue: _answers[question.id],
-                        onChanged: (value) =>
-                            _answerQuestion(question.id, value!),
-                        activeColor: Theme.of(context).colorScheme.primary,
-                      ),
-                      onTap: () => _answerQuestion(question.id, option),
-                      selected: isSelected,
-                    ),
-                  ),
-                );
+            child: RadioGroup<String>(
+              groupValue: _answers[question.id],
+              onChanged: (value) {
+                if (value == null) return;
+                _answerQuestion(question.id, value);
               },
+              child: ListView.builder(
+                itemCount: question.options.length,
+                itemBuilder: (context, index) {
+                  final option = question.options[index];
+                  final isSelected = _answers[question.id] == option;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: Card(
+                      elevation: isSelected ? 4 : 1,
+                      color: isSelected
+                          ? Theme.of(context)
+                              .colorScheme
+                              .primaryContainer
+                              .withValues(alpha: 0.3)
+                          : null,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: isSelected
+                            ? BorderSide(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 2,
+                              )
+                            : BorderSide.none,
+                      ),
+                      child: ListTile(
+                        title: Text(
+                          option,
+                          style: TextStyle(
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        leading: Radio<String>(
+                          value: option,
+                          activeColor: Theme.of(context).colorScheme.primary,
+                        ),
+                        onTap: () => _answerQuestion(question.id, option),
+                        selected: isSelected,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
 
@@ -441,14 +447,14 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
               color: Theme.of(context)
                   .colorScheme
                   .primaryContainer
-                  .withOpacity(0.2),
+                  .withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -479,7 +485,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                           color: Theme.of(context)
                               .colorScheme
                               .primary
-                              .withOpacity(0.1),
+                              .withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -513,7 +519,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withOpacity(0.7),
+                        .withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -595,7 +601,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                               color: Theme.of(context)
                                   .colorScheme
                                   .primary
-                                  .withOpacity(0.3),
+                                  .withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -628,7 +634,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                           : Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.6),
+                              .withValues(alpha: 0.6),
                     ),
                   ),
                 ),
@@ -654,7 +660,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
               gradient: LinearGradient(
                 colors: [
                   Colors.green.shade50,
-                  Colors.green.shade100.withOpacity(0.5),
+                  Colors.green.shade100.withValues(alpha: 0.5),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
@@ -794,9 +800,9 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
+              color: Colors.red.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.withOpacity(0.3)),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -839,6 +845,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
   Future<void> _saveAndClose() async {
     if (_assessment != null) {
       await _saveCurrentAssessment();
+      if (!mounted) return;
 
       // Show save confirmation
       ScaffoldMessenger.of(context).showSnackBar(
@@ -872,6 +879,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       await Future.delayed(const Duration(milliseconds: 500));
     }
 
+    if (!mounted) return;
     Navigator.pop(context);
   }
 
@@ -902,7 +910,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
 
   // NEW: Show assessment history dialog
   void _showAssessmentHistory(BuildContext context) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
@@ -948,7 +956,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withOpacity(0.7),
+                                        .withValues(alpha: 0.7),
                                   ),
                         ),
                       ],
@@ -1030,7 +1038,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                               color: Theme.of(context)
                                   .colorScheme
                                   .primaryContainer
-                                  .withOpacity(0.5),
+                                  .withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -1055,7 +1063,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
-                                      .withOpacity(0.6),
+                                      .withValues(alpha: 0.6),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -1065,7 +1073,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withOpacity(0.6),
+                                        .withValues(alpha: 0.6),
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1080,7 +1088,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                                 color: Theme.of(context)
                                     .colorScheme
                                     .surfaceContainerHighest
-                                    .withOpacity(0.3),
+                                    .withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Column(
@@ -1120,7 +1128,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .outline
-                                            .withOpacity(0.2),
+                                            .withValues(alpha: 0.2),
                                       ),
                                     ),
                                     child: SelectionArea(
@@ -1182,7 +1190,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
   // NEW: View individual assessment
   // ALTERNATIVE: Show assessment in a beautiful dialog
   void _viewAssessment(SymptomAssessmentHistory assessment) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
@@ -1230,7 +1238,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
-                                        .withOpacity(0.7),
+                                        .withValues(alpha: 0.7),
                                   ),
                         ),
                       ],
@@ -1258,13 +1266,13 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                     color: Theme.of(context)
                         .colorScheme
                         .surfaceContainerHighest
-                        .withOpacity(0.3),
+                        .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: Theme.of(context)
                           .colorScheme
                           .outline
-                          .withOpacity(0.2),
+                          .withValues(alpha: 0.2),
                     ),
                   ),
                   child: SingleChildScrollView(
@@ -1304,9 +1312,9 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1350,6 +1358,7 @@ Generated by MediPal
 Note: This is for informational purposes only. Consult a healthcare professional for medical advice.
     '''));
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
@@ -1372,7 +1381,7 @@ Note: This is for informational purposes only. Consult a healthcare professional
 
   // NEW: Clear history with confirmation
   void _clearHistory() {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear History'),
@@ -1408,7 +1417,7 @@ Note: This is for informational purposes only. Consult a healthcare professional
 
   // NEW: Show help dialog
   void _showHelpDialog(BuildContext context) {
-    showDialog(
+    showBlurDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
@@ -1547,6 +1556,7 @@ All your assessments are **automatically saved**:
 
     // Small delay to ensure UI updates
     await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
 
     try {
       if (kDebugMode) {

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../utils/app_state.dart';
 import '../services/onboarding_service.dart';
+import '../utils/blur_dialog.dart';
 
 class InitialScreen extends StatefulWidget {
   const InitialScreen({super.key});
@@ -89,7 +90,7 @@ class _InitialScreenState extends State<InitialScreen> {
   }
 
   void _showErrorDialog() {
-    showDialog(
+    showBlurDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
@@ -146,7 +147,7 @@ class _InitialScreenState extends State<InitialScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.primary.withOpacity(0.3),
+                    color: colorScheme.primary.withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -172,7 +173,7 @@ class _InitialScreenState extends State<InitialScreen> {
             Text(
               'Your Personal Health Assistant',
               style: theme.textTheme.titleMedium?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -191,7 +192,7 @@ class _InitialScreenState extends State<InitialScreen> {
               Text(
                 _status,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface.withOpacity(0.7),
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),

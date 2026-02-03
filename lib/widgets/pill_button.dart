@@ -47,8 +47,8 @@ class PillButton extends StatelessWidget {
                   : colorScheme.onPrimaryContainer),
           elevation: isSelected ? 4 : 2,
           shadowColor: isSelected
-              ? colorScheme.primary.withOpacity(0.5)
-              : colorScheme.shadow.withOpacity(0.2),
+              ? colorScheme.primary.withValues(alpha: 0.5)
+              : colorScheme.shadow.withValues(alpha: 0.2),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
@@ -58,11 +58,11 @@ class PillButton extends StatelessWidget {
           overlayColor: WidgetStateProperty.resolveWith<Color?>(
             (Set<WidgetState> states) {
               if (states.contains(WidgetState.hovered)) {
-                return colorScheme.primary.withOpacity(0.08);
+                return colorScheme.primary.withValues(alpha: 0.08);
               }
               if (states.contains(WidgetState.focused) ||
                   states.contains(WidgetState.pressed)) {
-                return colorScheme.primary.withOpacity(0.12);
+                return colorScheme.primary.withValues(alpha: 0.12);
               }
               return null;
             },

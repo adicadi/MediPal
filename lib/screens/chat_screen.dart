@@ -335,7 +335,7 @@ How can I help you today? Remember, I provide information to support your health
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
-          top: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
+          top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
         ),
       ),
       child: Column(
@@ -426,7 +426,7 @@ How can I help you today? Remember, I provide information to support your health
               backgroundColor: Theme.of(context)
                   .colorScheme
                   .primaryContainer
-                  .withOpacity(0.3),
+                  .withValues(alpha: 0.3),
             ),
           );
         },
@@ -488,7 +488,7 @@ How can I help you today? Remember, I provide information to support your health
                     color: (appState.isMinor
                             ? Colors.orange.shade600
                             : colorScheme.onSurfaceVariant)
-                        .withOpacity(0.7),
+                        .withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -511,7 +511,7 @@ How can I help you today? Remember, I provide information to support your health
                             color: (appState.isMinor
                                     ? Colors.orange.shade600
                                     : colorScheme.onSurfaceVariant)
-                                .withOpacity(opacity),
+                                .withValues(alpha: opacity),
                             shape: BoxShape.circle,
                           ),
                         );
@@ -705,6 +705,7 @@ How can I help you today? Remember, I provide information to support your health
         });
       }
     } catch (e) {
+      if (!mounted) return;
       final appState = Provider.of<AppState>(context, listen: false);
       setState(() {
         _messages.add(
@@ -715,13 +716,15 @@ How can I help you today? Remember, I provide information to support your health
         );
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-        _isStreaming = false;
-        _streamingContent = '';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isStreaming = false;
+          _streamingContent = '';
+        });
+        _scrollToBottom();
+      }
       _typingAnimationController.stop();
-      _scrollToBottom();
     }
   }
 
@@ -993,7 +996,7 @@ class ChatBubble extends StatelessWidget {
                         color: (appState.isMinor
                                 ? Colors.orange.shade600
                                 : colorScheme.onSurfaceVariant)
-                            .withOpacity(0.6),
+                            .withValues(alpha: 0.6),
                       ),
                     ),
                     const Spacer(),
@@ -1008,7 +1011,7 @@ class ChatBubble extends StatelessWidget {
                           color: (appState.isMinor
                                   ? Colors.orange.shade600
                                   : colorScheme.onSurfaceVariant)
-                              .withOpacity(0.6),
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -1099,7 +1102,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
                 color: (widget.appState.isMinor
                         ? Colors.orange.shade600
                         : colorScheme.onSurfaceVariant)
-                    .withOpacity(0.7),
+                    .withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(width: 8),
@@ -1122,7 +1125,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
                         color: (widget.appState.isMinor
                                 ? Colors.orange.shade600
                                 : colorScheme.onSurfaceVariant)
-                            .withOpacity(opacity),
+                            .withValues(alpha: opacity),
                         shape: BoxShape.circle,
                       ),
                     );

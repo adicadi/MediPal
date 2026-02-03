@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../utils/app_state.dart';
 import '../models/medication.dart';
 import '../services/notification_service.dart';
+import '../utils/blur_dialog.dart';
 
 class MedicationsScreen extends StatefulWidget {
   const MedicationsScreen({super.key});
@@ -56,21 +57,13 @@ class _MedicationsScreenState extends State<MedicationsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: colorScheme.surface,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          'Medications',
-          style: TextStyle(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        title: const Text('Medications'),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(100),
           child: Column(
@@ -82,18 +75,19 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search medications...',
-                    hintStyle:
-                        TextStyle(color: colorScheme.onSurface.withAlpha(128)),
+                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     prefixIcon: Icon(
                       Icons.search,
-                      color: colorScheme.onSurface.withAlpha(153),
+                      color: colorScheme.onSurfaceVariant,
                       size: 20,
                     ),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
                             icon: Icon(
                               Icons.clear,
-                              color: colorScheme.onSurface.withAlpha(153),
+                              color: colorScheme.onSurfaceVariant,
                               size: 20,
                             ),
                             onPressed: () {
@@ -106,7 +100,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                         : null,
                     filled: true,
                     fillColor:
-                        colorScheme.surfaceContainerHighest.withAlpha(128),
+                        colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -126,9 +120,8 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                 indicatorColor: colorScheme.primary,
                 indicatorWeight: 2,
                 labelColor: colorScheme.primary,
-                unselectedLabelColor: colorScheme.onSurface.withAlpha(153),
-                labelStyle:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                unselectedLabelColor: colorScheme.onSurfaceVariant,
+                labelStyle: theme.textTheme.labelLarge,
                 tabs: const [
                   Tab(text: 'All'),
                   Tab(text: 'Active'),
@@ -165,9 +158,6 @@ class _MedicationsScreenState extends State<MedicationsScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddMedicationDialog(context),
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
-        elevation: 2,
         child: const Icon(Icons.add, size: 24),
       ),
     );
@@ -282,19 +272,19 @@ class _MedicationsScreenState extends State<MedicationsScreen>
 
   // Minimal medication card
   Widget _buildMedicationCard(Medication medication, AppState appState) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final index = appState.medications.indexOf(medication);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: colorScheme.surfaceContainerLowest,
+      color: colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: medication.needsRefill
-              ? Colors.amber.withAlpha(128)
-              : colorScheme.outline.withAlpha(51),
+              ? colorScheme.tertiary
+              : colorScheme.outlineVariant,
           width: 1,
         ),
       ),
@@ -310,8 +300,8 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: medication.isEssential
-                        ? Colors.red.withAlpha(51)
-                        : colorScheme.primary.withAlpha(51),
+                        ? colorScheme.errorContainer
+                        : colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -319,8 +309,8 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                         ? Icons.local_hospital
                         : Icons.medication,
                     color: medication.isEssential
-                        ? Colors.red
-                        : colorScheme.primary,
+                        ? colorScheme.onErrorContainer
+                        : colorScheme.onPrimaryContainer,
                     size: 20,
                   ),
                 ),
@@ -334,10 +324,8 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                           Expanded(
                             child: Text(
                               medication.name,
-                              style: TextStyle(
-                                fontSize: 16,
+                              style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -348,13 +336,13 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: Colors.red.withAlpha(204),
+                                color: colorScheme.errorContainer,
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Essential',
-                                style: TextStyle(
-                                  color: Colors.white,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.onErrorContainer,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -365,9 +353,8 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                       const SizedBox(height: 4),
                       Text(
                         '${medication.dosage} • ${medication.frequency}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: colorScheme.onSurface.withAlpha(153),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -385,7 +372,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
                     await appState.toggleMedicationReminders(
                         medication.id, value);
                   },
-                  activeColor: colorScheme.primary,
+                  activeThumbColor: colorScheme.primary,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ],
@@ -488,21 +475,22 @@ class _MedicationsScreenState extends State<MedicationsScreen>
   }
 
   Widget _buildRefillNotice(Medication medication) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.amber.withAlpha(51),
+        color: colorScheme.tertiaryContainer,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         children: [
-          Icon(Icons.info, color: Colors.amber[800], size: 16),
+          Icon(Icons.info, color: colorScheme.onTertiaryContainer, size: 16),
           const SizedBox(width: 8),
           Text(
             'Refill needed',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.amber[800],
+              color: colorScheme.onTertiaryContainer,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -515,7 +503,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withAlpha(128),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -524,7 +512,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
           Icon(
             Icons.note,
             size: 14,
-            color: colorScheme.onSurface.withAlpha(153),
+            color: colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -532,7 +520,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
               medication.notes!,
               style: TextStyle(
                 fontSize: 12,
-                color: colorScheme.onSurface.withAlpha(179),
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -552,8 +540,6 @@ class _MedicationsScreenState extends State<MedicationsScreen>
             icon: const Icon(Icons.check, size: 16),
             label: const Text('Take Dose'),
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 8),
               textStyle:
                   const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
@@ -564,19 +550,19 @@ class _MedicationsScreenState extends State<MedicationsScreen>
         IconButton(
           onPressed: () => _showAddReminderDialog(medication),
           icon: const Icon(Icons.alarm_add, size: 18),
-          color: colorScheme.onSurface.withAlpha(153),
+          color: colorScheme.onSurfaceVariant,
           visualDensity: VisualDensity.compact,
         ),
         IconButton(
           onPressed: () => _editMedication(medication, index, appState),
           icon: const Icon(Icons.edit, size: 18),
-          color: colorScheme.onSurface.withAlpha(153),
+          color: colorScheme.onSurfaceVariant,
           visualDensity: VisualDensity.compact,
         ),
         IconButton(
           onPressed: () => _confirmDelete(medication, index, appState),
           icon: const Icon(Icons.delete_outline, size: 18),
-          color: Colors.red.withAlpha(179),
+          color: colorScheme.error,
           visualDensity: VisualDensity.compact,
         ),
       ],
@@ -588,7 +574,8 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     required String title,
     required String subtitle,
   }) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Center(
       child: Padding(
@@ -599,24 +586,21 @@ class _MedicationsScreenState extends State<MedicationsScreen>
             Icon(
               icon,
               size: 64,
-              color: colorScheme.onSurface.withAlpha(102),
+              color: colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 18,
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface.withAlpha(153),
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 14,
-                color: colorScheme.onSurface.withAlpha(128),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),
@@ -646,7 +630,8 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     final canSchedule = await NotificationService.canScheduleExactAlarms();
     if (canSchedule) return true;
 
-    final shouldRequest = await showDialog<bool>(
+    if (!context.mounted) return false;
+    final shouldRequest = await showBlurDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Permission Required'),
@@ -688,15 +673,16 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     final hasPermission = await _ensureExactAlarmPermission(context);
     if (!hasPermission) return;
 
-    final result = await showDialog<MedicationReminder>(
+    if (!mounted) return;
+    final result = await showBlurDialog<MedicationReminder>(
       context: context,
       builder: (context) => _AddReminderDialog(),
     );
 
-    if (result != null && mounted) {
-      final appState = Provider.of<AppState>(context, listen: false);
-      await appState.addReminderToMedication(medication.id, result);
-    }
+    if (!mounted || result == null) return;
+
+    final appState = Provider.of<AppState>(context, listen: false);
+    await appState.addReminderToMedication(medication.id, result);
   }
 
   void _editMedication(Medication medication, int index, AppState appState) {
@@ -706,7 +692,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
 
   Future<void> _confirmDelete(
       Medication medication, int index, AppState appState) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showBlurDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Medication?'),
@@ -725,42 +711,42 @@ class _MedicationsScreenState extends State<MedicationsScreen>
       ),
     );
 
-    if (confirmed == true && mounted) {
-      appState.removeMedication(index);
-    }
+    if (!mounted || confirmed != true) return;
+
+    appState.removeMedication(index);
   }
 
   Future<void> _showAddMedicationDialog(BuildContext context,
       {Medication? existingMedication, int? index}) async {
-    final result = await showDialog<Map<String, dynamic>>(
+    final result = await showBlurDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) =>
           _AddMedicationDialog(existingMedication: existingMedication),
     );
 
-    if (result != null && mounted) {
-      final appState = Provider.of<AppState>(context, listen: false);
-      final medication = Medication(
-        id: existingMedication?.id ??
-            DateTime.now().millisecondsSinceEpoch.toString(),
-        name: result['name'],
-        dosage: result['dosage'],
-        frequency: result['frequency'],
-        totalQuantity: result['totalQuantity'],
-        currentQuantity: result['currentQuantity'],
-        refillThreshold: result['refillThreshold'],
-        notes: result['notes'],
-        isEssential: result['isEssential'],
-        createdAt: existingMedication?.createdAt ?? DateTime.now(),
-        remindersEnabled: existingMedication?.remindersEnabled ?? false,
-        reminders: existingMedication?.reminders ?? [],
-      );
+    if (!context.mounted || result == null) return;
 
-      if (existingMedication != null && index != null) {
-        await appState.updateMedicationWithReminders(index, medication);
-      } else {
-        appState.addMedication(medication);
-      }
+    final appState = Provider.of<AppState>(context, listen: false);
+    final medication = Medication(
+      id: existingMedication?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+      name: result['name'],
+      dosage: result['dosage'],
+      frequency: result['frequency'],
+      totalQuantity: result['totalQuantity'],
+      currentQuantity: result['currentQuantity'],
+      refillThreshold: result['refillThreshold'],
+      notes: result['notes'],
+      isEssential: result['isEssential'],
+      createdAt: existingMedication?.createdAt ?? DateTime.now(),
+      remindersEnabled: existingMedication?.remindersEnabled ?? false,
+      reminders: existingMedication?.reminders ?? [],
+    );
+
+    if (existingMedication != null && index != null) {
+      await appState.updateMedicationWithReminders(index, medication);
+    } else {
+      appState.addMedication(medication);
     }
   }
 }
