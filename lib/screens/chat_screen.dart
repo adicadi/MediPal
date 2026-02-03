@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +27,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   bool _showHistory = false;
   String _streamingContent = '';
   List<Map<String, dynamic>> _chatSessions = [];
+  Timer? _autoSaveTimer;
+  late final String _currentSessionId;
 
   // OPTIMIZED: Animation controllers for better UX
   late AnimationController _typingAnimationController;
@@ -70,6 +74,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _currentSessionId = now.millisecondsSinceEpoch.toString();
     _initializeAnimations();
     _initializeChat();
     _loadChatHistory();
@@ -103,6 +109,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
         );
       });
+      _scheduleAutoSave();
     });
   }
 
@@ -214,11 +221,6 @@ How can I help you today? Remember, I provide information to support your health
                 tooltip: _showHistory ? 'Current Chat' : 'Chat History',
               ),
               if (!_showHistory && _messages.length > 1) ...[
-                IconButton(
-                  icon: const Icon(Icons.save),
-                  onPressed: _saveChatSession,
-                  tooltip: 'Save Chat',
-                ),
                 PopupMenuButton<String>(
                   onSelected: _handleMenuAction,
                   itemBuilder: (context) => [
@@ -637,6 +639,7 @@ How can I help you today? Remember, I provide information to support your health
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true));
     });
+    _scheduleAutoSave();
     _scrollToBottom();
 
     try {
@@ -657,6 +660,7 @@ How can I help you today? Remember, I provide information to support your health
           _messages.add(ChatMessage(text: quickResponse, isUser: false));
           _isLoading = false;
         });
+        _scheduleAutoSave();
         _scrollToBottom();
         return;
       }
@@ -693,6 +697,7 @@ How can I help you today? Remember, I provide information to support your health
         setState(() {
           _messages.add(ChatMessage(text: _streamingContent, isUser: false));
         });
+        _scheduleAutoSave();
       } else {
         // Fallback to regular API if streaming failed
         setState(() {
@@ -703,6 +708,7 @@ How can I help you today? Remember, I provide information to support your health
         setState(() {
           _messages.add(ChatMessage(text: response, isUser: false));
         });
+        _scheduleAutoSave();
       }
     } catch (e) {
       if (!mounted) return;
@@ -715,6 +721,7 @@ How can I help you today? Remember, I provide information to support your health
           ),
         );
       });
+      _scheduleAutoSave();
     } finally {
       if (mounted) {
         setState(() {
@@ -772,21 +779,18 @@ How can I help you today? Remember, I provide information to support your health
     }
   }
 
-  void _saveChatSession() async {
+  void _scheduleAutoSave() {
     if (_messages.length <= 1) return;
-
-    final sessionName =
-        'Chat ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year} ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}';
-    await ChatHistoryService.saveChatSession(_messages, sessionName);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Chat session saved'),
-          duration: Duration(seconds: 2),
-        ),
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(milliseconds: 600), () async {
+      final sessionName = ChatHistoryService.generateSessionName(_messages);
+      await ChatHistoryService.saveChatSession(
+        _messages,
+        sessionName,
+        sessionId: _currentSessionId,
+        replaceIfExists: true,
       );
-    }
+    });
   }
 
   void _handleMenuAction(String action) async {
@@ -912,6 +916,7 @@ How can I help you today? Remember, I provide information to support your health
 
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     _typingAnimationController.dispose();

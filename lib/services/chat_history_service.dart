@@ -6,10 +6,41 @@ import '../screens/chat_screen.dart';
 
 class ChatHistoryService {
   static const String _chatSessionsKey = 'chat_sessions';
+  static const int _maxTitleLength = 40;
+  static const int _maxTitleWords = 6;
 
-  // Save a chat session
+  static String generateSessionName(List<ChatMessage> messages) {
+    final userMessage = messages.firstWhere(
+      (message) => message.isUser && message.text.trim().isNotEmpty,
+      orElse: () => ChatMessage(text: '', isUser: true),
+    );
+
+    final raw = userMessage.text
+        .replaceAll(RegExp(r'\\s+'), ' ')
+        .replaceAll('\n', ' ')
+        .trim();
+
+    if (raw.isEmpty) {
+      return 'Chat ${DateTime.now().month}/${DateTime.now().day}';
+    }
+
+    final words = raw.split(' ');
+    final truncatedWords =
+        words.take(_maxTitleWords).where((word) => word.isNotEmpty).toList();
+    var title = truncatedWords.join(' ');
+    if (title.length > _maxTitleLength) {
+      title = title.substring(0, _maxTitleLength).trimRight();
+    }
+    return title;
+  }
+
+  // Save or update a chat session
   static Future<void> saveChatSession(
-      List<ChatMessage> messages, String sessionName) async {
+    List<ChatMessage> messages,
+    String sessionName, {
+    String? sessionId,
+    bool replaceIfExists = false,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
 
     // Convert messages to JSON
@@ -22,6 +53,7 @@ class ChatHistoryService {
         .toList();
 
     final sessionData = {
+      'id': sessionId,
       'name': sessionName,
       'messages': messagesJson,
       'timestamp': DateTime.now().toIso8601String(),
@@ -29,7 +61,17 @@ class ChatHistoryService {
 
     // Get existing sessions
     final existingSessions = await getChatSessions();
-    existingSessions.add(sessionData);
+    if (replaceIfExists && sessionId != null) {
+      final index = existingSessions
+          .indexWhere((session) => session['id'] == sessionId);
+      if (index >= 0) {
+        existingSessions[index] = sessionData;
+      } else {
+        existingSessions.add(sessionData);
+      }
+    } else {
+      existingSessions.add(sessionData);
+    }
 
     // Keep only last 20 sessions
     if (existingSessions.length > 20) {
