@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/wearable_health_service.dart';
 import '../utils/app_state.dart';
-import '../screens/home_screen.dart';
-import '../utils/blur_dialog.dart';
+import 'edit_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -51,13 +50,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  void _showProfileDialog(BuildContext context, AppState appState) {
-    showBlurDialog(
-      context: context,
-      builder: (context) => ProfileEditDialog(appState: appState),
     );
   }
 
@@ -127,7 +119,12 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                   leading: const Icon(Icons.person),
                   title: const Text('Edit Profile'),
                   subtitle: const Text('Update your personal information'),
-                  onTap: () => _showProfileDialog(context, appState),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EditProfileScreen(),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),

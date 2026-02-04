@@ -13,8 +13,6 @@ class WearableHealthService {
     HealthDataType.RESTING_HEART_RATE,
     HealthDataType.SLEEP_SESSION,
     HealthDataType.SLEEP_ASLEEP,
-    HealthDataType.SLEEP_IN_BED,
-    HealthDataType.EXERCISE_TIME,
   ];
 
   static Future<bool> isHealthConnectAvailable() async {
@@ -28,8 +26,9 @@ class WearableHealthService {
 
   static Future<bool> hasRequiredPermissions() async {
     await _ensureConfigured();
-    final availableTypes =
-        _summaryTypes.where((type) => _health.isDataTypeAvailable(type)).toList();
+    final availableTypes = _summaryTypes
+        .where((type) => _health.isDataTypeAvailable(type))
+        .toList();
     if (availableTypes.isEmpty) return false;
 
     final permissions =
@@ -49,8 +48,9 @@ class WearableHealthService {
     }
 
     await Permission.activityRecognition.request();
-    final availableTypes =
-        _summaryTypes.where((type) => _health.isDataTypeAvailable(type)).toList();
+    final availableTypes = _summaryTypes
+        .where((type) => _health.isDataTypeAvailable(type))
+        .toList();
     if (availableTypes.isEmpty) return false;
 
     final permissions =
@@ -74,8 +74,6 @@ class WearableHealthService {
 
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
-    final yesterday = now.subtract(const Duration(days: 1));
-
     final availableTypes = <HealthDataType>[];
     for (final type in _summaryTypes) {
       if (_health.isDataTypeAvailable(type)) {
@@ -101,16 +99,7 @@ class WearableHealthService {
       }
     }
 
-    final steps =
-        await _health.getTotalStepsInInterval(startOfDay, now) ?? 0;
-
-    final activeMinutes = await _sumNumericFromTypes(
-      startOfDay,
-      now,
-      _filterTypes(availableTypes, [
-        HealthDataType.EXERCISE_TIME,
-      ]),
-    );
+    final steps = await _health.getTotalStepsInInterval(startOfDay, now) ?? 0;
 
     final avgHeartRate = await _averageNumericFromTypes(
       startOfDay,
@@ -124,34 +113,31 @@ class WearableHealthService {
       _filterTypes(availableTypes, [HealthDataType.RESTING_HEART_RATE]),
     );
 
-    final asleepMinutes = await _sumDurationFromTypes(
-      yesterday,
-      now,
-      _filterTypes(availableTypes, [
-        HealthDataType.SLEEP_ASLEEP,
-        HealthDataType.SLEEP_SESSION,
-      ]),
-    );
-    final inBedMinutes = await _sumDurationFromTypes(
-      yesterday,
-      now,
-      _filterTypes(availableTypes, [HealthDataType.SLEEP_IN_BED]),
-    );
+    double? asleepMinutes;
+    if (availableTypes.contains(HealthDataType.SLEEP_ASLEEP)) {
+      asleepMinutes = await _sumMergedDurationFromTypes(
+        startOfDay,
+        now,
+        [HealthDataType.SLEEP_ASLEEP],
+      );
+    }
+    if ((asleepMinutes == null || asleepMinutes == 0) &&
+        availableTypes.contains(HealthDataType.SLEEP_SESSION)) {
+      asleepMinutes = await _sumMergedDurationFromTypes(
+        startOfDay,
+        now,
+        [HealthDataType.SLEEP_SESSION],
+      );
+    }
 
-    final sleepHours =
-        asleepMinutes != null ? asleepMinutes / 60.0 : null;
-    final sleepEfficiency = (asleepMinutes != null && inBedMinutes != null)
-        ? (inBedMinutes == 0 ? null : (asleepMinutes / inBedMinutes) * 100.0)
-        : null;
+    final sleepHours = asleepMinutes != null ? asleepMinutes / 60.0 : null;
 
     final summary = WearableSummary(
       updatedAt: now,
       stepsToday: steps,
-      activeMinutesToday: activeMinutes?.round(),
       avgHeartRate: avgHeartRate,
       restingHeartRate: restingHeartRate,
       sleepHours: sleepHours,
-      sleepEfficiency: sleepEfficiency,
       stressScore: null,
     );
 
@@ -159,32 +145,75 @@ class WearableHealthService {
     return summary;
   }
 
+  static Future<List<SleepSegmentDebug>> fetchSleepSegmentsLast24h() async {
+    await _ensureConfigured();
+    final bool isAvailable = await _health.isHealthConnectAvailable();
+    if (!isAvailable) return [];
+
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+
+    final debugTypes = <HealthDataType>[
+      HealthDataType.SLEEP_ASLEEP,
+      HealthDataType.SLEEP_SESSION,
+      HealthDataType.SLEEP_LIGHT,
+      HealthDataType.SLEEP_DEEP,
+      HealthDataType.SLEEP_REM,
+      HealthDataType.SLEEP_AWAKE,
+      HealthDataType.SLEEP_UNKNOWN,
+      HealthDataType.SLEEP_OUT_OF_BED,
+    ];
+
+    final availableTypes =
+        debugTypes.where((type) => _health.isDataTypeAvailable(type)).toList();
+    if (availableTypes.isEmpty) return [];
+
+    final permissions =
+        availableTypes.map((_) => HealthDataAccess.READ).toList();
+    final hasPermissions =
+        await _health.hasPermissions(availableTypes, permissions: permissions);
+    if (hasPermissions != true) {
+      final authorized = await _health.requestAuthorization(
+        availableTypes,
+        permissions: permissions,
+      );
+      if (!authorized) return [];
+    }
+
+    final points = await _safeGetHealthDataFromTypes(
+      types: availableTypes,
+      start: startOfDay,
+      end: now,
+    );
+    if (points.isEmpty) return [];
+
+    final unique = _health.removeDuplicates(points);
+    final segments = <SleepSegmentDebug>[];
+    for (final point in unique) {
+      final windowStart =
+          point.dateFrom.isAfter(startOfDay) ? point.dateFrom : startOfDay;
+      final windowEnd = point.dateTo.isBefore(now) ? point.dateTo : now;
+      if (!windowEnd.isAfter(windowStart)) continue;
+      final minutes = windowEnd.difference(windowStart).inMinutes;
+      if (minutes <= 0) continue;
+
+      segments.add(SleepSegmentDebug(
+        type: point.typeString,
+        start: windowStart,
+        end: windowEnd,
+        minutes: minutes,
+        sourceName: point.sourceName,
+        sourceId: point.sourceId,
+      ));
+    }
+
+    segments.sort((a, b) => a.start.compareTo(b.start));
+    return segments;
+  }
+
   static List<HealthDataType> _filterTypes(
       List<HealthDataType> available, List<HealthDataType> desired) {
     return desired.where(available.contains).toList();
-  }
-
-  static Future<double?> _sumNumericFromTypes(
-    DateTime start,
-    DateTime end,
-    List<HealthDataType> types,
-  ) async {
-    if (types.isEmpty) return null;
-    final points = await _safeGetHealthDataFromTypes(
-      types: types,
-      start: start,
-      end: end,
-    );
-    final unique = _health.removeDuplicates(points);
-    double sum = 0;
-    int count = 0;
-    for (final point in unique) {
-      final value = _numericValue(point);
-      if (value == null) continue;
-      sum += value;
-      count++;
-    }
-    return count == 0 ? null : sum;
   }
 
   static Future<double?> _averageNumericFromTypes(
@@ -210,7 +239,7 @@ class WearableHealthService {
     return count == 0 ? null : sum / count;
   }
 
-  static Future<double?> _sumDurationFromTypes(
+  static Future<double?> _sumMergedDurationFromTypes(
     DateTime start,
     DateTime end,
     List<HealthDataType> types,
@@ -221,11 +250,37 @@ class WearableHealthService {
       start: start,
       end: end,
     );
+    if (points.isEmpty) return null;
     final unique = _health.removeDuplicates(points);
-    double minutes = 0;
+
+    final intervals = <_Interval>[];
     for (final point in unique) {
-      final duration = point.dateTo.difference(point.dateFrom);
-      minutes += duration.inMinutes;
+      final windowStart =
+          point.dateFrom.isAfter(start) ? point.dateFrom : start;
+      final windowEnd = point.dateTo.isBefore(end) ? point.dateTo : end;
+      if (!windowEnd.isAfter(windowStart)) continue;
+      intervals.add(_Interval(windowStart, windowEnd));
+    }
+    if (intervals.isEmpty) return null;
+
+    intervals.sort((a, b) => a.start.compareTo(b.start));
+    final merged = <_Interval>[];
+    for (final interval in intervals) {
+      if (merged.isEmpty) {
+        merged.add(interval);
+        continue;
+      }
+      final last = merged.last;
+      if (interval.start.isAfter(last.end)) {
+        merged.add(interval);
+      } else if (interval.end.isAfter(last.end)) {
+        merged[merged.length - 1] = _Interval(last.start, interval.end);
+      }
+    }
+
+    double minutes = 0;
+    for (final interval in merged) {
+      minutes += interval.end.difference(interval.start).inMinutes;
     }
     return minutes == 0 ? null : minutes;
   }
@@ -276,4 +331,29 @@ class WearableHealthService {
     await _health.configure();
     _configured = true;
   }
+}
+
+class _Interval {
+  final DateTime start;
+  final DateTime end;
+
+  const _Interval(this.start, this.end);
+}
+
+class SleepSegmentDebug {
+  final String type;
+  final DateTime start;
+  final DateTime end;
+  final int minutes;
+  final String sourceName;
+  final String sourceId;
+
+  const SleepSegmentDebug({
+    required this.type,
+    required this.start,
+    required this.end,
+    required this.minutes,
+    required this.sourceName,
+    required this.sourceId,
+  });
 }

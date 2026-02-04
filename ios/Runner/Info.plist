@@ -49,5 +49,7 @@
 	<string>This app needs location access to provide local emergency numbers for your safety.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app needs location access to provide local emergency numbers for your safety.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MediPal uses your photo library to let you choose a profile picture.</string>
 </dict>
 </plist>

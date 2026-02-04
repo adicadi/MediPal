@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:provider/provider.dart';
@@ -193,16 +195,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(width: 16),
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
                     color: colorScheme.primary.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: Icon(
-                    appState.isMinor ? Icons.school : Icons.favorite,
-                    color: colorScheme.primary,
-                    size: 40,
-                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: appState.userProfileImagePath.isNotEmpty
+                      ? Image.file(
+                          File(appState.userProfileImagePath),
+                          fit: BoxFit.cover,
+                        )
+                      : Icon(
+                          appState.isMinor ? Icons.school : Icons.favorite,
+                          color: colorScheme.primary,
+                          size: 40,
+                        ),
                 ),
               ],
             ),
@@ -758,9 +767,6 @@ ${sleep != null ? '\n😴 **Sleep last night:** ${sleep.toStringAsFixed(1)} hour
         if (wearable.stepsToday != null) {
           lines.add('• Steps today: ${wearable.stepsToday}');
         }
-        if (wearable.activeMinutesToday != null) {
-          lines.add('• Active minutes: ${wearable.activeMinutesToday}');
-        }
         if (wearable.avgHeartRate != null) {
           lines.add(
               '• Avg heart rate: ${wearable.avgHeartRate!.toStringAsFixed(0)} bpm');
@@ -771,10 +777,6 @@ ${sleep != null ? '\n😴 **Sleep last night:** ${sleep.toStringAsFixed(1)} hour
         }
         if (wearable.sleepHours != null) {
           lines.add('• Sleep: ${wearable.sleepHours!.toStringAsFixed(1)} hrs');
-        }
-        if (wearable.sleepEfficiency != null) {
-          lines.add(
-              '• Sleep efficiency: ${wearable.sleepEfficiency!.toStringAsFixed(0)}%');
         }
       }
 
@@ -1584,273 +1586,5 @@ ${appState.ageAppropriateDisclaimer}
         ],
       ),
     );
-  }
-}
-
-// FIXED: Separate ProfileEditDialog widget to handle TextEditingController properly
-class ProfileEditDialog extends StatefulWidget {
-  final AppState appState;
-
-  const ProfileEditDialog({super.key, required this.appState});
-
-  @override
-  State<ProfileEditDialog> createState() => _ProfileEditDialogState();
-}
-
-class _ProfileEditDialogState extends State<ProfileEditDialog> {
-  late final TextEditingController nameController;
-  late final TextEditingController emailController;
-  late final TextEditingController ageController;
-  late String selectedGender;
-
-  @override
-  void initState() {
-    super.initState();
-    nameController = TextEditingController(text: widget.appState.userName);
-    emailController = TextEditingController(text: widget.appState.userEmail);
-    ageController = TextEditingController(
-        text: widget.appState.userAge > 0
-            ? widget.appState.userAge.toString()
-            : '');
-    selectedGender = widget.appState.userGender;
-  }
-
-  @override
-  void dispose() {
-    nameController.dispose();
-    emailController.dispose();
-    ageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Row(
-        children: [
-          Icon(Icons.person, color: Colors.blue),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Profile Settings',
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-      content: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.6,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  prefixIcon: Icon(Icons.person),
-                  border: OutlineInputBorder(),
-                ),
-                textCapitalization: TextCapitalization.words,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email (Optional)',
-                  prefixIcon: Icon(Icons.email),
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: ageController,
-                decoration: const InputDecoration(
-                  labelText: 'Age',
-                  prefixIcon: Icon(Icons.cake),
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Gender',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(child: _buildGenderOption('Male', Icons.male)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildGenderOption('Female', Icons.female)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildGenderOption('Other', Icons.person)),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: widget.appState.isMinor
-                      ? Colors.orange.shade50
-                      : Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: widget.appState.isMinor
-                        ? Colors.orange.shade200
-                        : Colors.blue.shade200,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      widget.appState.isMinor ? Icons.school : Icons.person,
-                      color: widget.appState.isMinor
-                          ? Colors.orange.shade700
-                          : Colors.blue.shade700,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.appState.isMinor
-                            ? 'Young User Mode - Always consult with parents or guardians'
-                            : widget.appState.isYoungAdult
-                                ? 'Young Adult Mode - Building healthy habits for your future'
-                                : 'Adult Mode - Full access to all health features',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: widget.appState.isMinor
-                              ? Colors.orange.shade700
-                              : Colors.blue.shade700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _saveProfile,
-          child: const Text('Save Changes'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGenderOption(String gender, IconData icon) {
-    final isSelected = selectedGender == gender;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedGender = gender;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.primary.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? colorScheme.primary
-                : colorScheme.outline.withValues(alpha: 0.3),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected
-                  ? colorScheme.primary
-                  : colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              gender,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected
-                    ? colorScheme.primary
-                    : colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _saveProfile() async {
-    try {
-      int? age;
-      if (ageController.text.trim().isNotEmpty) {
-        age = int.tryParse(ageController.text.trim());
-        if (age == null || age < 1 || age > 150) {
-          _showErrorSnackBar('Please enter a valid age between 1 and 150');
-          return;
-        }
-      }
-
-      await widget.appState.setUserName(nameController.text.trim());
-      await widget.appState.setUserEmail(emailController.text.trim());
-
-      if (age != null) {
-        await widget.appState.setUserAge(age);
-      }
-
-      if (selectedGender.isNotEmpty) {
-        await widget.appState.setUserGender(selectedGender);
-      }
-
-      if (mounted) {
-        Navigator.pop(context);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      _showErrorSnackBar('Error saving profile: $e');
-    }
-  }
-
-  void _showErrorSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 }

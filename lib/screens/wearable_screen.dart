@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/wearable_summary.dart';
+import '../services/wearable_health_service.dart';
 import '../utils/app_state.dart';
 
 class WearableScreen extends StatefulWidget {
@@ -13,12 +15,34 @@ class WearableScreen extends StatefulWidget {
 class _WearableScreenState extends State<WearableScreen> {
   bool _isRefreshing = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final appState = context.read<AppState>();
+      final summary = appState.wearableSummary;
+      if (summary == null || _isStale(summary.updatedAt)) {
+        _refresh(appState);
+      }
+    });
+  }
+
   Future<void> _refresh(AppState appState) async {
+    if (_isRefreshing) return;
     setState(() => _isRefreshing = true);
-    await appState.refreshWearableSummary();
-    if (mounted) {
-      setState(() => _isRefreshing = false);
+    try {
+      await appState.refreshWearableSummary();
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
     }
+  }
+
+  bool _isStale(DateTime updatedAt) {
+    return DateTime.now().difference(updatedAt) >
+        const Duration(minutes: 30);
   }
 
   @override
@@ -48,6 +72,10 @@ class _WearableScreenState extends State<WearableScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (_isRefreshing) ...[
+                        const LinearProgressIndicator(minHeight: 2),
+                        const SizedBox(height: 12),
+                      ],
                       Text(
                         'Today',
                         style: theme.textTheme.titleMedium
@@ -67,9 +95,6 @@ class _WearableScreenState extends State<WearableScreen> {
                             _metricRow('Steps',
                                 summary.stepsToday?.toString() ?? '-'),
                             _metricRow(
-                                'Active minutes',
-                                summary.activeMinutesToday?.toString() ?? '-'),
-                            _metricRow(
                                 'Avg heart rate',
                                 summary.avgHeartRate != null
                                     ? '${summary.avgHeartRate!.toStringAsFixed(0)} bpm'
@@ -84,11 +109,6 @@ class _WearableScreenState extends State<WearableScreen> {
                                 summary.sleepHours != null
                                     ? '${summary.sleepHours!.toStringAsFixed(1)} hrs'
                                     : '-'),
-                            _metricRow(
-                                'Sleep efficiency',
-                                summary.sleepEfficiency != null
-                                    ? '${summary.sleepEfficiency!.toStringAsFixed(0)}%'
-                                    : '-'),
                           ],
                         ),
                       const SizedBox(height: 12),
@@ -96,11 +116,27 @@ class _WearableScreenState extends State<WearableScreen> {
                         onPressed: _isRefreshing
                             ? null
                             : () => _refresh(appState),
-                        icon: const Icon(Icons.refresh),
+                        icon: _isRefreshing
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.refresh),
                         label: Text(_isRefreshing
                             ? 'Refreshing...'
                             : 'Refresh data'),
                       ),
+                      if (kDebugMode) ...[
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: () => _showSleepDebug(context),
+                          icon: const Icon(Icons.bug_report_outlined),
+                          label: const Text('Show sleep segments'),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -198,6 +234,116 @@ class _WearableScreenState extends State<WearableScreen> {
       if (restingHrAvg != null)
         'restingHr': '${restingHrAvg.toStringAsFixed(0)} bpm',
     };
+  }
+
+  Future<void> _showSleepDebug(BuildContext context) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: FutureBuilder<List<SleepSegmentDebug>>(
+              future: WearableHealthService.fetchSleepSegmentsLast24h(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return Text(
+                    'Failed to load sleep segments.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  );
+                }
+                final segments = snapshot.data ?? [];
+                if (segments.isEmpty) {
+                  return Text(
+                    'No sleep segments found in the last 24 hours.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  );
+                }
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sleep segments (today)',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: segments.length,
+                        separatorBuilder: (_, __) =>
+                            const Divider(height: 16),
+                        itemBuilder: (context, index) {
+                          final segment = segments[index];
+                          final range =
+                              '${_formatTime(context, segment.start)} - ${_formatTime(context, segment.end)}';
+                          final source =
+                              '${segment.sourceName} (${segment.sourceId})';
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                range,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${segment.minutes} min • ${segment.type}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                source,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatTime(BuildContext context, DateTime time) {
+    return TimeOfDay.fromDateTime(time).format(context);
   }
 
 }

@@ -15,6 +15,7 @@ class AppState extends ChangeNotifier {
   String _userEmail = '';
   int _userAge = 0;
   String _userGender = '';
+  String _userProfileImagePath = '';
 
   // Existing symptom and medication data
   final List<String> _selectedSymptoms = [];
@@ -49,6 +50,7 @@ class AppState extends ChangeNotifier {
   String get userEmail => _userEmail;
   int get userAge => _userAge;
   String get userGender => _userGender;
+  String get userProfileImagePath => _userProfileImagePath;
 
   // Getters - chat
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
@@ -153,7 +155,6 @@ class AppState extends ChangeNotifier {
     if (wearable != null && !wearable.isEmpty) {
       final steps = wearable.stepsToday;
       final sleepHours = wearable.sleepHours;
-      final activeMinutes = wearable.activeMinutesToday;
       final restingHr = wearable.restingHeartRate;
 
       if (steps != null) {
@@ -164,10 +165,6 @@ class AppState extends ChangeNotifier {
         } else {
           baseTips.add('🎉 Great job staying active—keep it up!');
         }
-      }
-
-      if (activeMinutes != null && activeMinutes < 20) {
-        baseTips.add('⏱️ Aim for 20–30 active minutes to support heart health');
       }
 
       if (sleepHours != null) {
@@ -306,6 +303,14 @@ Your health and safety are the top priority. 🏥
   Future<void> setUserGender(String gender) async {
     if (_userGender != gender) {
       _userGender = gender;
+      await _saveUserProfile();
+      notifyListeners();
+    }
+  }
+
+  Future<void> setUserProfileImagePath(String path) async {
+    if (_userProfileImagePath != path) {
+      _userProfileImagePath = path;
       await _saveUserProfile();
       notifyListeners();
     }
@@ -618,6 +623,7 @@ Is there something else I can help you with today?
       await prefs.setString('user_email', _userEmail);
       await prefs.setInt('user_age', _userAge);
       await prefs.setString('user_gender', _userGender);
+      await prefs.setString('user_profile_image', _userProfileImagePath);
     } catch (e) {
       if (kDebugMode) print('Error saving user profile: $e');
     }
@@ -630,6 +636,7 @@ Is there something else I can help you with today?
       _userEmail = prefs.getString('user_email') ?? '';
       _userAge = prefs.getInt('user_age') ?? 0;
       _userGender = prefs.getString('user_gender') ?? '';
+      _userProfileImagePath = prefs.getString('user_profile_image') ?? '';
 
       await _loadMedications();
       await _loadChatHistory();
@@ -757,9 +764,6 @@ Is there something else I can help you with today?
     if (summary.stepsToday != null) {
       parts.add('steps today: ${summary.stepsToday}');
     }
-    if (summary.activeMinutesToday != null) {
-      parts.add('active minutes today: ${summary.activeMinutesToday}');
-    }
     if (summary.avgHeartRate != null) {
       parts.add('avg HR: ${summary.avgHeartRate!.toStringAsFixed(0)} bpm');
     }
@@ -768,9 +772,6 @@ Is there something else I can help you with today?
     }
     if (summary.sleepHours != null) {
       parts.add('sleep: ${summary.sleepHours!.toStringAsFixed(1)} hrs');
-    }
-    if (summary.sleepEfficiency != null) {
-      parts.add('sleep efficiency: ${summary.sleepEfficiency!.toStringAsFixed(0)}%');
     }
     if (summary.stressScore != null) {
       parts.add('stress score: ${summary.stressScore!.toStringAsFixed(0)}');
