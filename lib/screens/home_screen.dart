@@ -53,11 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: () => _showProfileDialog(context),
-            icon: const Icon(Icons.account_circle),
-            tooltip: 'Profile',
-          ),
-          IconButton(
             onPressed: () => Navigator.pushNamed(context, '/settings'),
             icon: const Icon(Icons.settings),
             tooltip: 'Settings',
@@ -694,15 +689,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  // FIXED: Profile dialog using separate widget to avoid TextEditingController disposal issues
-  void _showProfileDialog(BuildContext context) {
-    final appState = Provider.of<AppState>(context, listen: false);
-    showBlurDialog(
-      context: context,
-      builder: (context) => ProfileEditDialog(appState: appState),
     );
   }
 
