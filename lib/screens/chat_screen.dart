@@ -2,12 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../models/chat_attachment.dart';
 import '../services/deepseek_service.dart';
 import '../services/chat_history_service.dart';
+import '../services/document_ingest_queue.dart';
 import '../utils/app_state.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
+import '../services/document_ingest_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -15,6 +20,7 @@ class ChatScreen extends StatefulWidget {
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
+
 
 class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
@@ -29,6 +35,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _chatSessions = [];
   Timer? _autoSaveTimer;
   late final String _currentSessionId;
+  bool _isProcessingDocument = false;
+  final List<ChatAttachment> _attachedDocuments = [];
+  bool _shouldAutoScroll = true;
+  bool _isUserScrolling = false;
+  AppState? _appState;
+  bool _isDisposed = false;
+  StreamSubscription<DocumentIngestEvent>? _ingestSubscription;
 
   // OPTIMIZED: Animation controllers for better UX
   late AnimationController _typingAnimationController;
@@ -79,6 +92,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _initializeAnimations();
     _initializeChat();
     _loadChatHistory();
+    _scrollController.addListener(_handleScroll);
+    _ingestSubscription =
+        DocumentIngestQueue.stream.listen(_handleIngestEvent);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _processPendingDocuments();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _appState ??= Provider.of<AppState>(context);
   }
 
   void _initializeAnimations() {
@@ -269,30 +294,53 @@ How can I help you today? Remember, I provide information to support your health
         if (!_isStreaming && !_isLoading) _buildQuickActionsBar(),
 
         Expanded(
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.all(16),
-            itemCount: _messages.length +
-                (_isStreaming ? 1 : 0) +
-                (_isLoading && !_isStreaming ? 1 : 0),
-            itemBuilder: (context, index) {
-              // Show streaming message
-              if (_isStreaming && index == _messages.length) {
-                return _buildStreamingBubble(appState);
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollStartNotification) {
+                _isUserScrolling = true;
+              } else if (notification is UserScrollNotification) {
+                if (notification.direction != ScrollDirection.idle) {
+                  _isUserScrolling = true;
+                }
+              } else if (notification is ScrollEndNotification) {
+                _isUserScrolling = false;
               }
 
-              // Show loading indicator
-              if (_isLoading && !_isStreaming && index == _messages.length) {
-                return TypingIndicator(showIndicator: true, appState: appState);
+              if (_scrollController.hasClients) {
+                final position = _scrollController.position;
+                final distanceFromBottom =
+                    position.maxScrollExtent - position.pixels;
+                const threshold = 120.0;
+                _shouldAutoScroll = distanceFromBottom <= threshold;
               }
-
-              final message = _messages[index];
-              return ChatBubble(
-                message: message,
-                appState: appState,
-                onCopy: () => _copyMessage(message.text),
-              );
+              return false;
             },
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length +
+                  (_isStreaming ? 1 : 0) +
+                  (_isLoading && !_isStreaming ? 1 : 0),
+              itemBuilder: (context, index) {
+                // Show streaming message
+                if (_isStreaming && index == _messages.length) {
+                  return _buildStreamingBubble(appState);
+                }
+
+                // Show loading indicator
+                if (_isLoading && !_isStreaming && index == _messages.length) {
+                  return TypingIndicator(
+                      showIndicator: true, appState: appState);
+                }
+
+                final message = _messages[index];
+                return ChatBubble(
+                  message: message,
+                  appState: appState,
+                  onCopy: () => _copyMessage(message.text),
+                );
+              },
+            ),
           ),
         ),
 
@@ -363,8 +411,25 @@ How can I help you today? Remember, I provide information to support your health
             ),
           ],
 
+          if (_attachedDocuments.isNotEmpty) ...[
+            _buildAttachmentChips(colorScheme, appState),
+            const SizedBox(height: 8),
+          ],
+
+          if (_isProcessingDocument) ...[
+            const LinearProgressIndicator(minHeight: 2),
+            const SizedBox(height: 8),
+          ],
+
           Row(
             children: [
+              IconButton(
+                onPressed: (_isStreaming || _isLoading || _isProcessingDocument)
+                    ? null
+                    : () => _pickDocument(appState),
+                icon: const Icon(Icons.attach_file),
+                tooltip: 'Attach health document',
+              ),
               Expanded(
                 child: TextField(
                   controller: _messageController,
@@ -634,6 +699,7 @@ How can I help you today? Remember, I provide information to support your health
 
     // Clear input immediately for better UX
     _messageController.clear();
+    _shouldAutoScroll = true;
 
     // Add user message instantly
     setState(() {
@@ -731,8 +797,254 @@ How can I help you today? Remember, I provide information to support your health
         });
         _scrollToBottom();
       }
-      _typingAnimationController.stop();
+      if (mounted && !_isDisposed) {
+        _typingAnimationController.stop();
+      }
     }
+  }
+
+  Widget _buildAttachmentChips(
+      ColorScheme colorScheme, AppState appState) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Attached health documents',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _attachedDocuments.clear();
+                });
+                _updateDocumentContext(appState);
+                _scheduleAutoSave();
+              },
+              child: const Text('Clear all'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: _attachedDocuments.map((doc) {
+            return InputChip(
+              label: Text(doc.name, overflow: TextOverflow.ellipsis),
+              avatar: const Icon(Icons.description, size: 18),
+              onDeleted: () {
+                setState(() {
+                  _attachedDocuments.remove(doc);
+                });
+                _updateDocumentContext(appState);
+                _scheduleAutoSave();
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickDocument(AppState appState) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'txt', 'docx', 'png', 'jpg', 'jpeg'],
+        allowMultiple: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+
+      if (file.size > 15 * 1024 * 1024) {
+        _showSnackBar('Please choose a file under 15 MB.');
+        return;
+      }
+
+      setState(() => _isProcessingDocument = true);
+      await DocumentIngestQueue.enqueue(file, _currentSessionId);
+    } catch (e) {
+      if (!mounted) return;
+      _showSnackBar('Unable to process the document.');
+    }
+  }
+
+  void _handleIngestEvent(DocumentIngestEvent event) {
+    if (event.sessionId != _currentSessionId) return;
+    if (!mounted) return;
+
+    if (event.error != null) {
+      setState(() => _isProcessingDocument = false);
+      _showSnackBar('Unable to process the document.');
+      return;
+    }
+
+    final ingestResult = event.result;
+    if (ingestResult == null || ingestResult.extractedText.isEmpty) {
+      setState(() => _isProcessingDocument = false);
+      _showSnackBar('Unable to read this document.');
+      return;
+    }
+
+    setState(() => _isProcessingDocument = false);
+    _processIngestResult(ingestResult);
+  }
+
+  Future<void> _processPendingDocuments() async {
+    if (!mounted) return;
+    if (_isProcessingDocument) {
+      setState(() => _isProcessingDocument = false);
+    }
+    final pending = DocumentIngestQueue.takePending(_currentSessionId);
+    for (final ingestResult in pending) {
+      if (!mounted) return;
+      await _processIngestResult(ingestResult);
+    }
+  }
+
+  Future<void> _processIngestResult(
+      DocumentIngestResult ingestResult) async {
+    if (ingestResult.relevance == HealthDocRelevance.low) {
+      await _showBlockedDocumentDialog();
+      return;
+    }
+
+    final shouldAdd = await _confirmDocumentAdd(
+        ingestResult, Provider.of<AppState>(context, listen: false));
+    if (!mounted || !shouldAdd) return;
+
+    setState(() {
+      _attachedDocuments.add(
+          DocumentIngestQueue.toAttachment(ingestResult));
+    });
+    _updateDocumentContext(
+        Provider.of<AppState>(context, listen: false));
+    _scheduleAutoSave();
+  }
+
+  Future<void> _showBlockedDocumentDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Health documents only'),
+        content: const Text(
+          'I can only read health-related documents. Please upload medical or wellness documents.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _confirmDocumentAdd(
+      DocumentIngestResult result, AppState appState) async {
+    final isMedium = result.relevance == HealthDocRelevance.medium;
+    final preview = result.extractedText.length > 260
+        ? '${result.extractedText.substring(0, 260)}...'
+        : result.extractedText;
+
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(isMedium
+                ? 'Confirm health document'
+                : 'Add health document'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isMedium
+                        ? 'This document doesn\'t clearly look health-related. Please confirm it is.'
+                        : 'We detected health-related content. Add it to your chat context?',
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Preview:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(preview),
+                  const SizedBox(height: 12),
+                  Text(
+                    'On-device only • ${result.wordCount} words',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  void _updateDocumentContext(AppState appState) {
+    final contextText = _buildDocumentContext();
+    appState.setChatDocumentContext(contextText);
+  }
+
+  String _buildDocumentContext() {
+    if (_attachedDocuments.isEmpty) return '';
+    const maxTotalChars = 4000;
+    final buffer = StringBuffer();
+    int used = 0;
+
+    for (final doc in _attachedDocuments) {
+      final header = 'Document: ${doc.name}\n';
+      if (used + header.length > maxTotalChars) break;
+      buffer.write(header);
+      used += header.length;
+
+      final remaining = maxTotalChars - used;
+      if (remaining <= 0) break;
+      final chunk = doc.contextText.length > remaining
+          ? doc.contextText.substring(0, remaining)
+          : doc.contextText;
+      buffer.write(chunk);
+      buffer.write('\n\n');
+      used += chunk.length + 2;
+      if (used >= maxTotalChars) break;
+    }
+
+    return buffer.toString().trim();
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   IconData _getIconData(String iconName) {
@@ -789,6 +1101,7 @@ How can I help you today? Remember, I provide information to support your health
         sessionName,
         sessionId: _currentSessionId,
         replaceIfExists: true,
+        attachments: _attachedDocuments,
       );
       if (mounted) {
         await Provider.of<AppState>(context, listen: false)
@@ -816,11 +1129,20 @@ How can I help you today? Remember, I provide information to support your health
     switch (action) {
       case 'load':
         final messages = await ChatHistoryService.loadChatSession(session);
+        final attachments =
+            ChatHistoryService.loadChatAttachments(session);
         setState(() {
           _messages.clear();
           _messages.addAll(messages);
+          _attachedDocuments
+            ..clear()
+            ..addAll(attachments);
           _showHistory = false;
         });
+        if (mounted) {
+          _updateDocumentContext(
+              Provider.of<AppState>(context, listen: false));
+        }
         break;
       case 'export':
         final messages = await ChatHistoryService.loadChatSession(session);
@@ -833,7 +1155,10 @@ How can I help you today? Remember, I provide information to support your health
         await _shareChat(messages, session['name']);
         break;
       case 'delete':
-        await ChatHistoryService.deleteChatSession(index);
+        final id = session['id'];
+        if (id != null) {
+          await ChatHistoryService.deleteChatSessionById(id);
+        }
         _loadChatHistory();
         break;
     }
@@ -893,7 +1218,9 @@ How can I help you today? Remember, I provide information to support your health
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients &&
+          _shouldAutoScroll &&
+          !_isUserScrolling) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
@@ -901,6 +1228,15 @@ How can I help you today? Remember, I provide information to support your health
         );
       }
     });
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final distanceFromBottom =
+        position.maxScrollExtent - position.pixels;
+    const threshold = 120.0;
+    _shouldAutoScroll = distanceFromBottom <= threshold;
   }
 
   String _formatDate(DateTime dateTime) {
@@ -920,7 +1256,11 @@ How can I help you today? Remember, I provide information to support your health
 
   @override
   void dispose() {
+    _isDisposed = true;
     _autoSaveTimer?.cancel();
+    _appState?.clearChatDocumentContext(notify: false);
+    _scrollController.removeListener(_handleScroll);
+    _ingestSubscription?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     _typingAnimationController.dispose();

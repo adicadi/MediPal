@@ -7,6 +7,7 @@ import '../services/deepseek_service.dart';
 import '../screens/initial_screen.dart';
 import '../theme/app_theme.dart';
 import 'app_router.dart';
+import 'app_scroll_behavior.dart';
 
 class MediPalApp extends StatelessWidget {
   const MediPalApp({super.key, this.home, this.routes});
@@ -37,6 +38,7 @@ class MediPalApp extends StatelessWidget {
         themeMode: ThemeMode.system,
         home: home ?? const InitialScreen(),
         routes: routes ?? appRoutes,
+        scrollBehavior: const AppScrollBehavior(),
         debugShowCheckedModeBanner: false,
       ),
     );

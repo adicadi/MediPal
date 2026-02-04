@@ -34,10 +34,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                Icons.psychology,
-                color: colorScheme.primary,
-                size: 20,
+              child: Image.asset(
+                'assets/Icons/playstore.png',
+                width: 20,
+                height: 20,
+                fit: BoxFit.cover,
               ),
             ),
             const SizedBox(width: 12),

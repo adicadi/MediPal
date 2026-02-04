@@ -241,6 +241,10 @@ class _WearableScreenState extends State<WearableScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      transitionAnimationController: AnimationController(
+        vsync: Navigator.of(context),
+        duration: const Duration(milliseconds: 220),
+      ),
       builder: (context) {
         return SafeArea(
           child: Padding(

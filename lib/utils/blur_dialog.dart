@@ -46,6 +46,11 @@ Future<T?> showBlurDialog<T>({
         curve: Curves.easeOutCubic,
       );
 
+      final slideTween = Tween<Offset>(
+        begin: const Offset(0, 0.04),
+        end: Offset.zero,
+      ).chain(CurveTween(curve: Curves.easeOutCubic));
+
       return Stack(
         children: [
           if (effectiveBlurSigma > 0)
@@ -61,9 +66,12 @@ Future<T?> showBlurDialog<T>({
             ),
           FadeTransition(
             opacity: curved,
-            child: ScaleTransition(
-              scale: Tween(begin: 0.98, end: 1.0).animate(curved),
-              child: child,
+            child: SlideTransition(
+              position: curved.drive(slideTween),
+              child: ScaleTransition(
+                scale: Tween(begin: 0.98, end: 1.0).animate(curved),
+                child: child,
+              ),
             ),
           ),
         ],

@@ -174,27 +174,30 @@ You are MediPal for ${appState.userName}, Age: ${appState.userAge}, Gender: ${ap
 ''';
     final wearablePrompt = appState.wearableSummaryPrompt;
     final wearableLine = wearablePrompt.isNotEmpty ? '\n$wearablePrompt\n' : '';
+    final documentLine = appState.chatDocumentContext.isNotEmpty
+        ? '\nHealth document context (on-device, user-provided):\n${appState.chatDocumentContext}\nUse only if relevant, and do not request non-health documents.\n'
+        : '';
 
     if (appState.isMinor) {
       return '''
 $basePrompt
 MINOR (Under 18): Use simple language. Always direct to trusted adults. Focus on wellness and safety. 
 Avoid: self-medication, detailed medical terms, sensitive topics. Keep under 250 words. End with reminder to talk to adults.
-$wearableLine
+$wearableLine$documentLine
       ''';
     } else if (appState.isYoungAdult) {
       return '''
 $basePrompt
 YOUNG ADULT (18-24): Clear educational language. Emphasize preventive care and professional consultation.
 Keep under 350 words with disclaimers.
-$wearableLine
+$wearableLine$documentLine
       ''';
     } else {
       return '''
 $basePrompt
 ADULT (25+): Detailed medical-grade information with appropriate terminology. 
 Thorough analysis with disclaimers. Keep under 500 words.
-$wearableLine
+$wearableLine$documentLine
       ''';
     }
   }

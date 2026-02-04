@@ -1,6 +1,6 @@
 name: medipal
 description: A healthcare app with AI-powered features
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -50,6 +50,10 @@ dependencies:
   health: ^11.1.1
   image_picker: ^1.1.2
   image_cropper: ^11.0.0
+  file_picker: ^8.0.7
+  google_mlkit_text_recognition: ^0.15.1
+  syncfusion_flutter_pdf: ^32.1.25
+  archive: ^4.0.7
 
 
 dev_dependencies:
@@ -62,3 +66,4 @@ flutter:
   uses-material-design: true
   assets:
     - .env
+    - assets/Icons/

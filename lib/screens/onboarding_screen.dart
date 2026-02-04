@@ -161,7 +161,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 Hero(
                   tag: 'app_logo',
                   child: Container(
-                    padding: const EdgeInsets.all(32),
+                    padding: const EdgeInsets.all(28),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
@@ -178,10 +178,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.psychology,
-                      size: 80,
-                      color: colorScheme.primary,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/Icons/playstore.png',
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),

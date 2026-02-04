@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import '../screens/chat_screen.dart';
+import '../models/chat_attachment.dart';
 
 class ChatHistoryService {
   static const String _chatSessionsKey = 'chat_sessions';
@@ -40,8 +41,11 @@ class ChatHistoryService {
     String sessionName, {
     String? sessionId,
     bool replaceIfExists = false,
+    List<ChatAttachment> attachments = const [],
   }) async {
     final prefs = await SharedPreferences.getInstance();
+    final resolvedSessionId =
+        sessionId ?? DateTime.now().millisecondsSinceEpoch.toString();
 
     // Convert messages to JSON
     final messagesJson = messages
@@ -53,17 +57,18 @@ class ChatHistoryService {
         .toList();
 
     final sessionData = {
-      'id': sessionId,
+      'id': resolvedSessionId,
       'name': sessionName,
       'messages': messagesJson,
+      'attachments': attachments.map((item) => item.toMap()).toList(),
       'timestamp': DateTime.now().toIso8601String(),
     };
 
     // Get existing sessions
     final existingSessions = await getChatSessions();
-    if (replaceIfExists && sessionId != null) {
+    if (replaceIfExists) {
       final index = existingSessions
-          .indexWhere((session) => session['id'] == sessionId);
+          .indexWhere((session) => session['id'] == resolvedSessionId);
       if (index >= 0) {
         existingSessions[index] = sessionData;
       } else {
@@ -108,15 +113,25 @@ class ChatHistoryService {
         .toList();
   }
 
+  static List<ChatAttachment> loadChatAttachments(
+      Map<String, dynamic> session) {
+    final attachments = session['attachments'];
+    if (attachments is List) {
+      return attachments
+          .whereType<Map>()
+          .map((item) =>
+              ChatAttachment.fromMap(item.cast<String, dynamic>()))
+          .toList();
+    }
+    return [];
+  }
+
   // Delete a chat session
-  static Future<void> deleteChatSession(int index) async {
+  static Future<void> deleteChatSessionById(String sessionId) async {
     final prefs = await SharedPreferences.getInstance();
     final sessions = await getChatSessions();
-
-    if (index >= 0 && index < sessions.length) {
-      sessions.removeAt(index);
-      await prefs.setString(_chatSessionsKey, jsonEncode(sessions));
-    }
+    sessions.removeWhere((session) => session['id'] == sessionId);
+    await prefs.setString(_chatSessionsKey, jsonEncode(sessions));
   }
 
   // Export chat to text file

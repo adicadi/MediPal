@@ -34,6 +34,7 @@ class AppState extends ChangeNotifier {
   int _chatSessionsCount = 0;
   WearableSummary? _wearableSummary;
   List<WearableSummary> _wearableHistory = [];
+  String _chatDocumentContext = '';
 
   // Getters - existing
   String get userName => _userName;
@@ -58,6 +59,7 @@ class AppState extends ChangeNotifier {
   WearableSummary? get wearableSummary => _wearableSummary;
   List<WearableSummary> get wearableHistory =>
       List.unmodifiable(_wearableHistory);
+  String get chatDocumentContext => _chatDocumentContext;
 
   // NEW: Age-based content restrictions
   bool get isMinor => _userAge > 0 && _userAge < 18;
@@ -312,6 +314,21 @@ Your health and safety are the top priority. 🏥
     if (_userProfileImagePath != path) {
       _userProfileImagePath = path;
       await _saveUserProfile();
+      notifyListeners();
+    }
+  }
+
+  void setChatDocumentContext(String context) {
+    if (_chatDocumentContext != context) {
+      _chatDocumentContext = context;
+      notifyListeners();
+    }
+  }
+
+  void clearChatDocumentContext({bool notify = true}) {
+    if (_chatDocumentContext.isEmpty) return;
+    _chatDocumentContext = '';
+    if (notify) {
       notifyListeners();
     }
   }
@@ -655,14 +672,27 @@ Is there something else I can help you with today?
   }
 
   Future<void> refreshWearableSummary() async {
-    final summary = await WearableHealthService.fetchAndCacheSummary();
+    WearableSummary? summary;
+    try {
+      summary = await WearableHealthService.fetchAndCacheSummary()
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      if (kDebugMode) {
+        print('Wearable refresh failed or timed out: $e');
+      }
+    }
+
     if (summary != null) {
       _wearableSummary = summary;
       await WearableCacheService.saveSummary(summary);
       await WearableCacheService.upsertHistory(summary);
       _wearableHistory = await WearableCacheService.loadHistory();
-      notifyListeners();
+    } else {
+      _wearableSummary = await WearableCacheService.loadSummary();
+      _wearableHistory = await WearableCacheService.loadHistory();
     }
+
+    notifyListeners();
   }
 
   Future<void> refreshChatSessionsCount() async {
