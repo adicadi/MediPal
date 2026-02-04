@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
 </div>
 
-MediPal is an intelligent Flutter-based personal health assistant app that provides AI-powered health insights, symptom assessment, medication management, and real-time health consultations. Designed with safety and accessibility in mind, MediPal helps users monitor their health, analyze symptoms, manage medications, and get personalized health recommendations through an intuitive and secure interface.
+MediPal is an intelligent Flutter-based personal health assistant that combines AI chat, symptom assessment, medication management, and wearable insights. Designed with safety and accessibility in mind, MediPal helps users monitor their health, analyze symptoms, manage medications, and get personalized recommendations through an intuitive and privacy-focused interface.
 
 ## 📱 Screenshots
 
@@ -49,9 +49,15 @@ MediPal is an intelligent Flutter-based personal health assistant app that provi
 - Pull-to-refresh health data
 - Emergency information and contacts
 
+### ⌚ **Wearable Insights (Android)**
+- Health Connect integration (steps, heart rate, sleep, activity)
+- Aggregates-only by default (privacy-first)
+- Weekly summary and trends
+- AI can use aggregated wearable summaries (no raw time-series)
+
 ### 🔒 **Safety & Privacy**
 - Age-appropriate content filtering
-- Local data storage for privacy
+- Local, on-device data storage for privacy
 - Emergency support with location-based information
 - Parental guidance prompts for minors
 
@@ -65,7 +71,7 @@ MediPal is an intelligent Flutter-based personal health assistant app that provi
 
 ## 📋 Supported Platforms
 
-- ✅ **Android** (API 21+)
+- ✅ **Android** (API 26+ required for Health Connect)
 - ✅ **iOS** (12.0+)
 - ✅ **Web** (Progressive Web App)
 - ⚠️ **Desktop** (Limited support)
@@ -111,6 +117,12 @@ DEEPSEEK_API_KEY=your_api_key_here
 <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 ```
+
+### Wearables (Android)
+
+- Install **Health Connect** and connect your wearable (e.g., OnePlus Health → Health Connect).
+- Grant Health Connect permissions in **Settings → Wearables**.
+- MediPal reads aggregates only by default (steps, sleep, heart rate, activity).
 
 ### Build and Run
 
@@ -159,7 +171,7 @@ flutter run -d chrome
 1. Access the chat interface
 2. Ask health-related questions
 3. Get instant AI-powered responses
-4. Save important conversations
+4. Conversations auto-save with context-based names
 5. Export chat history
 
 #### Emergency Support
@@ -184,6 +196,7 @@ dependencies:
   gpt_markdown: ^0.1.2
   share_plus: ^7.2.1
   flutter_local_notifications: ^16.3.0
+  health: ^11.1.1
 ```
 
 ### Project Structure
@@ -191,19 +204,28 @@ dependencies:
 ```
 lib/
 ├── main.dart                    # App entry point
+├── app/                         # App shell, bootstrap, routing
+│   ├── app.dart
+│   ├── app_router.dart
+│   └── bootstrap.dart
 ├── screens/                     # UI screens
 │   ├── home_screen.dart
 │   ├── onboarding_screen.dart
 │   ├── chat_screen.dart
 │   ├── symptom_checker_screen.dart
 │   ├── medication_screen.dart
-│   └── medication_warning_screen.dart
+│   ├── medication_warning_screen.dart
+│   ├── settings_screen.dart
+│   └── wearable_screen.dart
 ├── services/                    # Business logic
 │   ├── deepseek_service.dart
 │   ├── notification_service.dart
 │   ├── chat_history_service.dart
-│   └── emergency_service.dart
+│   ├── emergency_service.dart
+│   ├── wearable_cache_service.dart
+│   └── wearable_health_service.dart
 ├── models/                      # Data models
+│   └── wearable_summary.dart
 ├── utils/                       # Utilities
 │   └── app_state.dart
 └── widgets/                     # Reusable widgets
@@ -212,10 +234,11 @@ lib/
 ### Key Features Implementation
 
 - **State Management**: Provider pattern for reactive state management
-- **Local Storage**: SharedPreferences for user data persistence
+- **Local Storage**: SharedPreferences for user data persistence (including wearables cache)
 - **Notifications**: Flutter Local Notifications for medication reminders
-- **AI Integration**: Custom DeepSeek service for health consultations
+- **AI Integration**: Custom DeepSeek service for health consultations and wearable summaries
 - **Caching**: Smart caching system for medication interactions
+- **Wearables**: Health Connect aggregates (steps, sleep, heart rate, activity)
 - **Responsive Design**: Adaptive UI for different screen sizes
 
 ---
@@ -341,7 +364,6 @@ copies or substantial portions of the Software.
 
 ### Upcoming Features
 
-- [ ] Wearable device integration
 - [ ] Telemedicine consultation booking
 - [ ] Advanced health analytics
 - [ ] Multi-language support
