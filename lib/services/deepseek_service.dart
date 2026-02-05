@@ -183,6 +183,7 @@ You are MediPal for ${appState.userName}, Age: ${appState.userAge}, Gender: ${ap
 $basePrompt
 MINOR (Under 18): Use simple language. Always direct to trusted adults. Focus on wellness and safety. 
 Avoid: self-medication, detailed medical terms, sensitive topics. Keep under 250 words. End with reminder to talk to adults.
+Only answer health-related questions. If asked about non-health topics (e.g., programming, tech, homework), politely refuse and redirect to health.
 $wearableLine$documentLine
       ''';
     } else if (appState.isYoungAdult) {
@@ -190,6 +191,7 @@ $wearableLine$documentLine
 $basePrompt
 YOUNG ADULT (18-24): Clear educational language. Emphasize preventive care and professional consultation.
 Keep under 350 words with disclaimers.
+Only answer health-related questions. If asked about non-health topics (e.g., programming, tech, homework), politely refuse and redirect to health.
 $wearableLine$documentLine
       ''';
     } else {
@@ -197,9 +199,100 @@ $wearableLine$documentLine
 $basePrompt
 ADULT (25+): Detailed medical-grade information with appropriate terminology. 
 Thorough analysis with disclaimers. Keep under 500 words.
+Only answer health-related questions. If asked about non-health topics (e.g., programming, tech, homework), politely refuse and redirect to health.
 $wearableLine$documentLine
       ''';
     }
+  }
+
+  bool _isHealthRelated(String message) {
+    final text = message.toLowerCase();
+    const healthKeywords = [
+      'health',
+      'symptom',
+      'symptoms',
+      'pain',
+      'ache',
+      'fever',
+      'cough',
+      'cold',
+      'flu',
+      'allergy',
+      'asthma',
+      'blood',
+      'pressure',
+      'heart',
+      'pulse',
+      'sleep',
+      'insomnia',
+      'stress',
+      'anxiety',
+      'depression',
+      'mental',
+      'wellness',
+      'diet',
+      'nutrition',
+      'calorie',
+      'exercise',
+      'workout',
+      'steps',
+      'medicine',
+      'medication',
+      'drug',
+      'dosage',
+      'side effect',
+      'doctor',
+      'hospital',
+      'clinic',
+      'injury',
+      'wound',
+      'infection',
+      'virus',
+      'bacteria',
+      'headache',
+      'migraine',
+      'nausea',
+      'vomit',
+      'diarrhea',
+      'constipation',
+      'period',
+      'pregnancy',
+      'sex',
+      'sexual',
+      'skin',
+      'rash',
+      'itch',
+      'temperature',
+      'vaccin',
+      'immun',
+      'therapy',
+      'diagnos',
+      'treatment',
+      'surgery',
+      'cholesterol',
+      'glucose',
+      'diabetes',
+      'otc',
+      'relief',
+    ];
+
+    for (final keyword in healthKeywords) {
+      if (text.contains(keyword)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isHealthFollowUp(List<Map<String, String>> history, String lastText) {
+    if (history.length < 2) return false;
+    final prev = history[history.length - 2];
+    if (prev['isUser'] == 'true') return false;
+    final prevText = (prev['text'] ?? '').toLowerCase();
+    if (prevText.isEmpty) return false;
+    if (_isHealthRelated(prevText)) return true;
+    final wordCount = lastText.trim().split(RegExp(r'\\s+')).length;
+    return wordCount <= 4;
   }
 
   // ENHANCED: Streaming with age restrictions and AppState
@@ -209,8 +302,17 @@ $wearableLine$documentLine
     if (conversationHistory.isNotEmpty) {
       final lastMessage = conversationHistory.last;
       if (lastMessage['isUser'] == 'true') {
+        final lastText = lastMessage['text'] ?? '';
+        if (lastText.trim().isNotEmpty &&
+            !_isHealthRelated(lastText) &&
+            !_isHealthFollowUp(conversationHistory, lastText)) {
+          yield appState.isMinor
+              ? 'I can only help with health questions. Please ask about your health, symptoms, medicines, or wellness, and I’ll do my best to help.'
+              : 'I’m a health-only assistant, so I can’t help with that topic. Ask me about symptoms, medications, wellness, or other health questions.';
+          return;
+        }
         final quickResponse =
-            getQuickResponse(lastMessage['text'] ?? '', appState);
+            getQuickResponse(lastText, appState);
         if (quickResponse != null) {
           await Future.delayed(const Duration(milliseconds: 300));
           yield quickResponse;
@@ -238,13 +340,14 @@ $wearableLine$documentLine
       'top_p': 0.8,
     });
 
+    http.Client? client;
     try {
       final request =
           http.Request('POST', Uri.parse('$_baseUrl/chat/completions'))
             ..headers.addAll(headers)
             ..body = body;
 
-      final client = http.Client();
+      client = http.Client();
       final streamedResponse = await client.send(request).timeout(_timeout);
 
       if (streamedResponse.statusCode != 200) {
@@ -286,8 +389,6 @@ $wearableLine$documentLine
         }
       }
 
-      client.close();
-
       // Add age-appropriate disclaimer
       if (accumulatedText.isNotEmpty &&
           !accumulatedText.contains(appState.ageAppropriateDisclaimer)) {
@@ -305,6 +406,8 @@ $wearableLine$documentLine
       } catch (fallbackError) {
         yield appState.getAgeAppropriateErrorMessage();
       }
+    } finally {
+      client?.close();
     }
   }
 
@@ -315,8 +418,17 @@ $wearableLine$documentLine
     if (conversationHistory.isNotEmpty) {
       final lastMessage = conversationHistory.last;
       if (lastMessage['isUser'] == 'true') {
+        final lastText = lastMessage['text'] ?? '';
+        if (lastText.trim().isNotEmpty &&
+            !_isHealthRelated(lastText) &&
+            !_isHealthFollowUp(
+                conversationHistory.cast<Map<String, String>>(), lastText)) {
+          return appState.isMinor
+              ? 'I can only help with health questions. Please ask about your health, symptoms, medicines, or wellness, and I’ll do my best to help.'
+              : 'I’m a health-only assistant, so I can’t help with that topic. Ask me about symptoms, medications, wellness, or other health questions.';
+        }
         final quickResponse =
-            getQuickResponse(lastMessage['text'] ?? '', appState);
+            getQuickResponse(lastText, appState);
         if (quickResponse != null) {
           await Future.delayed(const Duration(milliseconds: 500));
           return quickResponse;

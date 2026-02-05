@@ -226,7 +226,7 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                           if (!_hasPermissions) {
                             final granted = await WearableHealthService
                                 .ensurePermissions();
-                            if (!mounted) return;
+                            if (!context.mounted) return;
                             setState(() {
                               _hasPermissions = granted;
                             });
@@ -235,7 +235,7 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                               return;
                             }
                           }
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           Navigator.pushNamed(context, '/wearables');
                         },
                         icon: const Icon(Icons.watch),

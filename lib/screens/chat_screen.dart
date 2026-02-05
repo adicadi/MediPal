@@ -21,7 +21,6 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-
 class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -42,6 +41,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   AppState? _appState;
   bool _isDisposed = false;
   StreamSubscription<DocumentIngestEvent>? _ingestSubscription;
+  final ValueNotifier<String> _streamingNotifier = ValueNotifier<String>('');
+  String _pendingStreamChunk = '';
+  StreamSubscription<String>? _streamSubscription;
+  Completer<void>? _streamDoneCompleter;
+  bool _streamCancelled = false;
+  bool _isPrivateChat = false;
 
   // OPTIMIZED: Animation controllers for better UX
   late AnimationController _typingAnimationController;
@@ -93,8 +98,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _initializeChat();
     _loadChatHistory();
     _scrollController.addListener(_handleScroll);
-    _ingestSubscription =
-        DocumentIngestQueue.stream.listen(_handleIngestEvent);
+    _ingestSubscription = DocumentIngestQueue.stream.listen(_handleIngestEvent);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _processPendingDocuments();
     });
@@ -175,6 +179,10 @@ How can I help you today? Remember, I provide information to support your health
     });
   }
 
+  bool get _hasUserMessages => _messages.any((message) => message.isUser);
+  bool get _showPrivateToggle => !_showHistory;
+  bool get _showNewChatAction => !_showHistory;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -183,58 +191,146 @@ How can I help you today? Remember, I provide information to support your health
     return Consumer<AppState>(
       builder: (context, appState, child) {
         return Scaffold(
+          resizeToAvoidBottomInset: false,
           appBar: AppBar(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_showHistory
-                    ? 'Chat History'
-                    : appState.isMinor
-                        ? 'MediPal - Young User'
-                        : 'MediPal Chat'),
-                if (!_showHistory) ...[
-                  Row(
-                    children: [
-                      Text(
-                        _isStreaming
-                            ? '✨ Responding...'
-                            : _isLoading
-                                ? '🤔 Thinking...'
-                                : '💬 Ready to help',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: _isStreaming || _isLoading
-                              ? Colors.orange
-                              : Colors.green,
+            elevation: 0,
+            backgroundColor: colorScheme.surface,
+            surfaceTintColor: colorScheme.surfaceTint,
+            flexibleSpace: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.surface,
+                    colorScheme.primaryContainer.withValues(alpha: 0.25),
+                  ],
+                ),
+              ),
+            ),
+            title: AnimatedSlide(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              offset: const Offset(0, 0),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                opacity: 1,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant,
                         ),
                       ),
-                      if (appState.isMinor) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade100,
-                            borderRadius: BorderRadius.circular(8),
+                      child: Icon(
+                        _showHistory ? Icons.history : Icons.psychology,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _showHistory
+                                      ? 'Chat History'
+                                      : appState.isMinor
+                                          ? 'MediPal Companion'
+                                          : 'MediPal Chat',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (_isPrivateChat && !_showHistory)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: colorScheme.outlineVariant,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.lock,
+                                    size: 14,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
                           ),
-                          child: Text(
-                            'Safe Mode',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade700,
+                          if (!_showHistory)
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: _isStreaming || _isLoading
+                                        ? Colors.orange
+                                        : Colors.green,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                Text(
+                                  _isStreaming
+                                      ? 'Responding'
+                                      : _isLoading
+                                          ? 'Thinking'
+                                          : 'Ready',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            backgroundColor: appState.isMinor
-                ? Colors.orange.shade50
-                : colorScheme.primaryContainer,
             actions: [
+              if (_showPrivateToggle && !_hasUserMessages)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    selected: _isPrivateChat,
+                    label: const Text('Private'),
+                    avatar: Icon(
+                      _isPrivateChat ? Icons.lock : Icons.lock_open,
+                      size: 16,
+                    ),
+                    onSelected: (value) {
+                      setState(() {
+                        _isPrivateChat = value;
+                      });
+                    },
+                  ),
+                ),
+              if (_showNewChatAction && _hasUserMessages)
+                IconButton(
+                  icon: const Icon(Icons.add_comment),
+                  tooltip: 'New chat',
+                  onPressed: _confirmStartNewChat,
+                ),
               IconButton(
                 icon: Icon(_showHistory ? Icons.chat : Icons.history),
                 onPressed: () {
@@ -289,9 +385,6 @@ How can I help you today? Remember, I provide information to support your health
         // Age-appropriate safety notice for minors
         if (appState.isMinor && _messages.length == 1)
           _buildMinorSafetyNotice(),
-
-        // OPTIMIZED: Quick actions bar for instant responses
-        if (!_isStreaming && !_isLoading) _buildQuickActionsBar(),
 
         Expanded(
           child: NotificationListener<ScrollNotification>(
@@ -380,123 +473,219 @@ How can I help you today? Remember, I provide information to support your health
 
   // ENHANCED: Age-appropriate input area
   Widget _buildInputArea(AppState appState, ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Minor reminder
-          if (appState.isMinor) ...[
-            Container(
-              padding: const EdgeInsets.all(8),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '💡 Ask me about healthy habits, but always talk to trusted adults about health concerns!',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.orange.shade700,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardOpen = viewInsets > 0;
 
-          if (_attachedDocuments.isNotEmpty) ...[
-            _buildAttachmentChips(colorScheme, appState),
-            const SizedBox(height: 8),
-          ],
-
-          if (_isProcessingDocument) ...[
-            const LinearProgressIndicator(minHeight: 2),
-            const SizedBox(height: 8),
-          ],
-
-          Row(
-            children: [
-              IconButton(
-                onPressed: (_isStreaming || _isLoading || _isProcessingDocument)
-                    ? null
-                    : () => _pickDocument(appState),
-                icon: const Icon(Icons.attach_file),
-                tooltip: 'Attach health document',
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: _isStreaming || _isLoading
-                        ? 'Please wait...'
-                        : appState.isMinor
-                            ? 'Ask me about staying healthy...'
-                            : 'Type your message...',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24)),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: viewInsets),
+      child: SafeArea(
+        top: false,
+        bottom: !isKeyboardOpen,
+        child: RepaintBoundary(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (appState.isMinor)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '💡 Ask me about healthy habits, but always talk to trusted adults about health concerns!',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.orange.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                  maxLines: null,
-                  enabled: !_isStreaming && !_isLoading,
-                  textCapitalization: TextCapitalization.sentences,
-                  onSubmitted: (_) => _sendMessage(),
-                ),
-              ),
-              const SizedBox(width: 8),
-              FloatingActionButton(
-                onPressed: (_isStreaming || _isLoading) ? null : _sendMessage,
-                mini: true,
-                backgroundColor: appState.isMinor ? Colors.orange : null,
-                child: _isStreaming || _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                if (_attachedDocuments.isNotEmpty) ...[
+                  _buildAttachmentChips(colorScheme, appState),
+                  const SizedBox(height: 6),
+                ],
+                if (_isProcessingDocument) ...[
+                  const LinearProgressIndicator(minHeight: 2),
+                  const SizedBox(height: 6),
+                ],
+                if (_quickActions.isNotEmpty && !_hasUserMessages)
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _messageController,
+                    builder: (context, value, child) {
+                      final hasText = value.text.trim().isNotEmpty;
+                      if (hasText) return const SizedBox.shrink();
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            height: 36,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _quickActions.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (context, index) {
+                                final action = _quickActions[index];
+                                return ActionChip(
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  avatar: Icon(_getIconData(action['icon']!),
+                                      size: 14),
+                                  label: Text(action['label']!),
+                                  onPressed: () =>
+                                      _sendQuickMessage(action['message']!),
+                                  backgroundColor: colorScheme.primaryContainer
+                                      .withValues(alpha: 0.3),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                        ],
+                      );
+                    },
+                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: colorScheme.outlineVariant,
                         ),
-                      )
-                    : const Icon(Icons.send),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ENHANCED: Age-appropriate quick actions
-  Widget _buildQuickActionsBar() {
-    return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _quickActions.length,
-        itemBuilder: (context, index) {
-          final action = _quickActions[index];
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ActionChip(
-              avatar: Icon(_getIconData(action['icon']!), size: 16),
-              label: Text(action['label']!),
-              onPressed: () => _sendQuickMessage(action['message']!),
-              backgroundColor: Theme.of(context)
-                  .colorScheme
-                  .primaryContainer
-                  .withValues(alpha: 0.3),
+                        boxShadow: isKeyboardOpen
+                            ? const []
+                            : [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.12),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: (_isStreaming ||
+                                _isLoading ||
+                                _isProcessingDocument)
+                            ? null
+                            : () => _pickDocument(appState),
+                        icon: const Icon(Icons.add, size: 20),
+                        tooltip: 'Attach health document',
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(28),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.98),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: colorScheme.outlineVariant,
+                            ),
+                            boxShadow: isKeyboardOpen
+                                ? const []
+                                : [
+                                    BoxShadow(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextField(
+                                  controller: _messageController,
+                                  decoration: InputDecoration(
+                                    hintText: _isStreaming || _isLoading
+                                        ? 'Please wait...'
+                                        : appState.isMinor
+                                            ? 'Ask me about staying healthy...'
+                                            : 'Type your message...',
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    isCollapsed: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                  maxLines: null,
+                                  enabled: !_isStreaming && !_isLoading,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  onSubmitted: (_) => _sendMessage(),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ValueListenableBuilder<TextEditingValue>(
+                                valueListenable: _messageController,
+                                builder: (context, value, child) {
+                                  final hasText = value.text.trim().isNotEmpty;
+                                  final isBusy = _isStreaming || _isLoading;
+                                  return SizedBox(
+                                    width: 36,
+                                    height: 36,
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 36,
+                                        minHeight: 36,
+                                      ),
+                                      onPressed: isBusy
+                                          ? _stopStreamingResponse
+                                          : (hasText ? _sendMessage : null),
+                                      icon: Icon(
+                                        isBusy
+                                            ? Icons.stop_rounded
+                                            : Icons.arrow_upward,
+                                      ),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: isBusy || hasText
+                                            ? colorScheme.primary
+                                            : colorScheme
+                                                .surfaceContainerHighest,
+                                        foregroundColor: isBusy || hasText
+                                            ? colorScheme.onPrimary
+                                            : colorScheme.onSurfaceVariant,
+                                        disabledBackgroundColor:
+                                            colorScheme.surfaceContainerHighest,
+                                        disabledForegroundColor:
+                                            colorScheme.onSurfaceVariant,
+                                        shape: const CircleBorder(),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -527,22 +716,28 @@ How can I help you today? Remember, I provide information to support your health
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_streamingContent.isNotEmpty) ...[
-              SelectionArea(
-                child: TexMarkdown(
-                  _streamingContent,
-                  style: TextStyle(
-                    color: appState.isMinor
-                        ? Colors.orange.shade800
-                        : colorScheme.onSurfaceVariant,
-                    fontSize: 14,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-
+            ValueListenableBuilder<String>(
+              valueListenable: _streamingNotifier,
+              builder: (context, value, child) {
+                if (value.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: TextStyle(
+                        color: appState.isMinor
+                            ? Colors.orange.shade800
+                            : colorScheme.onSurfaceVariant,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                );
+              },
+            ),
             // Typing indicator
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -689,6 +884,36 @@ How can I help you today? Remember, I provide information to support your health
     _sendMessage();
   }
 
+  void _stopStreamingResponse() {
+    if (!_isStreaming && !_isLoading) return;
+    _streamCancelled = true;
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
+    _streamDoneCompleter?.complete();
+    _streamDoneCompleter = null;
+
+    if (_streamingContent.isNotEmpty) {
+      setState(() {
+        _messages.add(ChatMessage(text: _streamingContent, isUser: false));
+      });
+      _scheduleAutoSave();
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _isStreaming = false;
+        _streamingContent = '';
+      });
+      _streamingNotifier.value = '';
+      _scrollToBottom();
+    }
+
+    if (mounted && !_isDisposed) {
+      _typingAnimationController.stop();
+    }
+  }
+
   // ENHANCED: Message sending with age restrictions and AppState
   void _sendMessage() async {
     final text = _messageController.text.trim();
@@ -732,10 +957,12 @@ How can I help you today? Remember, I provide information to support your health
       }
 
       // Use streaming for better UX
+      _streamCancelled = false;
       setState(() {
         _isStreaming = true;
         _streamingContent = '';
       });
+      _streamingNotifier.value = '';
 
       _typingAnimationController.repeat();
       _scrollToBottom();
@@ -749,13 +976,36 @@ How can I help you today? Remember, I provide information to support your health
 
       // Try streaming first (now with AppState)
       bool hasStreamedContent = false;
-      await for (final chunk in deepSeekService.streamChatResponse(
-          conversationHistory, appState)) {
-        setState(() {
-          _streamingContent = chunk;
-          hasStreamedContent = true;
-        });
-        _scrollToBottom();
+      Object? streamError;
+      _streamDoneCompleter = Completer<void>();
+      _streamSubscription = deepSeekService
+          .streamChatResponse(conversationHistory, appState)
+          .listen((chunk) {
+        hasStreamedContent = true;
+        _pendingStreamChunk = chunk;
+        _streamingContent = _pendingStreamChunk;
+        _streamingNotifier.value = _streamingContent;
+        if (!_isUserScrolling && _shouldAutoScroll) {
+          _scrollToBottom();
+        }
+      }, onError: (error) {
+        streamError = error;
+        _streamDoneCompleter?.complete();
+      }, onDone: () {
+        _streamDoneCompleter?.complete();
+      });
+
+      await _streamDoneCompleter?.future;
+      _streamDoneCompleter = null;
+      await _streamSubscription?.cancel();
+      _streamSubscription = null;
+
+      if (streamError != null) {
+        throw streamError!;
+      }
+
+      if (_streamCancelled) {
+        return;
       }
 
       // Add final message to history
@@ -795,6 +1045,7 @@ How can I help you today? Remember, I provide information to support your health
           _isStreaming = false;
           _streamingContent = '';
         });
+        _streamingNotifier.value = '';
         _scrollToBottom();
       }
       if (mounted && !_isDisposed) {
@@ -803,8 +1054,7 @@ How can I help you today? Remember, I provide information to support your health
     }
   }
 
-  Widget _buildAttachmentChips(
-      ColorScheme colorScheme, AppState appState) {
+  Widget _buildAttachmentChips(ColorScheme colorScheme, AppState appState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -910,8 +1160,7 @@ How can I help you today? Remember, I provide information to support your health
     }
   }
 
-  Future<void> _processIngestResult(
-      DocumentIngestResult ingestResult) async {
+  Future<void> _processIngestResult(DocumentIngestResult ingestResult) async {
     if (ingestResult.relevance == HealthDocRelevance.low) {
       await _showBlockedDocumentDialog();
       return;
@@ -922,11 +1171,9 @@ How can I help you today? Remember, I provide information to support your health
     if (!mounted || !shouldAdd) return;
 
     setState(() {
-      _attachedDocuments.add(
-          DocumentIngestQueue.toAttachment(ingestResult));
+      _attachedDocuments.add(DocumentIngestQueue.toAttachment(ingestResult));
     });
-    _updateDocumentContext(
-        Provider.of<AppState>(context, listen: false));
+    _updateDocumentContext(Provider.of<AppState>(context, listen: false));
     _scheduleAutoSave();
   }
 
@@ -958,9 +1205,8 @@ How can I help you today? Remember, I provide information to support your health
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text(isMedium
-                ? 'Confirm health document'
-                : 'Add health document'),
+            title: Text(
+                isMedium ? 'Confirm health document' : 'Add health document'),
             content: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1092,6 +1338,7 @@ How can I help you today? Remember, I provide information to support your health
   }
 
   void _scheduleAutoSave() {
+    if (_isPrivateChat) return;
     if (_messages.length <= 1) return;
     _autoSaveTimer?.cancel();
     _autoSaveTimer = Timer(const Duration(milliseconds: 600), () async {
@@ -1129,8 +1376,7 @@ How can I help you today? Remember, I provide information to support your health
     switch (action) {
       case 'load':
         final messages = await ChatHistoryService.loadChatSession(session);
-        final attachments =
-            ChatHistoryService.loadChatAttachments(session);
+        final attachments = ChatHistoryService.loadChatAttachments(session);
         setState(() {
           _messages.clear();
           _messages.addAll(messages);
@@ -1140,8 +1386,7 @@ How can I help you today? Remember, I provide information to support your health
           _showHistory = false;
         });
         if (mounted) {
-          _updateDocumentContext(
-              Provider.of<AppState>(context, listen: false));
+          _updateDocumentContext(Provider.of<AppState>(context, listen: false));
         }
         break;
       case 'export':
@@ -1216,6 +1461,37 @@ How can I help you today? Remember, I provide information to support your health
     _initializeChat(); // Reinitialize with age-appropriate welcome message
   }
 
+  Future<void> _confirmStartNewChat() async {
+    final shouldStart = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Start a new chat?'),
+            content: const Text(
+              'This will clear the current conversation. You can still find it in chat history unless you are in Private chat.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Start new'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!shouldStart) return;
+    setState(() {
+      _messages.clear();
+      _attachedDocuments.clear();
+    });
+    _updateDocumentContext(Provider.of<AppState>(context, listen: false));
+    _initializeChat();
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients &&
@@ -1233,8 +1509,7 @@ How can I help you today? Remember, I provide information to support your health
   void _handleScroll() {
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
-    final distanceFromBottom =
-        position.maxScrollExtent - position.pixels;
+    final distanceFromBottom = position.maxScrollExtent - position.pixels;
     const threshold = 120.0;
     _shouldAutoScroll = distanceFromBottom <= threshold;
   }
@@ -1261,6 +1536,9 @@ How can I help you today? Remember, I provide information to support your health
     _appState?.clearChatDocumentContext(notify: false);
     _scrollController.removeListener(_handleScroll);
     _ingestSubscription?.cancel();
+    _streamSubscription?.cancel();
+    _streamDoneCompleter?.complete();
+    _streamingNotifier.dispose();
     _messageController.dispose();
     _scrollController.dispose();
     _typingAnimationController.dispose();
