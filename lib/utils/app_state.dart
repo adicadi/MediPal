@@ -35,6 +35,8 @@ class AppState extends ChangeNotifier {
   WearableSummary? _wearableSummary;
   List<WearableSummary> _wearableHistory = [];
   String _chatDocumentContext = '';
+  static const String _wearablePermissionPromptedKey =
+      'wearable_permission_prompted';
 
   // Getters - existing
   String get userName => _userName;
@@ -693,6 +695,29 @@ Is there something else I can help you with today?
     }
 
     notifyListeners();
+  }
+
+  Future<bool> maybeRequestWearablePermissions(
+      {bool forcePrompt = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final alreadyPrompted =
+        prefs.getBool(_wearablePermissionPromptedKey) ?? false;
+    if (!forcePrompt && alreadyPrompted) return false;
+
+    final available = await WearableHealthService.isHealthConnectAvailable();
+    if (!available) return false;
+
+    final hasPermissions = await WearableHealthService.hasRequiredPermissions();
+    if (hasPermissions) {
+      if (!alreadyPrompted) {
+        await prefs.setBool(_wearablePermissionPromptedKey, true);
+      }
+      return false;
+    }
+
+    final granted = await WearableHealthService.ensurePermissions();
+    await prefs.setBool(_wearablePermissionPromptedKey, true);
+    return granted;
   }
 
   Future<void> refreshChatSessionsCount() async {

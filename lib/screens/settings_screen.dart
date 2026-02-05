@@ -53,6 +53,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showHealthConnectHelpDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Grant Health Connect permissions'),
+        content: const Text(
+          'If the permission screen didn’t open, please grant access in the Health Connect app:\n\n'
+          'Health Connect → App permissions → MediPal → Allow all.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _privacyText() {
     return '''MediPal Privacy Notice (Summary)
 
@@ -188,11 +207,14 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                             TextButton(
                               onPressed: () async {
                                 final granted = await WearableHealthService
-                                    .requestRequiredPermissions();
+                                    .ensurePermissions();
                                 if (!mounted) return;
                                 setState(() {
                                   _hasPermissions = granted;
                                 });
+                                if (!granted) {
+                                  _showHealthConnectHelpDialog();
+                                }
                               },
                               child: const Text('Grant'),
                             ),
@@ -200,7 +222,22 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                       ),
                       const SizedBox(height: 12),
                       FilledButton.icon(
-                        onPressed: () => Navigator.pushNamed(context, '/wearables'),
+                        onPressed: () async {
+                          if (!_hasPermissions) {
+                            final granted = await WearableHealthService
+                                .ensurePermissions();
+                            if (!mounted) return;
+                            setState(() {
+                              _hasPermissions = granted;
+                            });
+                            if (!granted) {
+                              _showHealthConnectHelpDialog();
+                              return;
+                            }
+                          }
+                          if (!mounted) return;
+                          Navigator.pushNamed(context, '/wearables');
+                        },
                         icon: const Icon(Icons.watch),
                         label: const Text('Open Wearables'),
                       ),

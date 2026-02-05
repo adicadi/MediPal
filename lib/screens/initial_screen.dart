@@ -31,6 +31,10 @@ class _InitialScreenState extends State<InitialScreen> {
 
       final appState = Provider.of<AppState>(context, listen: false);
       await appState.loadUserProfile();
+      setState(() {
+        _status = 'Connecting Health Connect...';
+      });
+      await appState.maybeRequestWearablePermissions();
       await appState.refreshWearableSummary();
 
       setState(() {

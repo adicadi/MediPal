@@ -20,18 +20,53 @@ class _WearableScreenState extends State<WearableScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final appState = context.read<AppState>();
-      final summary = appState.wearableSummary;
-      if (summary == null || _isStale(summary.updatedAt)) {
-        _refresh(appState);
-      }
+      _refreshIfPermitted();
     });
+  }
+
+  Future<void> _refreshIfPermitted() async {
+    final appState = context.read<AppState>();
+    final available = await WearableHealthService.isHealthConnectAvailable();
+    if (!mounted) return;
+    if (!available) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Health Connect not available. Install it to use Wearable Insights.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final granted = await WearableHealthService.hasRequiredPermissions();
+    if (!mounted || !granted) return;
+
+    final summary = appState.wearableSummary;
+    if (summary == null || _isStale(summary.updatedAt)) {
+      _refresh(appState);
+    }
   }
 
   Future<void> _refresh(AppState appState) async {
     if (_isRefreshing) return;
     setState(() => _isRefreshing = true);
     try {
+      final granted = await WearableHealthService.ensurePermissions();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Please allow permissions in Health Connect to refresh data.',
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
       await appState.refreshWearableSummary();
     } finally {
       if (mounted) {

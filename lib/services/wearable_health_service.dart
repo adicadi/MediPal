@@ -62,6 +62,12 @@ class WearableHealthService {
     return authorized;
   }
 
+  static Future<bool> ensurePermissions() async {
+    final hasPermissions = await hasRequiredPermissions();
+    if (hasPermissions) return true;
+    return requestRequiredPermissions();
+  }
+
   static Future<WearableSummary?> fetchAndCacheSummary() async {
     await _ensureConfigured();
     final bool isAvailable = await _health.isHealthConnectAvailable();
@@ -90,13 +96,7 @@ class WearableHealthService {
     final hasPermissions =
         await _health.hasPermissions(availableTypes, permissions: permissions);
     if (hasPermissions != true) {
-      final authorized = await _health.requestAuthorization(
-        availableTypes,
-        permissions: permissions,
-      );
-      if (!authorized) {
-        return WearableCacheService.loadSummary();
-      }
+      return WearableCacheService.loadSummary();
     }
 
     final steps = await _health.getTotalStepsInInterval(startOfDay, now) ?? 0;

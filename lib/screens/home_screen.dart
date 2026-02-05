@@ -8,6 +8,7 @@ import '../widgets/health_summary_card.dart';
 import '../services/emergency_service.dart';
 import '../utils/blur_dialog.dart';
 import '../models/wearable_summary.dart';
+import '../services/wearable_health_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -110,13 +110,6 @@ class _HomeScreenState extends State<HomeScreen> {
               Consumer<AppState>(
                 builder: (context, appState, child) {
                   return _buildHealthSummarySection(appState, theme);
-                },
-              ),
-              const SizedBox(height: 32),
-              Consumer<AppState>(
-                builder: (context, appState, child) {
-                  return _buildPersonalizedTipsSection(
-                      appState, theme, colorScheme);
                 },
               ),
               const SizedBox(height: 32),
@@ -538,8 +531,42 @@ class _HomeScreenState extends State<HomeScreen> {
           ? subtitle
           : '$subtitle • ${_formatTrend(trend)} steps vs 7d',
       icon: Icons.watch,
-      onTap: () => Navigator.pushNamed(context, '/wearables'),
+      onTap: () => _handleWearableTap(appState),
     );
+  }
+
+  Future<void> _handleWearableTap(AppState appState) async {
+    final available = await WearableHealthService.isHealthConnectAvailable();
+    if (!mounted) return;
+    if (!available) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Health Connect not available. Install it to use Wearable Insights.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final granted = await WearableHealthService.ensurePermissions();
+    if (!mounted) return;
+    if (!granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please allow permissions in Health Connect to view wearable data.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    await appState.refreshWearableSummary();
+    if (!mounted) return;
+    Navigator.pushNamed(context, '/wearables');
   }
 
   String _formatWearableSummary(WearableSummary summary) {
@@ -570,77 +597,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String _formatTrend(double value) {
     final sign = value >= 0 ? '+' : '';
     return '$sign${value.toStringAsFixed(0)}%';
-  }
-
-  Widget _buildPersonalizedTipsSection(
-      AppState appState, ThemeData theme, ColorScheme colorScheme) {
-    final tips = appState.personalizedHealthTips.take(3).toList();
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.lightbulb,
-                  color: colorScheme.primary,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    appState.isMinor
-                        ? 'Tips Just for You!'
-                        : 'Personalized Health Tips',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.primary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () =>
-                      _showPersonalizedHealthTips(context, appState),
-                  child: const Text('View All'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...tips.map((tip) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tip.split(' ')[0], // Get emoji
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          tip.substring(
-                              tip.indexOf(' ') + 1), // Get text after emoji
-                          style: theme.textTheme.bodyMedium,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildEnhancedPillButton(
