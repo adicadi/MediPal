@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
@@ -9,6 +10,8 @@ import '../services/emergency_service.dart';
 import '../utils/blur_dialog.dart';
 import '../models/wearable_summary.dart';
 import '../services/wearable_health_service.dart';
+import '../services/deepseek_service.dart';
+import '../services/ai_insights_cache_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -661,14 +664,24 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _getHealthInsights(BuildContext context,
       {bool showDialog = true}) async {
     final appState = Provider.of<AppState>(context, listen: false);
+    final deepSeekService =
+        Provider.of<DeepSeekService>(context, listen: false);
 
     setState(() {
       _isGettingInsights = true;
     });
 
     try {
-      await Future.delayed(const Duration(seconds: 2));
-      final insights = _generateAgeAppropriateInsights(appState);
+      final payload = _buildHealthInsightsPayload(appState);
+      final payloadJson = jsonEncode(payload);
+      final cached = await AiInsightsCacheService.load();
+      String insights;
+      if (cached != null && cached.payloadJson == payloadJson) {
+        insights = cached.insights;
+      } else {
+        insights = await deepSeekService.getHealthInsights(payload, appState);
+        await AiInsightsCacheService.save(payloadJson, insights);
+      }
 
       if (!context.mounted) return;
       setState(() {
@@ -777,6 +790,31 @@ ${appState.personalizedHealthTips.take(3).map((tip) => '• ${tip.substring(tip.
 ${appState.ageAppropriateDisclaimer}
       ''';
     }
+  }
+
+  Map<String, dynamic> _buildHealthInsightsPayload(AppState appState) {
+    final wearable = appState.wearableSummary;
+    final history = appState.wearableHistory;
+    return {
+      'wearable_summary': wearable == null || wearable.isEmpty
+          ? null
+          : {
+              'steps_today': wearable.stepsToday,
+              'sleep_hours': wearable.sleepHours,
+              'avg_heart_rate': wearable.avgHeartRate,
+              'resting_heart_rate': wearable.restingHeartRate,
+              'stress_score': wearable.stressScore,
+            },
+      'wearable_history_days': history.isEmpty ? 0 : history.length,
+      'steps_trend_percent': appState.stepsTrendPercent,
+      'sleep_trend_percent': appState.sleepTrendPercent,
+      'resting_hr_trend_percent': appState.restingHrTrendPercent,
+      'medications_count': appState.medications.length,
+      'active_reminders': appState.totalActiveReminders,
+      'refill_alerts': appState.medicationsNeedingRefill.length,
+      'user_age': appState.userAge,
+      'user_gender': appState.userGender,
+    };
   }
 
   void _showInsightsDialog(

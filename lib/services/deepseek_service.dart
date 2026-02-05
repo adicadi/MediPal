@@ -587,10 +587,6 @@ $wearableLine$documentLine
     final result = await _safeApiCall(prompt, 'Error analyzing symptoms',
         appState: appState);
 
-    // Add age-appropriate disclaimer
-    if (!result.contains(appState.ageAppropriateDisclaimer)) {
-      return '$result\n\n${appState.ageAppropriateDisclaimer}';
-    }
     return result;
   }
 
@@ -673,8 +669,6 @@ ${appState.ageAppropriateDisclaimer}
 - Your parents and guardians are there to help you stay healthy
 - Ask questions! Adults love to help you learn
 - You're doing great by learning about health! 
-
-${appState.ageAppropriateDisclaimer}
       ''';
     } else {
       return '''
@@ -694,7 +688,6 @@ ${appState.ageAppropriateDisclaimer}
 
 💡 **Tip:** Add your health data to get more personalized insights!
 
-${appState.ageAppropriateDisclaimer}
       ''';
     }
   }
@@ -1000,48 +993,28 @@ Keep under 250 words.
 """;
   }
 
-  // OPTIMIZED: Dramatically simplified health insights prompt
+  // OPTIMIZED: Wearable-driven health insights prompt
   String _buildHealthInsightsPrompt(
       Map<String, dynamic> healthData, AppState appState) {
-    if (appState.isMinor) {
-      return """
-Create health tips for ${appState.userName} (${appState.userAge}yo):
-Focus on: healthy habits, exercise, sleep, nutrition.
-Use simple, encouraging language. Mention trusted adults. Keep under 200 words.
-""";
-    }
-
-    // Extract only top 5 most relevant health data items
-    final relevantData = <String, dynamic>{};
-    final priorityKeys = [
-      'medications_count',
-      'health_score',
-      'sleep_hours',
-      'recent_symptoms',
-      'activity_level'
-    ];
-
-    for (final key in priorityKeys) {
-      if (healthData.containsKey(key) &&
-          healthData[key] != null &&
-          healthData[key].toString().isNotEmpty) {
-        relevantData[key] = healthData[key];
-      }
-      if (relevantData.length >= 5) break;
-    }
-
     final buffer = StringBuffer();
     buffer.writeln(
-        "Health insights for ${appState.userName} (${appState.userAge}yo, ${appState.userGender}):");
+        "AI health insights for ${appState.userName} (${appState.userAge}yo, ${appState.userGender}).");
+    buffer.writeln(
+        "Use wearable summary + trends to provide: 1) Key insights 2) Tips to improve metrics 3) Encouraging next steps.");
+    buffer.writeln(
+        "If data is missing, say what's missing and give general tips.");
 
-    if (relevantData.isNotEmpty) {
-      relevantData.forEach((key, value) {
-        buffer.writeln("- $key: $value");
-      });
+    if (appState.isMinor) {
+      buffer.writeln(
+          "Use lots of friendly emojis, simple language, and remind to talk to trusted adults.");
+      buffer.writeln("Keep under 180 words. Do not add a medical disclaimer.");
+    } else {
+      buffer.writeln(
+          "Keep under 250 words, concise bullets. Do not add a medical disclaimer.");
     }
 
-    buffer.writeln(
-        "\nProvide: Assessment, lifestyle tips, improvements, encouragement. Under 350 words with disclaimer.");
+    buffer.writeln("\nWearable data (aggregates only):");
+    buffer.writeln(healthData.toString());
     return buffer.toString();
   }
 
