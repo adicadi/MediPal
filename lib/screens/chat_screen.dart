@@ -921,6 +921,7 @@ How can I help you today? Remember, I provide information to support your health
 
     // Get AppState for age-appropriate handling
     final appState = Provider.of<AppState>(context, listen: false);
+    final hadPriorUserMessage = _messages.any((message) => message.isUser);
 
     // Clear input immediately for better UX
     _messageController.clear();
@@ -938,7 +939,8 @@ How can I help you today? Remember, I provide information to support your health
           Provider.of<DeepSeekService>(context, listen: false);
 
       // Check if quick response is available (now with AppState)
-      final quickResponse = deepSeekService.getQuickResponse(text, appState);
+      final quickResponse =
+          !hadPriorUserMessage ? deepSeekService.getQuickResponse(text, appState) : null;
 
       if (quickResponse != null) {
         // Show brief loading for natural feel

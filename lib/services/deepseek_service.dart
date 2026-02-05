@@ -183,6 +183,8 @@ You are MediPal for ${appState.userName}, Age: ${appState.userAge}, Gender: ${ap
 $basePrompt
 MINOR (Under 18): Use simple language. Always direct to trusted adults. Focus on wellness and safety. 
 Avoid: self-medication, detailed medical terms, sensitive topics. Keep under 250 words. End with reminder to talk to adults.
+Use lots of friendly emojis to make the response visually appealing.
+Follow the conversation context; if the user asks a short follow-up, connect it to the previous medical topic.
 Only answer health-related questions. If asked about non-health topics (e.g., programming, tech, homework), politely refuse and redirect to health.
 $wearableLine$documentLine
       ''';
@@ -192,6 +194,8 @@ $basePrompt
 YOUNG ADULT (18-24): Clear educational language. Emphasize preventive care and professional consultation.
 Keep under 350 words with disclaimers.
 Only answer health-related questions. If asked about non-health topics (e.g., programming, tech, homework), politely refuse and redirect to health.
+Answer short questions with short responses (1-3 sentences). Provide detailed answers only when the user asks for detail.
+Include medical disclaimers only for serious or emergency topics; omit for general questions.
 $wearableLine$documentLine
       ''';
     } else {
@@ -200,6 +204,8 @@ $basePrompt
 ADULT (25+): Detailed medical-grade information with appropriate terminology. 
 Thorough analysis with disclaimers. Keep under 500 words.
 Only answer health-related questions. If asked about non-health topics (e.g., programming, tech, homework), politely refuse and redirect to health.
+Answer short questions with short responses (1-3 sentences). Provide detailed answers only when the user asks for detail.
+Include medical disclaimers only for serious or emergency topics; omit for general questions.
 $wearableLine$documentLine
       ''';
     }
@@ -291,18 +297,102 @@ $wearableLine$documentLine
     final prevText = (prev['text'] ?? '').toLowerCase();
     if (prevText.isEmpty) return false;
     if (_isHealthRelated(prevText)) return true;
-    final wordCount = lastText.trim().split(RegExp(r'\\s+')).length;
+    final wordCount = lastText.trim().split(RegExp(r'\s+')).length;
     return wordCount <= 4;
+  }
+
+  bool _isDetailRequest(String text) {
+    final lower = text.toLowerCase();
+    const detailMarkers = [
+      'detail',
+      'explain',
+      'why',
+      'how',
+      'cause',
+      'causes',
+      'treatment',
+      'plan',
+      'steps',
+      'step by step',
+      'tell me more',
+      'more info',
+      'in depth',
+    ];
+    return detailMarkers.any(lower.contains);
+  }
+
+  bool _isListRequest(String text) {
+    final lower = text.toLowerCase();
+    const listMarkers = [
+      'which',
+      'options',
+      'list',
+      'examples',
+      'types',
+      'kinds',
+      'what otc',
+      'otc',
+      'meds',
+      'medicine',
+    ];
+    return listMarkers.any(lower.contains);
+  }
+
+  bool _isShortQuery(String text) {
+    final wordCount = text.trim().split(RegExp(r'\s+')).length;
+    return wordCount <= 5 && !_isDetailRequest(text);
+  }
+
+  int _maxTokensForQuery(AppState appState, String lastText) {
+    if (_isDetailRequest(lastText)) {
+      return appState.isMinor ? 220 : 380;
+    }
+    if (_isShortQuery(lastText)) {
+      if (_isListRequest(lastText)) {
+        return appState.isMinor ? 180 : 260;
+      }
+      return appState.isMinor ? 120 : 180;
+    }
+    return appState.isMinor ? 180 : 320;
+  }
+
+  bool _isSeriousMedicalTopic(String text) {
+    final lower = text.toLowerCase();
+    const seriousKeywords = [
+      'chest pain',
+      'shortness of breath',
+      'difficulty breathing',
+      'severe',
+      'sudden',
+      'faint',
+      'passed out',
+      'seizure',
+      'stroke',
+      'heart attack',
+      'overdose',
+      'bleeding',
+      'blood',
+      'suicidal',
+      'self-harm',
+      'pregnancy bleeding',
+      'high fever',
+      'persistent',
+      'worsening',
+      'emergency',
+    ];
+    return seriousKeywords.any(lower.contains);
   }
 
   // ENHANCED: Streaming with age restrictions and AppState
   Stream<String> streamChatResponse(
       List<Map<String, String>> conversationHistory, AppState appState) async* {
     // Check for quick response first
+    String lastUserText = '';
     if (conversationHistory.isNotEmpty) {
       final lastMessage = conversationHistory.last;
       if (lastMessage['isUser'] == 'true') {
         final lastText = lastMessage['text'] ?? '';
+        lastUserText = lastText;
         if (lastText.trim().isNotEmpty &&
             !_isHealthRelated(lastText) &&
             !_isHealthFollowUp(conversationHistory, lastText)) {
@@ -311,15 +401,19 @@ $wearableLine$documentLine
               : 'I’m a health-only assistant, so I can’t help with that topic. Ask me about symptoms, medications, wellness, or other health questions.';
           return;
         }
-        final quickResponse =
-            getQuickResponse(lastText, appState);
-        if (quickResponse != null) {
-          await Future.delayed(const Duration(milliseconds: 300));
-          yield quickResponse;
-          return;
+        final hasPriorUserMessages =
+            conversationHistory.where((m) => m['isUser'] == 'true').length > 1;
+        if (!hasPriorUserMessages) {
+          final quickResponse = getQuickResponse(lastText, appState);
+          if (quickResponse != null) {
+            await Future.delayed(const Duration(milliseconds: 300));
+            yield quickResponse;
+            return;
+          }
         }
       }
     }
+    final maxTokens = _maxTokensForQuery(appState, lastUserText);
 
     final headers = {
       'Content-Type': 'application/json',
@@ -334,7 +428,7 @@ $wearableLine$documentLine
     final body = jsonEncode({
       'model': 'deepseek-chat',
       'messages': messages,
-      'max_tokens': appState.isMinor ? 200 : 400, // OPTIMIZED
+      'max_tokens': maxTokens,
       'temperature': 0.4, // SIMPLIFIED: Single value
       'stream': true,
       'top_p': 0.8,
@@ -389,8 +483,9 @@ $wearableLine$documentLine
         }
       }
 
-      // Add age-appropriate disclaimer
+      // Add disclaimer only for serious topics
       if (accumulatedText.isNotEmpty &&
+          _isSeriousMedicalTopic(lastUserText) &&
           !accumulatedText.contains(appState.ageAppropriateDisclaimer)) {
         final finalResponse =
             '$accumulatedText\n\n${appState.ageAppropriateDisclaimer}';
@@ -427,11 +522,14 @@ $wearableLine$documentLine
               ? 'I can only help with health questions. Please ask about your health, symptoms, medicines, or wellness, and I’ll do my best to help.'
               : 'I’m a health-only assistant, so I can’t help with that topic. Ask me about symptoms, medications, wellness, or other health questions.';
         }
-        final quickResponse =
-            getQuickResponse(lastText, appState);
-        if (quickResponse != null) {
-          await Future.delayed(const Duration(milliseconds: 500));
-          return quickResponse;
+        final hasPriorUserMessages =
+            conversationHistory.where((m) => m['isUser'] == 'true').length > 1;
+        if (!hasPriorUserMessages) {
+          final quickResponse = getQuickResponse(lastText, appState);
+          if (quickResponse != null) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            return quickResponse;
+          }
         }
       }
     }
@@ -440,9 +538,13 @@ $wearableLine$documentLine
     final result = await _safeApiCall(prompt, 'Error in chat conversation',
         isChat: true, appState: appState);
 
-    // Add age-appropriate disclaimer if not already present
-    if (!result.contains(appState.ageAppropriateDisclaimer)) {
-      return '$result\n\n${appState.ageAppropriateDisclaimer}';
+    if (conversationHistory.isNotEmpty) {
+      final lastMessage = conversationHistory.last;
+      final lastText = lastMessage['text'] ?? '';
+      if (_isSeriousMedicalTopic(lastText) &&
+          !result.contains(appState.ageAppropriateDisclaimer)) {
+        return '$result\n\n${appState.ageAppropriateDisclaimer}';
+      }
     }
     return result;
   }
@@ -664,10 +766,20 @@ ${appState.ageAppropriateDisclaimer}
       });
     }
 
+    String lastUserText = '';
+    for (int i = messages.length - 1; i >= 0; i--) {
+      if (messages[i]['role'] == 'user') {
+        lastUserText = messages[i]['content'] ?? '';
+        break;
+      }
+    }
+    final maxTokens =
+        appState != null ? _maxTokensForQuery(appState, lastUserText) : 300;
+
     final body = jsonEncode({
       'model': 'deepseek-chat',
       'messages': messages,
-      'max_tokens': appState?.isMinor == true ? 200 : 400, // OPTIMIZED
+      'max_tokens': maxTokens,
       'temperature': 0.4, // SIMPLIFIED
       'top_p': 0.8,
     });
