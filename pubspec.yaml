@@ -24,6 +24,7 @@ dependencies:
 
   # Environment Variables
   flutter_dotenv: ^5.1.0
+  supabase_flutter: ^2.6.0
 
   # Local Storage
   shared_preferences: ^2.2.2

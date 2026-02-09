@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -12,6 +13,7 @@ class AppBootstrap {
     WidgetsFlutterBinding.ensureInitialized();
 
     await _loadEnv();
+    await _initializeSupabase();
     await _initializeTimezone();
     await _initializeNotifications();
   }
@@ -26,6 +28,27 @@ class AppBootstrap {
       if (kDebugMode) {
         print('⚠️ Warning: .env file not found: $e');
       }
+    }
+  }
+
+  static Future<void> _initializeSupabase() async {
+    final url = dotenv.env['SUPABASE_URL']?.trim() ?? '';
+    final anonKey = dotenv.env['SUPABASE_ANON_KEY']?.trim() ?? '';
+
+    if (url.isEmpty || anonKey.isEmpty) {
+      if (kDebugMode) {
+        print(
+            '⚠️ Supabase not initialized. Missing SUPABASE_URL or SUPABASE_ANON_KEY.');
+      }
+      return;
+    }
+
+    await Supabase.initialize(
+      url: url,
+      anonKey: anonKey,
+    );
+    if (kDebugMode) {
+      print('✅ Supabase initialized');
     }
   }
 

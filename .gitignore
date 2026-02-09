@@ -117,3 +117,10 @@ pubspec.lock
 .metadata
 .settings/
 *.launch
+
+# Backend (Node) local/runtime files
+backend/node_modules/
+backend/.env
+backend/.env.*
+backend/data/db.json
+backend/*.log

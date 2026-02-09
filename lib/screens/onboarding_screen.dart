@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../auth/auth_state.dart';
 import '../utils/app_state.dart';
 import '../services/onboarding_service.dart';
 
@@ -30,11 +31,25 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   String _selectedGender = '';
   bool _hasGenderError = false;
   bool _makeFieldsOptional = false;
+  bool _authEmailPrefilled = false;
 
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_authEmailPrefilled) return;
+
+    final authState = Provider.of<AuthState>(context, listen: false);
+    final authEmail = authState.user?['email']?.toString().trim() ?? '';
+    if (authEmail.isNotEmpty && _emailController.text.trim().isEmpty) {
+      _emailController.text = authEmail;
+    }
+    _authEmailPrefilled = true;
   }
 
   void _initializeAnimations() {
@@ -218,7 +233,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    color: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: colorScheme.outline.withValues(alpha: 0.2),
@@ -295,6 +311,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // FIXED: User info page with proper scrolling
   Widget _buildUserInfoPage(
       BuildContext context, ColorScheme colorScheme, ThemeData theme) {
+    final authState = Provider.of<AuthState>(context, listen: false);
+    final isAuthEmailLocked = authState.isAuthenticated &&
+        (authState.user?['email']?.toString().trim().isNotEmpty ?? false);
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: GestureDetector(
@@ -309,7 +329,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      color:
+                          colorScheme.primaryContainer.withValues(alpha: 0.3),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -394,6 +415,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         hint: 'Enter your email address',
                         icon: Icons.email,
                         keyboardType: TextInputType.emailAddress,
+                        enabled: !isAuthEmailLocked,
+                        readOnly: isAuthEmailLocked,
                         isRequired: !_makeFieldsOptional,
                         validator: _makeFieldsOptional
                             ? null
@@ -743,9 +766,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
     bool isRequired = true,
+    bool enabled = true,
+    bool readOnly = false,
   }) {
     return TextFormField(
       controller: controller,
+      enabled: enabled,
+      readOnly: readOnly,
       keyboardType: keyboardType,
       validator: validator,
       textCapitalization: keyboardType == TextInputType.name
@@ -765,7 +792,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         fillColor: Theme.of(context)
             .colorScheme
             .surfaceContainerHighest
-            .withValues(alpha: 0.3),
+            .withValues(alpha: enabled ? 0.3 : 0.18),
         contentPadding:
             const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       ),
@@ -996,7 +1023,31 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _completeOnboarding() async {
-    await OnboardingService.completeOnboarding();
+    final appState = Provider.of<AppState>(context, listen: false);
+    final authState = Provider.of<AuthState>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final authUserId = authState.user?['id']?.toString();
+
+    await OnboardingService.completeOnboarding(userId: authUserId);
+
+    if (authState.isAuthenticated) {
+      try {
+        await authState.syncProfile(
+          name: appState.userName,
+          age: appState.userAge,
+          gender: appState.userGender,
+        );
+      } catch (_) {
+        if (mounted) {
+          messenger.showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Profile saved locally. Server sync will retry later.'),
+            ),
+          );
+        }
+      }
+    }
 
     if (mounted) {
       Navigator.of(context).pushReplacementNamed('/home');

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../screens/auth_gate_screen.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/chat_screen.dart';
@@ -9,6 +10,7 @@ import '../screens/wearable_screen.dart';
 import '../screens/settings_screen.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
+  '/auth': (context) => const AuthGateScreen(),
   '/home': (context) => const HomeScreen(),
   '/onboarding': (context) => const OnboardingScreen(),
   '/chat': (context) => const ChatScreen(),

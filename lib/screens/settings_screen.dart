@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../auth/auth_state.dart';
 import '../services/wearable_health_service.dart';
 import '../utils/app_state.dart';
 import 'edit_profile_screen.dart';
@@ -25,8 +26,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadStatus() async {
     setState(() => _isChecking = true);
     final available = await WearableHealthService.isHealthConnectAvailable();
-    final permissions =
-        available ? await WearableHealthService.hasRequiredPermissions() : false;
+    final permissions = available
+        ? await WearableHealthService.hasRequiredPermissions()
+        : false;
     if (!mounted) return;
     setState(() {
       _isAvailable = available;
@@ -130,9 +132,35 @@ Note: This summary is informational and should be reviewed by legal counsel to e
       ),
       body: Consumer<AppState>(
         builder: (context, appState, child) {
+          final authState = Provider.of<AuthState>(context, listen: false);
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.account_circle_outlined),
+                  title: Text(
+                    authState.isGuest
+                        ? 'Guest session'
+                        : (authState.user?['email']?.toString() ?? 'Signed in'),
+                  ),
+                  subtitle: Text(
+                    authState.isGuest
+                        ? 'Limited to ${AuthState.guestTokensLimit} tokens/session'
+                        : 'Authenticated account',
+                  ),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      await authState.signOut();
+                      if (!context.mounted) return;
+                      Navigator.of(context)
+                          .pushNamedAndRemoveUntil('/auth', (route) => false);
+                    },
+                    child: const Text('Sign out'),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.person),
@@ -224,8 +252,8 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                       FilledButton.icon(
                         onPressed: () async {
                           if (!_hasPermissions) {
-                            final granted = await WearableHealthService
-                                .ensurePermissions();
+                            final granted =
+                                await WearableHealthService.ensurePermissions();
                             if (!context.mounted) return;
                             setState(() {
                               _hasPermissions = granted;

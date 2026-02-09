@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../auth/auth_state.dart';
 import '../utils/app_state.dart';
 import '../services/onboarding_service.dart';
 import '../utils/blur_dialog.dart';
@@ -30,7 +31,13 @@ class _InitialScreenState extends State<InitialScreen> {
       });
 
       final appState = Provider.of<AppState>(context, listen: false);
+      final authState = Provider.of<AuthState>(context, listen: false);
       await appState.loadUserProfile();
+      if (authState.isGuest) {
+        await _applyGuestProfile(appState);
+      } else {
+        await _syncProfileFromAuth(authState, appState);
+      }
       setState(() {
         _status = 'Connecting Health Connect...';
       });
@@ -56,8 +63,9 @@ class _InitialScreenState extends State<InitialScreen> {
         _status = 'Checking onboarding status...';
       });
 
+      final authUserId = authState.user?['id']?.toString();
       final isOnboardingCompleted =
-          await OnboardingService.isOnboardingCompleted();
+          await OnboardingService.isOnboardingCompleted(userId: authUserId);
 
       setState(() {
         _status = 'Launching app...';
@@ -92,6 +100,47 @@ class _InitialScreenState extends State<InitialScreen> {
         });
       }
     }
+  }
+
+  Future<void> _syncProfileFromAuth(
+    AuthState authState,
+    AppState appState,
+  ) async {
+    if (!authState.isAuthenticated) return;
+    final profile = authState.profile;
+    final user = authState.user;
+    final name = profile?['name']?.toString().trim() ?? '';
+    final age = (profile?['age'] as num?)?.toInt() ?? 0;
+    final gender = profile?['gender']?.toString().trim() ?? '';
+    final email = user?['email']?.toString().trim() ?? '';
+
+    if (name.isNotEmpty) {
+      await appState.setUserName(name);
+    } else {
+      await appState.setUserName('User');
+    }
+    if (email.isNotEmpty) {
+      await appState.setUserEmail(email);
+    } else {
+      await appState.setUserEmail('');
+    }
+    if (age > 0) {
+      await appState.setUserAge(age);
+    } else {
+      await appState.setUserAge(0);
+    }
+    if (gender.isNotEmpty) {
+      await appState.setUserGender(gender);
+    } else {
+      await appState.setUserGender('');
+    }
+  }
+
+  Future<void> _applyGuestProfile(AppState appState) async {
+    await appState.setUserName('Guest');
+    await appState.setUserEmail('');
+    await appState.setUserAge(0);
+    await appState.setUserGender('');
   }
 
   void _showErrorDialog() {
