@@ -19,7 +19,6 @@ MediPal is an intelligent Flutter-based personal health assistant that combines 
   <img src="Screenshots/ChatScreen.jpeg" alt="Chat Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
   <img src="Screenshots/SettingScreen.jpeg" alt="Settings Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
   <img src="Screenshots/Wearables_Screen.jpeg" alt="Wearables Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
-  <img src="Screenshots/AIHealthInsightsPopup.jpeg" alt="AI Health Insights Popup" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
 </div>
 
 ---
