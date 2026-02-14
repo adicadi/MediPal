@@ -23,7 +23,9 @@ class MediPalApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => AppState()),
+        ChangeNotifierProvider(
+          create: (context) => AppState()..loadThemePreference(),
+        ),
         Provider(create: (_) => SessionStorageService()),
         Provider(create: (_) => BackendApiService()),
         Provider(
@@ -48,15 +50,17 @@ class MediPalApp extends StatelessWidget {
           }
         }),
       ],
-      child: MaterialApp(
-        title: 'MediPal',
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        home: home ?? const AuthGateScreen(),
-        routes: routes ?? appRoutes,
-        scrollBehavior: const AppScrollBehavior(),
-        debugShowCheckedModeBanner: false,
+      child: Consumer<AppState>(
+        builder: (context, appState, _) => MaterialApp(
+          title: 'MediPal',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: appState.themeMode,
+          home: home ?? const AuthGateScreen(),
+          routes: routes ?? appRoutes,
+          scrollBehavior: const AppScrollBehavior(),
+          debugShowCheckedModeBanner: false,
+        ),
       ),
     );
   }

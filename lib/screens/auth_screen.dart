@@ -96,7 +96,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Consumer<AuthState>(
           builder: (context, auth, _) {

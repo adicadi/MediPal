@@ -56,14 +56,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
-      ),
-      body: Consumer<AppState>(
-        builder: (context, appState, child) {
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
+      body: SafeArea(
+        child: Consumer<AppState>(
+          builder: (context, appState, child) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+              children: [
+                Row(
+                  children: [
+                    IconButton.filledTonal(
+                      onPressed: () => Navigator.maybePop(context),
+                      style: IconButton.styleFrom(
+                        shape: const CircleBorder(),
+                        backgroundColor: colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.9),
+                        foregroundColor: colorScheme.onSurface,
+                      ),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      tooltip: 'Back',
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Edit Profile',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
               _ProfileHeaderCard(
                 name: _nameController.text.trim().isEmpty
                     ? 'Your Name'
@@ -151,9 +174,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

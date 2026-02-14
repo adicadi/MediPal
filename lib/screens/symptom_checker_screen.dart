@@ -85,58 +85,101 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Symptom Checker'),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        actions: [
-          // NEW: History button
-          Badge(
-            isLabelVisible: _assessmentHistory.isNotEmpty,
-            label: Text('${_assessmentHistory.length}'),
-            child: IconButton(
-              icon: const Icon(Icons.history),
-              onPressed: () => _showAssessmentHistory(context),
-              tooltip: 'Assessment History (${_assessmentHistory.length})',
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: Row(
+                children: [
+                  IconButton.filledTonal(
+                    onPressed: () => Navigator.maybePop(context),
+                    style: IconButton.styleFrom(
+                      shape: const CircleBorder(),
+                      backgroundColor:
+                          colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.9,
+                      ),
+                      foregroundColor: colorScheme.onSurface,
+                    ),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    tooltip: 'Back',
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Symptom Checker',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Badge(
+                    isLabelVisible: _assessmentHistory.isNotEmpty,
+                    label: Text('${_assessmentHistory.length}'),
+                    child: IconButton.filledTonal(
+                      onPressed: () => _showAssessmentHistory(context),
+                      style: IconButton.styleFrom(
+                        shape: const CircleBorder(),
+                        backgroundColor:
+                            colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.9,
+                        ),
+                        foregroundColor: colorScheme.onSurface,
+                      ),
+                      icon: const Icon(Icons.history_rounded),
+                      tooltip:
+                          'Assessment History (${_assessmentHistory.length})',
+                    ),
+                  ),
+                  IconButton.filledTonal(
+                    onPressed: () => _showHelpDialog(context),
+                    style: IconButton.styleFrom(
+                      shape: const CircleBorder(),
+                      backgroundColor:
+                          colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.9,
+                      ),
+                      foregroundColor: colorScheme.onSurface,
+                    ),
+                    icon: const Icon(Icons.help_outline_rounded),
+                    tooltip: 'Help',
+                  ),
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            onPressed: () => _showHelpDialog(context),
-            tooltip: 'Help',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          const EmergencyButton(),
-          Expanded(
-            child: _questions.isEmpty
-                ? _buildInitialSymptomInput()
-                : _buildQuestionFlow(),
-          ),
-        ],
+            const EmergencyButton(),
+            Expanded(
+              child: _questions.isEmpty
+                  ? _buildInitialSymptomInput()
+                  : _buildQuestionFlow(),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildInitialSymptomInput() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
     return Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // NEW: Recent assessments preview
               if (_assessmentHistory.isNotEmpty) ...[
                 Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -218,45 +261,55 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                 const SizedBox(height: 20),
               ],
 
-              const Text(
+              Text(
                 'What symptom are you experiencing?',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _symptomController,
-                decoration: const InputDecoration(
-                  hintText: 'Describe your main symptom...',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.search),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                maxLines: 3,
+                child: TextField(
+                  controller: _symptomController,
+                  decoration: const InputDecoration(
+                    hintText: 'Describe your main symptom...',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  maxLines: 3,
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: FilledButton.icon(
                   onPressed: _startSymptomAssessment,
-                  child: const Text('Start Assessment'),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Start Assessment'),
                 ),
               ),
               const SizedBox(height: 24),
-              const Card(
+              Card(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.blue),
-                          SizedBox(width: 8),
+                          Icon(Icons.info_outline, color: colorScheme.primary),
+                          const SizedBox(width: 8),
                           Text('Important',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              )),
                         ],
                       ),
-                      SizedBox(height: 8),
-                      Text(
+                      const SizedBox(height: 8),
+                      const Text(
                         'This tool is for informational purposes only and is not a substitute for professional medical advice. If you are experiencing a medical emergency, call 911 immediately.',
                         style: TextStyle(fontSize: 12),
                       ),
@@ -292,7 +345,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
     final question = _questions[_currentQuestionIndex];
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -309,13 +362,16 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           Text(
             'Question ${_currentQuestionIndex + 1} of ${_questions.length}',
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -324,10 +380,14 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
 
           Text(
             question.question,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
           // Options list
           Expanded(
@@ -344,23 +404,23 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                   final isSelected = _answers[question.id] == option;
 
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
+                    margin: const EdgeInsets.only(bottom: 10),
                     child: Card(
-                      elevation: isSelected ? 4 : 1,
+                      elevation: 0,
                       color: isSelected
                           ? Theme.of(context)
                               .colorScheme
                               .primaryContainer
-                              .withValues(alpha: 0.3)
-                          : null,
+                              .withValues(alpha: 0.35)
+                          : Theme.of(context).colorScheme.surface,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: isSelected
-                            ? BorderSide(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 2,
-                              )
-                            : BorderSide.none,
+                        borderRadius: BorderRadius.circular(18),
+                        side: BorderSide(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outlineVariant,
+                          width: isSelected ? 1.8 : 1,
+                        ),
                       ),
                       child: ListTile(
                         title: Text(
@@ -369,6 +429,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                             fontWeight: isSelected
                                 ? FontWeight.w600
                                 : FontWeight.normal,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         leading: Radio<String>(
@@ -385,7 +446,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Navigation buttons
           Row(
@@ -435,14 +496,14 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
 
   Widget _buildLoadingAssessment() {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Progress indicator with animation
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Theme.of(context)
                   .colorScheme
@@ -450,11 +511,17 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                   .withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.3),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -480,7 +547,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Theme.of(context)
                               .colorScheme
@@ -498,7 +565,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 Text(
                   'MediPal is analyzing your symptoms...',
@@ -524,7 +591,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                   textAlign: TextAlign.center,
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // Progress steps with animation
                 _buildAnimatedProgressSteps(),
@@ -532,25 +599,36 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
           // Important note
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.shade200),
+              border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.4),
+              ),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.blue.shade700),
+                Icon(
+                  Icons.info_outline,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Please wait while we process your information. The analysis will appear shortly.',
                     style: TextStyle(
-                      color: Colors.blue.shade700,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
                       fontSize: 13,
                     ),
                   ),
@@ -648,39 +726,42 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
 
   Widget _buildAssessmentResult() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Success header
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.green.shade50,
-                  Colors.green.shade100.withValues(alpha: 0.5),
-                ],
-              ),
+              color: Theme.of(context)
+                  .colorScheme
+                  .secondaryContainer
+                  .withValues(alpha: 0.45),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.green.shade200),
+              border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .secondary
+                    .withValues(alpha: 0.4),
+              ),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade100,
+                    color: Theme.of(context).colorScheme.secondaryContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.assessment,
-                    color: Colors.green.shade700,
+                    color: Theme.of(context).colorScheme.secondary,
                     size: 28,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -690,7 +771,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade800,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -698,7 +779,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                         'Based on your symptoms and responses',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.green.shade600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -708,16 +789,19 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // Assessment result card
           Card(
-            elevation: 4,
+            elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: SelectionArea(
                 child: TexMarkdown(
                   _assessment!,
@@ -731,7 +815,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // ENHANCED: Action buttons with save feedback
           Row(
@@ -742,7 +826,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                   icon: const Icon(Icons.save),
                   label: const Text('Save & Close'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(
@@ -758,7 +842,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                   icon: const Icon(Icons.refresh),
                   label: const Text('New Assessment'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -794,20 +878,30 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // Medical disclaimer
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.1),
+              color: Theme.of(context)
+                  .colorScheme
+                  .errorContainer
+                  .withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              border: Border.all(
+                color:
+                    Theme.of(context).colorScheme.error.withValues(alpha: 0.35),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.warning, color: Colors.red.shade700, size: 24),
+                Icon(
+                  Icons.warning,
+                  color: Theme.of(context).colorScheme.error,
+                  size: 24,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -818,7 +912,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Colors.red.shade700,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -826,7 +920,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                         'This analysis is for informational purposes only and should not replace professional medical advice. Please consult a qualified healthcare professional for proper diagnosis and treatment.',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.red.shade600,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
                           height: 1.4,
                         ),
                       ),
@@ -912,278 +1006,299 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
   void _showAssessmentHistory(BuildContext context) {
     showBlurDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.9,
-          height: MediaQuery.of(context).size.height * 0.8,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.history,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Assessment History',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '${_assessmentHistory.length} saved assessments',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.7),
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Clear history button (for testing)
-                  if (_assessmentHistory.isNotEmpty)
-                    IconButton(
-                      onPressed: () => _clearHistory(),
-                      icon: const Icon(Icons.delete_sweep),
-                      tooltip: 'Clear History',
-                    ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                    style: IconButton.styleFrom(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.surfaceContainerHighest,
-                    ),
-                  ),
-                ],
+      builder: (context) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        return Dialog(
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 760,
+              maxHeight: MediaQuery.of(context).size.height * 0.86,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
-              const SizedBox(height: 20),
-              if (_assessmentHistory.isEmpty) ...[
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.assessment_outlined,
-                          size: 64,
-                          color: Colors.grey.shade400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No assessments yet',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: Colors.grey.shade600,
-                                  ),
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
+                        child: Icon(
+                          Icons.history,
+                          color: colorScheme.primary,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Complete a symptom assessment to see it saved here',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ] else ...[
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _assessmentHistory.length,
-                    itemBuilder: (context, index) {
-                      final assessment = _assessmentHistory[index];
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ExpansionTile(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          leading: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer
-                                  .withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.psychology,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 20,
-                            ),
-                          ),
-                          title: Text(
-                            assessment.primarySymptom,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.access_time,
-                                  size: 12,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _formatCacheAge(assessment.timestamp),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              margin: const EdgeInsets.all(16),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest
-                                    .withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(12),
+                            Text(
+                              'Assessment History',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.assessment,
-                                        size: 16,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'Assessment Result:',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .outline
-                                            .withValues(alpha: 0.2),
-                                      ),
-                                    ),
-                                    child: SelectionArea(
-                                      child: SingleChildScrollView(
-                                        child: TexMarkdown(
-                                          assessment.assessment,
-                                          style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface,
-                                            fontSize: 13,
-                                            height: 1.4,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: TextButton.icon(
-                                          onPressed: () => _shareAssessment(
-                                              assessment.assessment),
-                                          icon:
-                                              const Icon(Icons.share, size: 16),
-                                          label: const Text('Share'),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          onPressed: () =>
-                                              _viewAssessment(assessment),
-                                          icon: const Icon(Icons.visibility,
-                                              size: 16),
-                                          label: const Text('View Full'),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${_assessmentHistory.length} saved assessments',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.7),
                               ),
                             ),
                           ],
                         ),
-                      );
-                    },
+                      ),
+                      // Clear history button (for testing)
+                      if (_assessmentHistory.isNotEmpty)
+                        IconButton(
+                          onPressed: () => _clearHistory(),
+                          icon: const Icon(Icons.delete_sweep),
+                          tooltip: 'Clear History',
+                        ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        style: IconButton.styleFrom(
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ],
+                  const SizedBox(height: 16),
+                  if (_assessmentHistory.isEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 28),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.assessment_outlined,
+                              size: 64,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No assessments yet',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: colorScheme.onSurface,
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Complete a symptom assessment to see it saved here',
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.62,
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _assessmentHistory.length,
+                        itemBuilder: (context, index) {
+                          final assessment = _assessmentHistory[index];
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color: colorScheme.outlineVariant,
+                              ),
+                            ),
+                            child: ExpansionTile(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer
+                                      .withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.psychology,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(
+                                assessment.primarySymptom,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.access_time,
+                                      size: 12,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _formatCacheAge(assessment.timestamp),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest
+                                        .withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.assessment,
+                                            size: 16,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              'Assessment Result:',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .primary,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .surface,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .outline
+                                                .withValues(alpha: 0.2),
+                                          ),
+                                        ),
+                                        child: SelectionArea(
+                                          child: SingleChildScrollView(
+                                            child: TexMarkdown(
+                                              assessment.assessment,
+                                              style: TextStyle(
+                                                color: colorScheme.onSurface,
+                                                fontSize: 13.5,
+                                                height: 1.45,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextButton.icon(
+                                              onPressed: () => _shareAssessment(
+                                                  assessment.assessment),
+                                              icon: const Icon(Icons.share,
+                                                  size: 16),
+                                              label: const Text('Share'),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: () =>
+                                                  _viewAssessment(assessment),
+                                              icon: const Icon(Icons.visibility,
+                                                  size: 16),
+                                              label: const Text('View Full'),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -1194,12 +1309,18 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
         ),
         child: Container(
           width: MediaQuery.of(context).size.width * 0.9,
           height: MediaQuery.of(context).size.height * 0.8,
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(24),
+            border:
+                Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1255,13 +1376,13 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                 ],
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // Assessment content
               Expanded(
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Theme.of(context)
                         .colorScheme
@@ -1290,7 +1411,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // Action buttons
               Row(
@@ -1312,21 +1433,33 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .errorContainer
+                      .withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .error
+                        .withValues(alpha: 0.35),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.warning, color: Colors.red.shade700, size: 16),
+                    Icon(
+                      Icons.warning,
+                      color: Theme.of(context).colorScheme.error,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'This analysis is for informational purposes only. Consult a healthcare professional for medical advice.',
                         style: TextStyle(
                           fontSize: 11,
-                          color: Colors.red.shade600,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
                         ),
                       ),
                     ),
@@ -1407,7 +1540,10 @@ Note: This is for informational purposes only. Consult a healthcare professional
                 ),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             child: const Text('Clear All'),
           ),
         ],
@@ -1425,7 +1561,7 @@ Note: This is for informational purposes only. Consult a healthcare professional
         ),
         title: const Row(
           children: [
-            Icon(Icons.help_outline, color: Colors.blue),
+            Icon(Icons.help_outline),
             SizedBox(width: 8),
             Expanded(
               child: Text(

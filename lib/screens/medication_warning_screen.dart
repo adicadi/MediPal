@@ -403,78 +403,112 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Medication Warnings',
-          overflow: TextOverflow.ellipsis,
-        ),
-        centerTitle: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MedicationsScreen(),
-                ),
-              );
-            },
-            icon: const Icon(Icons.alarm),
-            tooltip: 'Set Reminders',
-            style: IconButton.styleFrom(
-              backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
-            ),
-          ),
-          // Enhanced history button with count
-          Badge(
-            isLabelVisible: _analysisHistory.isNotEmpty,
-            label: Text('${_analysisHistory.length}'),
-            child: IconButton(
-              icon: const Icon(Icons.history),
-              onPressed: () => _showAnalysisHistory(context),
-              tooltip: 'Analysis History (${_analysisHistory.length})',
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            onPressed: () => _showHelpDialog(context),
-            tooltip: 'Help',
-          ),
-        ],
-      ),
-      body: Consumer<AppState>(
-        builder: (context, appState, child) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Consumer<AppState>(
+          builder: (context, appState, child) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      IconButton.filledTonal(
+                        onPressed: () => Navigator.maybePop(context),
+                        style: IconButton.styleFrom(
+                          shape: const CircleBorder(),
+                          backgroundColor: colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.9),
+                          foregroundColor: colorScheme.onSurface,
+                        ),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        tooltip: 'Back',
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Medication Warnings',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton.filledTonal(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const MedicationsScreen(),
+                            ),
+                          );
+                        },
+                        style: IconButton.styleFrom(
+                          shape: const CircleBorder(),
+                          backgroundColor: colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.9),
+                          foregroundColor: colorScheme.onSurface,
+                        ),
+                        icon: const Icon(Icons.alarm_rounded),
+                        tooltip: 'Set Reminders',
+                      ),
+                      Badge(
+                        isLabelVisible: _analysisHistory.isNotEmpty,
+                        label: Text('${_analysisHistory.length}'),
+                        child: IconButton.filledTonal(
+                          onPressed: () => _showAnalysisHistory(context),
+                          style: IconButton.styleFrom(
+                            shape: const CircleBorder(),
+                            backgroundColor:
+                                colorScheme.surfaceContainerHighest.withValues(
+                              alpha: 0.9,
+                            ),
+                            foregroundColor: colorScheme.onSurface,
+                          ),
+                          icon: const Icon(Icons.history_rounded),
+                          tooltip:
+                              'Analysis History (${_analysisHistory.length})',
+                        ),
+                      ),
+                      IconButton.filledTonal(
+                        onPressed: () => _showHelpDialog(context),
+                        style: IconButton.styleFrom(
+                          shape: const CircleBorder(),
+                          backgroundColor: colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.9),
+                          foregroundColor: colorScheme.onSurface,
+                        ),
+                        icon: const Icon(Icons.help_outline_rounded),
+                        tooltip: 'Help',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                 // UPDATED: Enhanced Safety Notice - NOW USES THEME COLORS
                 _buildSafetyNotice(theme, colorScheme),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
                 // Enhanced Add Medication Section
                 _buildAddMedicationSection(colorScheme, theme),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
 
                 // Enhanced Current Medications Section
                 _buildCurrentMedicationsSection(appState, theme, colorScheme),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
 
                 // ENHANCED: Drug Interaction Analysis with smart caching
                 if (appState.medications.length >= 2) ...[
                   _buildInteractionAnalysisSection(
                       appState, colorScheme, theme, context),
                 ],
-                const SizedBox(height: 32),
-              ],
-            ),
-          );
-        },
+                const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -554,30 +588,24 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   Widget _buildInteractionAnalysisSection(AppState appState,
       ColorScheme colorScheme, ThemeData theme, BuildContext context) {
     return Card(
-      elevation: 6,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: colorScheme.outlineVariant),
       ),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              colorScheme.primaryContainer.withValues(alpha: 0.1),
-              colorScheme.secondaryContainer.withValues(alpha: 0.1),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          borderRadius: BorderRadius.circular(22),
+          color: colorScheme.surfaceContainer.withValues(alpha: 0.5),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header with cache status
               _buildAnalysisHeader(colorScheme, theme),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
 
               // Content area with smart loading/results
               AnimatedSwitcher(
@@ -585,7 +613,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                 child: _buildAnalysisContent(
                     appState, colorScheme, theme, context),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
 
               // Action buttons with cache options
               _buildAnalysisActionButtons(appState, colorScheme, context),
@@ -1145,12 +1173,13 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
 
   Widget _buildAddMedicationSection(ColorScheme colorScheme, ThemeData theme) {
     return Card(
-      elevation: 4,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: colorScheme.outlineVariant),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1206,11 +1235,12 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   children: [
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.3),
+                            .withValues(alpha: 0.55),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: colorScheme.outlineVariant),
                       ),
                       child: Form(
                         key: _formKey,
@@ -1282,7 +1312,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                                 label: const Text('Add Medication'),
                                 style: ElevatedButton.styleFrom(
                                   padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
+                                      const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -1306,12 +1336,13 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   Widget _buildCurrentMedicationsSection(
       AppState appState, ThemeData theme, ColorScheme colorScheme) {
     return Card(
-      elevation: 4,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: colorScheme.outlineVariant),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1362,7 +1393,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             if (appState.medications.isEmpty) ...[
               _buildEmptyMedicationState(context, colorScheme, theme),
             ] else ...[
@@ -1384,16 +1415,10 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           opacity: value,
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+              color:
+                  colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: colorScheme.outline.withValues(alpha: 0.2),
@@ -1402,7 +1427,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: colorScheme.primaryContainer.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(20),
@@ -1433,7 +1458,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -1447,7 +1472,7 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
                     label: const Text('Add Your First Medication'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                          horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -1476,26 +1501,15 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
           curve: Curves.easeOutBack,
           child: ListTile(
             contentPadding:
-                const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
             leading: Hero(
               tag: 'medication_$index',
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      colorScheme.primaryContainer,
-                      colorScheme.primaryContainer.withValues(alpha: 0.7),
-                    ],
-                  ),
+                  color: colorScheme.primaryContainer.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.primary.withValues(alpha: 0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 child: Icon(
                   Icons.medication,
@@ -1516,7 +1530,8 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
               margin: const EdgeInsets.only(top: 4),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                color:
+                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -1784,261 +1799,264 @@ class _MedicationWarningScreenState extends State<MedicationWarningScreen>
   void _showAnalysisHistory(BuildContext context) {
     showBlurDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.9,
-          height: MediaQuery.of(context).size.height * 0.8,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.history,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Analysis History',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '${_analysisHistory.length} cached analyses',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.7),
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Debug button to clear cache
-                  if (_analysisHistory.isNotEmpty)
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _analysisHistory.clear();
-                        });
-                        _saveAnalysisHistory();
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Cache cleared for testing'),
-                            backgroundColor:
-                                Theme.of(context).colorScheme.secondary,
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.delete_sweep),
-                      tooltip: 'Clear Cache (Debug)',
-                    ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                    style: IconButton.styleFrom(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.surfaceContainerHighest,
-                    ),
-                  ),
-                ],
+      builder: (context) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        return Dialog(
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 760,
+              maxHeight: MediaQuery.of(context).size.height * 0.86,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
-              const SizedBox(height: 20),
-              if (_analysisHistory.isEmpty) ...[
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
                           Icons.history,
-                          size: 64,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.4),
+                          color: colorScheme.primary,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No analysis history yet',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6),
-                                  ),
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Analysis History',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${_analysisHistory.length} cached analyses',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Analyze medication interactions to build your cache history',
-                          style: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      // Debug button to clear cache
+                      if (_analysisHistory.isNotEmpty)
+                        IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _analysisHistory.clear();
+                            });
+                            _saveAnalysisHistory();
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    const Text('Cache cleared for testing'),
+                                backgroundColor: colorScheme.secondary,
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.delete_sweep),
+                          tooltip: 'Clear Cache (Debug)',
                         ),
-                      ],
-                    ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        style: IconButton.styleFrom(
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ] else ...[
-                const SizedBox(height: 12),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: _analysisHistory.length,
-                    itemBuilder: (context, index) {
-                      final analysis = _analysisHistory[index];
-                      final isCurrentMedications =
-                          analysis.medicationHash == _currentMedicationHash;
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: isCurrentMedications ? 4 : 2,
-                        color: isCurrentMedications
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primaryContainer
-                                .withValues(alpha: 0.3)
-                            : null,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: isCurrentMedications
-                              ? BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 2,
-                                )
-                              : BorderSide.none,
+                  const SizedBox(height: 16),
+                  if (_analysisHistory.isEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 28),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.history,
+                              size: 64,
+                              color:
+                                  colorScheme.onSurface.withValues(alpha: 0.4),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No analysis history yet',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Analyze medication interactions to build your cache history',
+                              style: TextStyle(
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        child: ListTile(
-                          leading: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: isCurrentMedications
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withValues(alpha: 0.2)
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.62,
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _analysisHistory.length,
+                        itemBuilder: (context, index) {
+                          final analysis = _analysisHistory[index];
+                          final isCurrentMedications =
+                              analysis.medicationHash == _currentMedicationHash;
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            elevation: 0,
+                            color: isCurrentMedications
+                                ? colorScheme.primaryContainer
+                                    .withValues(alpha: 0.3)
+                                : colorScheme.surface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: isCurrentMedications
+                                  ? BorderSide(
+                                      color: colorScheme.primary,
+                                      width: 1.5,
+                                    )
+                                  : BorderSide(
+                                      color: colorScheme.outlineVariant),
                             ),
-                            child: Icon(
-                              isCurrentMedications
-                                  ? Icons.star
-                                  : Icons.medication,
-                              color: isCurrentMedications
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                              size: 20,
-                            ),
-                          ),
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  analysis.medications
-                                      .map((m) => m.name)
-                                      .join(', '),
-                                  style: TextStyle(
-                                    fontWeight: isCurrentMedications
-                                        ? FontWeight.bold
-                                        : FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                            child: ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isCurrentMedications
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withValues(alpha: 0.2)
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  isCurrentMedications
+                                      ? Icons.star
+                                      : Icons.medication,
+                                  color: isCurrentMedications
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                  size: 20,
                                 ),
                               ),
-                              if (isCurrentMedications) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    'CURRENT',
-                                    style: TextStyle(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      analysis.medications
+                                          .map((m) => m.name)
+                                          .join(', '),
+                                      style: TextStyle(
+                                        fontWeight: isCurrentMedications
+                                            ? FontWeight.bold
+                                            : FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
+                                  if (isCurrentMedications) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primary,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        'CURRENT',
+                                        style: TextStyle(
+                                          color: colorScheme.onPrimary,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _formatCacheAge(analysis.timestamp),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: colorScheme.onSurface
+                                          .withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: ElevatedButton(
+                                onPressed: () => _loadAnalysisResult(analysis),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
                                 ),
-                              ],
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _formatCacheAge(analysis.timestamp),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
+                                child: Text(
+                                  isCurrentMedications ? 'Current' : 'Use',
+                                  style: const TextStyle(fontSize: 12),
                                 ),
                               ),
-                            ],
-                          ),
-                          trailing: ElevatedButton(
-                            onPressed: () => _loadAnalysisResult(analysis),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
                             ),
-                            child: Text(
-                              isCurrentMedications ? 'Current' : 'Use',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

@@ -19,15 +19,17 @@ class MedicationReminderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return Card(
-      elevation: 3,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: medication.needsRefill
-              ? Colors.orange.withValues(alpha: 0.5)
-              : Colors.transparent,
+              ? colorScheme.error.withValues(alpha: 0.45)
+              : colorScheme.outlineVariant,
           width: 2,
         ),
       ),
@@ -35,11 +37,11 @@ class MedicationReminderCard extends StatelessWidget {
         children: [
           // Header Section
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: medication.isEssential
-                  ? Colors.red.shade50
-                  : Colors.blue.shade50,
+                  ? colorScheme.errorContainer.withValues(alpha: 0.5)
+                  : colorScheme.primaryContainer.withValues(alpha: 0.5),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
@@ -49,20 +51,22 @@ class MedicationReminderCard extends StatelessWidget {
               children: [
                 // Medication Icon
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     medication.isEssential
                         ? Icons.local_hospital
                         : Icons.medication,
-                    color: medication.isEssential ? Colors.red : Colors.blue,
-                    size: 28,
+                    color: medication.isEssential
+                        ? colorScheme.error
+                        : colorScheme.primary,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 // Medication Info
                 Expanded(
                   child: Column(
@@ -70,17 +74,17 @@ class MedicationReminderCard extends StatelessWidget {
                     children: [
                       Text(
                         medication.name,
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${medication.dosage} • ${medication.frequency}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -90,7 +94,7 @@ class MedicationReminderCard extends StatelessWidget {
                 Switch(
                   value: medication.remindersEnabled,
                   onChanged: onToggleReminders,
-                  activeThumbColor: Colors.green,
+                  activeThumbColor: colorScheme.primary,
                 ),
               ],
             ),
@@ -98,30 +102,30 @@ class MedicationReminderCard extends StatelessWidget {
 
           // Body Section
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Quantity Status
-                _buildQuantityStatus(),
+                _buildQuantityStatus(context),
 
                 if (medication.reminders.isNotEmpty) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   _buildRemindersList(),
                 ],
 
                 if (medication.needsRefill) ...[
                   const SizedBox(height: 12),
-                  _buildRefillAlert(),
+                  _buildRefillAlert(context),
                 ],
 
                 if (medication.notes != null &&
                     medication.notes!.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  _buildNotes(),
+                  _buildNotes(context),
                 ],
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _buildActionButtons(context),
               ],
             ),
@@ -131,7 +135,8 @@ class MedicationReminderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildQuantityStatus() {
+  Widget _buildQuantityStatus(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final percentage = (medication.currentQuantity / medication.totalQuantity);
     Color statusColor;
 
@@ -167,7 +172,7 @@ class MedicationReminderCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
             value: percentage,
-            backgroundColor: Colors.grey[200],
+            backgroundColor: colorScheme.surfaceContainerHighest,
             color: statusColor,
             minHeight: 10,
           ),
@@ -175,10 +180,9 @@ class MedicationReminderCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           '${medication.daysUntilEmpty} days remaining',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
         ),
       ],
     );
@@ -220,17 +224,18 @@ class MedicationReminderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRefillAlert() {
+  Widget _buildRefillAlert(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.orange[50],
+        color: colorScheme.errorContainer.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange[300]!),
+        border: Border.all(color: colorScheme.error.withValues(alpha: 0.45)),
       ),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.orange[700]),
+          Icon(Icons.warning_amber_rounded, color: colorScheme.error),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -240,15 +245,14 @@ class MedicationReminderCard extends StatelessWidget {
                   'Refill Needed!',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.orange[900],
+                    color: colorScheme.error,
                   ),
                 ),
                 Text(
                   'Only ${medication.currentQuantity} pills remaining',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.orange[800],
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onErrorContainer,
+                      ),
                 ),
               ],
             ),
@@ -258,22 +262,27 @@ class MedicationReminderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildNotes() {
+  Widget _buildNotes(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.note_outlined, size: 20, color: Colors.grey[600]),
+          Icon(Icons.note_outlined,
+              size: 20, color: colorScheme.onSurfaceVariant),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               medication.notes!,
-              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 13,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
             ),
           ),
         ],

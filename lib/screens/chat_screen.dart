@@ -191,126 +191,68 @@ How can I help you today? Remember, I provide information to support your health
     return Consumer<AppState>(
       builder: (context, appState, child) {
         return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           resizeToAvoidBottomInset: false,
-          appBar: AppBar(
-            elevation: 0,
-            backgroundColor: colorScheme.surface,
-            surfaceTintColor: colorScheme.surfaceTint,
-            flexibleSpace: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    colorScheme.surface,
-                    colorScheme.primaryContainer.withValues(alpha: 0.25),
-                  ],
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildTopHeader(theme, colorScheme, appState),
+                Expanded(
+                  child: _showHistory
+                      ? _buildHistoryView()
+                      : _buildChatView(appState),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTopHeader(
+    ThemeData theme,
+    ColorScheme colorScheme,
+    AppState appState,
+  ) {
+    final title = _showHistory
+        ? 'Chat History'
+        : appState.isMinor
+            ? 'MediPal Companion'
+            : 'MediPal Chat';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton.filledTonal(
+                onPressed: () => Navigator.maybePop(context),
+                style: IconButton.styleFrom(
+                  shape: const CircleBorder(),
+                  backgroundColor:
+                      colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.9,
+                  ),
+                  foregroundColor: colorScheme.onSurface,
+                ),
+                icon: const Icon(Icons.arrow_back_rounded),
+                tooltip: 'Back',
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
-            title: AnimatedSlide(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOut,
-              offset: const Offset(0, 0),
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                opacity: 1,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: colorScheme.outlineVariant,
-                        ),
-                      ),
-                      child: Icon(
-                        _showHistory ? Icons.history : Icons.psychology,
-                        color: colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  _showHistory
-                                      ? 'Chat History'
-                                      : appState.isMinor
-                                          ? 'MediPal Companion'
-                                          : 'MediPal Chat',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (_isPrivateChat && !_showHistory)
-                                Container(
-                                  margin: const EdgeInsets.only(left: 8),
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: colorScheme.outlineVariant,
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    Icons.lock,
-                                    size: 14,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                            ],
-                          ),
-                          if (!_showHistory)
-                            Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 6,
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: _isStreaming || _isLoading
-                                        ? Colors.orange
-                                        : Colors.green,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                Text(
-                                  _isStreaming
-                                      ? 'Responding'
-                                      : _isLoading
-                                          ? 'Thinking'
-                                          : 'Ready',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
               if (_showPrivateToggle && !_hasUserMessages)
                 Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.only(right: 4),
                   child: FilterChip(
                     selected: _isPrivateChat,
                     label: const Text('Private'),
@@ -326,54 +268,88 @@ How can I help you today? Remember, I provide information to support your health
                   ),
                 ),
               if (_showNewChatAction && _hasUserMessages)
-                IconButton(
-                  icon: const Icon(Icons.add_comment),
-                  tooltip: 'New chat',
+                IconButton.filledTonal(
                   onPressed: _confirmStartNewChat,
+                  style: IconButton.styleFrom(
+                    shape: const CircleBorder(),
+                    backgroundColor:
+                        colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.9,
+                    ),
+                    foregroundColor: colorScheme.onSurface,
+                  ),
+                  icon: const Icon(Icons.add_comment_rounded),
+                  tooltip: 'New chat',
                 ),
-              IconButton(
-                icon: Icon(_showHistory ? Icons.chat : Icons.history),
+              IconButton.filledTonal(
                 onPressed: () {
                   setState(() {
                     _showHistory = !_showHistory;
                   });
                   if (_showHistory) _loadChatHistory();
                 },
+                style: IconButton.styleFrom(
+                  shape: const CircleBorder(),
+                  backgroundColor:
+                      colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.9,
+                  ),
+                  foregroundColor: colorScheme.onSurface,
+                ),
+                icon: Icon(_showHistory ? Icons.chat_rounded : Icons.history),
                 tooltip: _showHistory ? 'Current Chat' : 'Chat History',
               ),
-              if (!_showHistory && _messages.length > 1) ...[
+              if (!_showHistory && _messages.length > 1)
                 PopupMenuButton<String>(
                   onSelected: _handleMenuAction,
                   itemBuilder: (context) => [
                     const PopupMenuItem(
-                        value: 'export',
-                        child: Row(children: [
+                      value: 'export',
+                      child: Row(
+                        children: [
                           Icon(Icons.download),
                           SizedBox(width: 8),
-                          Text('Export Chat')
-                        ])),
+                          Text('Export Chat'),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
-                        value: 'share',
-                        child: Row(children: [
+                      value: 'share',
+                      child: Row(
+                        children: [
                           Icon(Icons.share),
                           SizedBox(width: 8),
-                          Text('Share Chat')
-                        ])),
+                          Text('Share Chat'),
+                        ],
+                      ),
+                    ),
                     const PopupMenuItem(
-                        value: 'clear',
-                        child: Row(children: [
+                      value: 'clear',
+                      child: Row(
+                        children: [
                           Icon(Icons.clear_all),
                           SizedBox(width: 8),
-                          Text('Clear Chat')
-                        ])),
+                          Text('Clear Chat'),
+                        ],
+                      ),
+                    ),
                   ],
+                  icon: CircleAvatar(
+                    radius: 18,
+                    backgroundColor:
+                        colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.9,
+                    ),
+                    child: Icon(
+                      Icons.more_horiz_rounded,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
                 ),
-              ],
             ],
           ),
-          body: _showHistory ? _buildHistoryView() : _buildChatView(appState),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -548,6 +524,13 @@ How can I help you today? Remember, I provide information to support your health
                       );
                     },
                   ),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  child: (_isLoading || _isStreaming)
+                      ? _buildAiStatusPopup(colorScheme, appState)
+                      : const SizedBox.shrink(),
+                ),
+                if (_isLoading || _isStreaming) const SizedBox(height: 8),
                 Row(
                   children: [
                     Container(
@@ -685,6 +668,60 @@ How can I help you today? Remember, I provide information to support your health
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAiStatusPopup(ColorScheme colorScheme, AppState appState) {
+    final isResponding = _isStreaming;
+    final icon = isResponding
+        ? _getIconData('health_and_safety')
+        : _getIconData('help_outline');
+    final label = isResponding
+        ? (appState.isMinor
+            ? 'MediPal is responding...'
+            : 'AI is responding...')
+        : (appState.isMinor ? 'MediPal is thinking...' : 'AI is thinking...');
+
+    return Center(
+      child: Container(
+        key: ValueKey<bool>(isResponding),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: colorScheme.primaryContainer.withValues(alpha: 0.26),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withValues(alpha: 0.65),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 12,
+                color: colorScheme.onPrimaryContainer,
+              ),
+            ),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
         ),
       ),
     );
@@ -939,8 +976,9 @@ How can I help you today? Remember, I provide information to support your health
           Provider.of<DeepSeekService>(context, listen: false);
 
       // Check if quick response is available (now with AppState)
-      final quickResponse =
-          !hadPriorUserMessage ? deepSeekService.getQuickResponse(text, appState) : null;
+      final quickResponse = !hadPriorUserMessage
+          ? deepSeekService.getQuickResponse(text, appState)
+          : null;
 
       if (quickResponse != null) {
         // Show brief loading for natural feel
@@ -1486,11 +1524,13 @@ How can I help you today? Remember, I provide information to support your health
         false;
 
     if (!shouldStart) return;
+    if (!mounted) return;
+    final appState = context.read<AppState>();
     setState(() {
       _messages.clear();
       _attachedDocuments.clear();
     });
-    _updateDocumentContext(Provider.of<AppState>(context, listen: false));
+    _updateDocumentContext(appState);
     _initializeChat();
   }
 
@@ -1559,44 +1599,48 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final isUser = message.isUser;
+    final bubbleColor = isUser
+        ? (appState.isMinor ? const Color(0xFFDD6B20) : const Color(0xFF1A2233))
+        : const Color(0xFFF5F6FA);
+    final onBubble = isUser ? Colors.white : const Color(0xFF3E4554);
 
     return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
         onLongPress: onCopy,
         child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.75),
           decoration: BoxDecoration(
-            color: message.isUser
-                ? (appState.isMinor
-                    ? Colors.orange.shade400
-                    : colorScheme.primary)
-                : (appState.isMinor
-                    ? Colors.orange.shade50
-                    : colorScheme.surfaceContainerHighest),
-            borderRadius: BorderRadius.circular(18).copyWith(
-              bottomRight: message.isUser ? const Radius.circular(4) : null,
-              bottomLeft: message.isUser ? null : const Radius.circular(4),
+            color: bubbleColor,
+            borderRadius: BorderRadius.circular(22).copyWith(
+              bottomRight: isUser ? const Radius.circular(6) : null,
+              bottomLeft: isUser ? null : const Radius.circular(6),
             ),
-            border: appState.isMinor && !message.isUser
-                ? Border.all(color: Colors.orange.shade200)
-                : null,
+            border: Border.all(
+              color: isUser
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : const Color(0xFFE1E5EF),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              message.isUser
+              isUser
                   ? Text(
                       message.text,
                       style: TextStyle(
-                        color: appState.isMinor
-                            ? Colors.white
-                            : colorScheme.onPrimary,
+                        color: onBubble,
                         fontSize: 14,
                         height: 1.4,
                       ),
@@ -1605,42 +1649,34 @@ class ChatBubble extends StatelessWidget {
                       child: TexMarkdown(
                         message.text,
                         style: TextStyle(
-                          color: appState.isMinor
-                              ? Colors.orange.shade800
-                              : colorScheme.onSurfaceVariant,
+                          color: onBubble,
                           fontSize: 14,
                           height: 1.4,
                         ),
                       ),
                     ),
-              if (!message.isUser) ...[
+              if (!isUser) ...[
                 const SizedBox(height: 4),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       _formatTime(message.timestamp),
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 10,
-                        color: (appState.isMinor
-                                ? Colors.orange.shade600
-                                : colorScheme.onSurfaceVariant)
-                            .withValues(alpha: 0.6),
+                        color: Color(0xFF6C7382),
                       ),
                     ),
                     const Spacer(),
                     InkWell(
                       onTap: onCopy,
                       borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
                         child: Icon(
                           Icons.copy,
                           size: 14,
-                          color: (appState.isMinor
-                                  ? Colors.orange.shade600
-                                  : colorScheme.onSurfaceVariant)
-                              .withValues(alpha: 0.6),
+                          color: Color(0xFF6C7382),
                         ),
                       ),
                     ),
@@ -1711,14 +1747,10 @@ class _TypingIndicatorState extends State<TypingIndicator>
         margin: const EdgeInsets.only(bottom: 8, right: 80),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: widget.appState.isMinor
-              ? Colors.orange.shade50
-              : colorScheme.surfaceContainerHighest,
+          color: const Color(0xFFF5F6FA),
           borderRadius: BorderRadius.circular(18)
               .copyWith(bottomLeft: const Radius.circular(4)),
-          border: widget.appState.isMinor
-              ? Border.all(color: Colors.orange.shade200)
-              : null,
+          border: Border.all(color: const Color(0xFFE1E5EF)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

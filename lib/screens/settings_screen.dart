@@ -127,15 +127,81 @@ Note: This summary is informational and should be reviewed by legal counsel to e
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
-      body: Consumer<AppState>(
-        builder: (context, appState, child) {
-          final authState = Provider.of<AuthState>(context, listen: false);
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Consumer<AppState>(
+          builder: (context, appState, child) {
+            final authState = Provider.of<AuthState>(context, listen: false);
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              children: [
+                Row(
+                  children: [
+                    IconButton.filledTonal(
+                      onPressed: () => Navigator.maybePop(context),
+                      style: IconButton.styleFrom(
+                        shape: const CircleBorder(),
+                        backgroundColor: colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.9),
+                        foregroundColor: colorScheme.onSurface,
+                      ),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      tooltip: 'Back',
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Settings',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Appearance',
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 10),
+                      SegmentedButton<AppThemePreference>(
+                        segments: const [
+                          ButtonSegment<AppThemePreference>(
+                            value: AppThemePreference.system,
+                            icon: Icon(Icons.brightness_auto),
+                            label: Text('System'),
+                          ),
+                          ButtonSegment<AppThemePreference>(
+                            value: AppThemePreference.light,
+                            icon: Icon(Icons.light_mode),
+                            label: Text('Light'),
+                          ),
+                          ButtonSegment<AppThemePreference>(
+                            value: AppThemePreference.dark,
+                            icon: Icon(Icons.dark_mode),
+                            label: Text('Dark'),
+                          ),
+                        ],
+                        selected: {appState.themePreference},
+                        onSelectionChanged: (selection) {
+                          if (selection.isNotEmpty) {
+                            appState.setThemePreference(selection.first);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.account_circle_outlined),
@@ -160,7 +226,7 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.person),
@@ -174,10 +240,10 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -186,7 +252,7 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                         style: theme.textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       if (_isChecking)
                         const LinearProgressIndicator(minHeight: 2)
                       else
@@ -248,7 +314,7 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                             ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       FilledButton.icon(
                         onPressed: () async {
                           if (!_hasPermissions) {
@@ -273,7 +339,7 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.notifications),
@@ -282,7 +348,7 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                   onTap: () {},
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.security),
@@ -291,18 +357,19 @@ Note: This summary is informational and should be reviewed by legal counsel to e
                   onTap: () => _showPrivacyDialog(context),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.info),
                   title: const Text('About'),
-                  subtitle: const Text('MediPal v1.0.0'),
+                  subtitle: const Text('MediPal v2.0.0'),
                   onTap: () {},
                 ),
               ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

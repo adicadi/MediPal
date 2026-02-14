@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -26,297 +25,310 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Image.asset(
-                'assets/Icons/playstore.png',
-                width: 20,
-                height: 20,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'MediPal',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
-            icon: const Icon(Icons.settings),
-            tooltip: 'Settings',
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await _getHealthInsights(context, showDialog: false);
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.refresh, color: Colors.white),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Health data refreshed',
-                      overflow: TextOverflow.ellipsis,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: theme.colorScheme.primary,
+          backgroundColor: theme.colorScheme.surface,
+          onRefresh: () async {
+            await _getHealthInsights(context, showDialog: false);
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.refresh, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Health data refreshed',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+            );
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Consumer<AppState>(
+              builder: (context, appState, child) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTopBar(theme),
+                    const SizedBox(height: 6),
+                    _buildGreetingLine(theme, appState),
+                    const SizedBox(height: 14),
+                    _buildHealthStatsRow(appState),
+                    const SizedBox(height: 18),
+                    _buildQuickActionsSection(appState, theme),
+                    const SizedBox(height: 22),
+                    _buildHealthSummarySection(appState, theme),
+                    const SizedBox(height: 20),
+                  ],
+                );
+              },
             ),
-          );
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Consumer<AppState>(
-                builder: (context, appState, child) {
-                  return _buildPersonalizedWelcomeCard(
-                      appState, colorScheme, theme);
-                },
-              ),
-              const SizedBox(height: 24),
-              Consumer<AppState>(
-                builder: (context, appState, child) {
-                  return _buildQuickActionsSection(appState, theme);
-                },
-              ),
-              const SizedBox(height: 32),
-              Consumer<AppState>(
-                builder: (context, appState, child) {
-                  return _buildHealthSummarySection(appState, theme);
-                },
-              ),
-              const SizedBox(height: 32),
-            ],
           ),
         ),
       ),
       floatingActionButton: Consumer<AppState>(
         builder: (context, appState, child) {
-          return FloatingActionButton.extended(
-            onPressed: () => Navigator.pushNamed(context, '/chat'),
-            icon: const Icon(Icons.psychology),
-            label: Text(
-              appState.isMinor ? 'Ask Questions' : 'Ask AI',
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+          return GestureDetector(
+            onTap: () => Navigator.pushNamed(context, '/chat'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(38),
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF262B35), Color(0xFF0E1118)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF07112A).withValues(alpha: 0.45),
+                    blurRadius: 26,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.14),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.play_arrow_rounded,
+                      color: Colors.white, size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    appState.isMinor ? 'Ask Questions' : 'Quick AI Session',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            elevation: 4,
-            backgroundColor: appState.isMinor ? Colors.orange : null,
           );
         },
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
-  Widget _buildPersonalizedWelcomeCard(
-      AppState appState, ColorScheme colorScheme, ThemeData theme) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              colorScheme.primaryContainer.withValues(alpha: 0.8),
-              colorScheme.secondaryContainer.withValues(alpha: 0.6),
-            ],
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        appState.personalizedGreeting,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimaryContainer,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _getAgeAppropriateSubtitle(appState),
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: colorScheme.onPrimaryContainer
-                              .withValues(alpha: 0.8),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: appState.userProfileImagePath.isNotEmpty
-                      ? Image.file(
-                          File(appState.userProfileImagePath),
-                          fit: BoxFit.cover,
-                        )
-                      : Icon(
-                          appState.isMinor ? Icons.school : Icons.favorite,
-                          color: colorScheme.primary,
-                          size: 40,
-                        ),
-                ),
-              ],
-            ),
+  Widget _buildTopBar(ThemeData theme) {
+    final textColor = theme.colorScheme.onSurface;
+    final colorScheme = theme.colorScheme;
 
-            const SizedBox(height: 16),
-
-            // Age-appropriate information bar
-            if (appState.isMinor)
-              _buildMinorSafetyBar(colorScheme, theme)
-            else
-              _buildHealthStatsRow(appState, colorScheme),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getAgeAppropriateSubtitle(AppState appState) {
-    if (appState.isMinor) {
-      return 'Remember to talk to trusted adults about health questions! 🌟';
-    } else if (appState.isYoungAdult) {
-      return 'Building healthy habits for your future! 💪';
-    } else {
-      return 'How are you feeling today? 💙';
-    }
-  }
-
-  Widget _buildMinorSafetyBar(ColorScheme colorScheme, ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade100,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.shade300),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.family_restroom, color: Colors.orange.shade700, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Young User Mode: Always consult with parents or guardians',
-              style: TextStyle(
-                color: Colors.orange.shade700,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // FIXED: Health stats row WITHOUT health score
-  Widget _buildHealthStatsRow(AppState appState, ColorScheme colorScheme) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 8,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _buildQuickStat(
-          '${appState.medications.length}',
-          'Medications',
-          Icons.medication,
-          colorScheme,
+        Expanded(
+          child: Text(
+            _formatCurrentDateLabel().toUpperCase(),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w400,
+              letterSpacing: 1.2,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
         ),
-        _buildQuickStat(
-          '${appState.chatSessionsCount}',
-          'Consultations',
-          Icons.chat,
-          colorScheme,
+        const SizedBox(width: 12),
+        IconButton.filledTonal(
+          onPressed: () => Navigator.pushNamed(context, '/settings'),
+          style: IconButton.styleFrom(
+            shape: const CircleBorder(),
+            backgroundColor:
+                colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
+            foregroundColor: textColor,
+          ),
+          icon: const Icon(Icons.tune_rounded),
+          tooltip: 'Settings',
         ),
       ],
     );
   }
 
-  Widget _buildQuickActionsSection(AppState appState, ThemeData theme) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildGreetingLine(ThemeData theme, AppState appState) {
+    final colorScheme = theme.colorScheme;
+    final baseStyle = theme.textTheme.titleLarge?.copyWith(
+      fontWeight: FontWeight.w400,
+      color: colorScheme.onSurface.withValues(alpha: 0.94),
+      letterSpacing: -0.2,
+    );
+    final nameStyle = baseStyle?.copyWith(fontWeight: FontWeight.w700);
+    final text = appState.personalizedGreeting;
+    final match = RegExp(r'^([^,]+),\s([^!]+)(!?.*)$').firstMatch(text);
+
+    if (match != null) {
+      final prefix = '${match.group(1)!}, ';
+      final name = match.group(2)!;
+      final suffix = match.group(3) ?? '';
+      return Text.rich(
+        TextSpan(
+          style: baseStyle,
           children: [
-            Expanded(
-              child: Text(
-                appState.isMinor ? 'Things You Can Do' : 'Quick Actions',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
-            if (!appState.isMinor)
-              TextButton.icon(
-                onPressed: () => Navigator.pushNamed(context, '/chat'),
-                icon: const Icon(Icons.chat, size: 18),
-                label: const Text(
-                  'AI Chat',
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+            TextSpan(text: prefix),
+            TextSpan(text: name, style: nameStyle),
+            TextSpan(text: suffix),
           ],
         ),
-        const SizedBox(height: 12),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    return Text(
+      text,
+      style: baseStyle,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  // FIXED: Health stats row WITHOUT health score
+  Widget _buildHealthStatsRow(AppState appState) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatusMetricCard(
+            label: 'Medications',
+            value: '${appState.medications.length}',
+            icon: Icons.medication_rounded,
+            accent: const Color(0xFF32A275),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildStatusMetricCard(
+            label: 'Consultations',
+            value: '${appState.chatSessionsCount}',
+            icon: Icons.chat_bubble_rounded,
+            accent: const Color(0xFF4D80C9),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusMetricCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color accent,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: Theme.of(context).brightness == Brightness.dark
+                  ? [
+                      Theme.of(context)
+                          .colorScheme
+                          .surfaceContainer
+                          .withValues(alpha: 0.95),
+                      Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerLow
+                          .withValues(alpha: 0.95),
+                    ]
+                  : [
+                      Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withValues(alpha: 0.96),
+                      Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerLow
+                          .withValues(alpha: 0.96),
+                    ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 14, color: accent),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 36,
+                  height: 0.95,
+                  fontWeight: FontWeight.w800,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  letterSpacing: -1.5,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickActionsSection(AppState appState, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          title: appState.isMinor ? 'Things You Can Do' : 'Priority',
+          actionLabel: null,
+          onActionTap: null,
+          theme: theme,
+        ),
+        const SizedBox(height: 10),
         SizedBox(
-          height: 70,
+          height: 56,
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: _buildAgeAppropriateActions(appState),
@@ -383,35 +395,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHealthSummarySection(AppState appState, ThemeData theme) {
+    final cards = _buildAgeAppropriateHealthCards(appState);
+    final split = cards.length > 1 ? (cards.length / 2).ceil() : cards.length;
+    final priorityCards = cards.take(split).toList();
+    final scheduledCards = cards.skip(split).toList();
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                appState.isMinor ? 'Health Information' : 'Health Summary',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
-            TextButton.icon(
-              onPressed: () => _showPersonalizedHealthTips(context, appState),
-              icon: const Icon(Icons.tips_and_updates, size: 18),
-              label: const Text(
-                'Tips',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        _buildSectionHeader(
+          title: 'Summary',
+          actionLabel: 'Tips',
+          onActionTap: () => _showPersonalizedHealthTips(context, appState),
+          theme: theme,
         ),
-        const SizedBox(height: 12),
-        Column(
-          children: _buildAgeAppropriateHealthCards(appState),
-        ),
+        const SizedBox(height: 6),
+        _buildTimelineGroup('', priorityCards, theme),
+        if (scheduledCards.isNotEmpty)
+          _buildTimelineGroup('', scheduledCards, theme),
       ],
     );
   }
@@ -428,6 +429,7 @@ class _HomeScreenState extends State<HomeScreen> {
           content: "Ask me about health topics appropriate for your age",
           subtitle: "Always remember to talk to trusted adults too!",
           icon: Icons.help,
+          backgroundColor: const Color(0xFFEAF3FF),
           onTap: () => _showMinorChatInfo(context),
         ),
         HealthSummaryCard(
@@ -435,6 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
           content: "Learn about staying healthy and strong",
           subtitle: "Fun tips for young people",
           icon: Icons.fitness_center,
+          backgroundColor: const Color(0xFFEBF7EF),
           onTap: () => _showPersonalizedHealthTips(context, appState),
         ),
         HealthSummaryCard(
@@ -442,6 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
           content: "Learn when it's important to talk to grown-ups",
           subtitle: "Your safety is most important",
           icon: Icons.family_restroom,
+          backgroundColor: const Color(0xFFF9EDDE),
           onTap: () => _showMinorGuidance(context),
         ),
       ]);
@@ -457,6 +461,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ? "Latest: ${appState.medications.last.name}"
               : "Tap to add your first medication",
           icon: Icons.medication,
+          backgroundColor: const Color(0xFFEAF3FF),
           onTap: () => Navigator.pushNamed(context, '/medications'),
         ),
         HealthSummaryCard(
@@ -468,6 +473,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ? "Tap to view chat history"
               : "Start your first consultation",
           icon: Icons.psychology,
+          backgroundColor: const Color(0xFFEEEAFB),
           onTap: () {
             if (appState.chatSessionsCount > 0) {
               Navigator.pushNamed(context, '/chat');
@@ -512,6 +518,7 @@ class _HomeScreenState extends State<HomeScreen> {
       content: content,
       subtitle: subtitle,
       icon: Icons.insights,
+      backgroundColor: const Color(0xFFE9F5F1),
       isLoading: _isGettingInsights,
       onTap: () => _getHealthInsights(context),
     );
@@ -534,6 +541,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ? subtitle
           : '$subtitle • ${_formatTrend(trend)} steps vs 7d',
       icon: Icons.watch,
+      backgroundColor: const Color(0xFFEAF1F8),
       onTap: () => _handleWearableTap(appState),
     );
   }
@@ -604,61 +612,138 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildEnhancedPillButton(
       String text, IconData icon, Color color, VoidCallback onPressed) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final base = HSLColor.fromColor(color);
+    final background = base
+        .withSaturation(isDark ? 0.20 : 0.24)
+        .withLightness(isDark ? 0.24 : 0.95)
+        .toColor();
+    final border = base
+        .withSaturation(isDark ? 0.26 : 0.18)
+        .withLightness(isDark ? 0.34 : 0.78)
+        .toColor();
+    final foreground = base
+        .withSaturation(isDark ? 0.50 : 0.52)
+        .withLightness(isDark ? 0.76 : 0.35)
+        .toColor();
+
     return Container(
-      margin: const EdgeInsets.only(right: 12),
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 20, color: Colors.white),
-        label: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          elevation: 3,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
+      margin: const EdgeInsets.only(right: 10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: border, width: 1.5),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: foreground),
+                const SizedBox(width: 6),
+                Text(
+                  text,
+                  style: TextStyle(
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildQuickStat(
-      String value, String label, IconData icon, ColorScheme colorScheme) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 120),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
+  Widget _buildSectionHeader({
+    required String title,
+    required ThemeData theme,
+    String? actionLabel,
+    VoidCallback? onActionTap,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              letterSpacing: 1.4,
+              fontWeight: FontWeight.w700,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              '$value $label',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+        ),
+        if (actionLabel != null && onActionTap != null)
+          TextButton.icon(
+            onPressed: onActionTap,
+            icon: const Icon(Icons.chevron_right_rounded, size: 18),
+            label: Text(actionLabel),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-        ],
-      ),
+      ],
     );
+  }
+
+  Widget _buildTimelineGroup(
+      String label, List<Widget> cards, ThemeData theme) {
+    if (cards.isEmpty) return const SizedBox.shrink();
+    final showLabel = label.trim().isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showLabel)
+          Text(
+            label,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              letterSpacing: 2.2,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        if (showLabel) const SizedBox(height: 6),
+        ...cards,
+      ],
+    );
+  }
+
+  String _formatCurrentDateLabel() {
+    const weekdays = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    final now = DateTime.now();
+    return '${weekdays[now.weekday % 7]}, ${months[now.month - 1]} ${now.day}';
   }
 
   Future<void> _getHealthInsights(BuildContext context,
@@ -703,6 +788,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // ignore: unused_element
   String _generateAgeAppropriateInsights(AppState appState) {
     final wearable = appState.wearableSummary;
     final meds = appState.medications;

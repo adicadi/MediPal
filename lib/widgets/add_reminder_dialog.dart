@@ -16,11 +16,13 @@ class _AddReminderDialogState extends State<AddReminderDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: colorScheme.surface,
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,9 +60,9 @@ class _AddReminderDialogState extends State<AddReminderDialog> {
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
+                    border: Border.all(color: colorScheme.outlineVariant),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -167,9 +169,17 @@ class _AddReminderDialogState extends State<AddReminderDialog> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        minimumSize: const Size(0, 44),
                       ),
-                      child: const Text('Cancel'),
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Cancel',
+                          maxLines: 1,
+                          softWrap: false,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -203,9 +213,17 @@ class _AddReminderDialogState extends State<AddReminderDialog> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        minimumSize: const Size(0, 44),
                       ),
-                      child: const Text('Add Reminder'),
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Add Reminder',
+                          maxLines: 1,
+                          softWrap: false,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -218,6 +236,7 @@ class _AddReminderDialogState extends State<AddReminderDialog> {
   }
 
   Widget _buildDayChip(String label, int dayNumber) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isSelected = _selectedDays.contains(dayNumber);
     return FilterChip(
       label: Text(label),
@@ -231,10 +250,11 @@ class _AddReminderDialogState extends State<AddReminderDialog> {
           }
         });
       },
-      selectedColor: Colors.blue,
-      checkmarkColor: Colors.white,
+      selectedColor: colorScheme.primary,
+      checkmarkColor: colorScheme.onPrimary,
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.black,
+        color:
+            isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
         fontWeight: FontWeight.w600,
       ),
     );

@@ -16,7 +16,7 @@ class _NotificationPermissionCardState
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(12),
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
@@ -28,7 +28,7 @@ class _NotificationPermissionCardState
           ),
           borderRadius: BorderRadius.circular(16),
         ),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             const Icon(
@@ -62,8 +62,8 @@ class _NotificationPermissionCardState
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.blue[600],
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 14,
+                  horizontal: 26,
+                  vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
@@ -79,7 +79,7 @@ class _NotificationPermissionCardState
                       'Enable Notifications',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 15,
                       ),
                     ),
             ),

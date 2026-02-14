@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/notification_service.dart';
@@ -8,6 +9,8 @@ import '../models/wearable_summary.dart';
 import '../services/wearable_cache_service.dart';
 import '../services/wearable_health_service.dart';
 import '../services/chat_history_service.dart';
+
+enum AppThemePreference { system, light, dark }
 
 class AppState extends ChangeNotifier {
   // User profile data (enhanced for onboarding)
@@ -35,8 +38,10 @@ class AppState extends ChangeNotifier {
   WearableSummary? _wearableSummary;
   List<WearableSummary> _wearableHistory = [];
   String _chatDocumentContext = '';
+  AppThemePreference _themePreference = AppThemePreference.system;
   static const String _wearablePermissionPromptedKey =
       'wearable_permission_prompted';
+  static const String _themePreferenceKey = 'theme_preference';
 
   // Getters - existing
   String get userName => _userName;
@@ -62,6 +67,17 @@ class AppState extends ChangeNotifier {
   List<WearableSummary> get wearableHistory =>
       List.unmodifiable(_wearableHistory);
   String get chatDocumentContext => _chatDocumentContext;
+  AppThemePreference get themePreference => _themePreference;
+  ThemeMode get themeMode {
+    switch (_themePreference) {
+      case AppThemePreference.light:
+        return ThemeMode.light;
+      case AppThemePreference.dark:
+        return ThemeMode.dark;
+      case AppThemePreference.system:
+        return ThemeMode.system;
+    }
+  }
 
   // NEW: Age-based content restrictions
   bool get isMinor => _userAge > 0 && _userAge < 18;
@@ -91,19 +107,19 @@ class AppState extends ChangeNotifier {
     String emoji;
 
     if (timeOfDay < 6) {
-      greeting = 'Good night';
+      greeting = 'Good Night';
       emoji = '🌙';
     } else if (timeOfDay < 12) {
-      greeting = 'Good morning';
+      greeting = 'Good Morning';
       emoji = '🌅';
     } else if (timeOfDay < 17) {
-      greeting = 'Good afternoon';
+      greeting = 'Good Afternoon';
       emoji = '☀️';
     } else if (timeOfDay < 21) {
-      greeting = 'Good evening';
+      greeting = 'Good Evening';
       emoji = '🌆';
     } else {
-      greeting = 'Good night';
+      greeting = 'Good Night';
       emoji = '🌙';
     }
 
@@ -165,7 +181,8 @@ class AppState extends ChangeNotifier {
         if (steps < 4000) {
           baseTips.add('👟 Try a short walk today to boost your step count');
         } else if (steps < 8000) {
-          baseTips.add('✅ You’re close to 8k steps—one more walk can get you there');
+          baseTips.add(
+              '✅ You’re close to 8k steps—one more walk can get you there');
         } else {
           baseTips.add('🎉 Great job staying active—keep it up!');
         }
@@ -175,12 +192,14 @@ class AppState extends ChangeNotifier {
         if (sleepHours < 7) {
           baseTips.add('🌙 Try to get 7–9 hours of sleep for better recovery');
         } else if (sleepHours > 9.5) {
-          baseTips.add('🛌 Too much sleep can be tiring—aim for a consistent schedule');
+          baseTips.add(
+              '🛌 Too much sleep can be tiring—aim for a consistent schedule');
         }
       }
 
       if (restingHr != null && restingHr > 80) {
-        baseTips.add('❤️ Elevated resting HR can relate to stress—try breathing exercises');
+        baseTips.add(
+            '❤️ Elevated resting HR can relate to stress—try breathing exercises');
       }
     }
 
@@ -661,8 +680,10 @@ Is there something else I can help you with today?
       await _loadChatHistory();
       _wearableSummary = await WearableCacheService.loadSummary();
       _wearableHistory = await WearableCacheService.loadHistory();
-      _chatSessionsCount =
-          (await ChatHistoryService.getChatSessions()).length;
+      _themePreference = _themePreferenceFromString(
+        prefs.getString(_themePreferenceKey),
+      );
+      _chatSessionsCount = (await ChatHistoryService.getChatSessions()).length;
 
       // Initialize notifications after loading profile
       await initializeNotifications();
@@ -670,6 +691,44 @@ Is there something else I can help you with today?
       notifyListeners();
     } catch (e) {
       if (kDebugMode) print('Error loading user profile: $e');
+    }
+  }
+
+  Future<void> loadThemePreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final value = _themePreferenceFromString(
+        prefs.getString(_themePreferenceKey),
+      );
+      if (_themePreference != value) {
+        _themePreference = value;
+        notifyListeners();
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error loading theme preference: $e');
+    }
+  }
+
+  Future<void> setThemePreference(AppThemePreference preference) async {
+    if (_themePreference == preference) return;
+    _themePreference = preference;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_themePreferenceKey, preference.name);
+    } catch (e) {
+      if (kDebugMode) print('Error saving theme preference: $e');
+    }
+  }
+
+  AppThemePreference _themePreferenceFromString(String? value) {
+    switch (value) {
+      case 'light':
+        return AppThemePreference.light;
+      case 'dark':
+        return AppThemePreference.dark;
+      default:
+        return AppThemePreference.system;
     }
   }
 
@@ -721,8 +780,7 @@ Is there something else I can help you with today?
   }
 
   Future<void> refreshChatSessionsCount() async {
-    _chatSessionsCount =
-        (await ChatHistoryService.getChatSessions()).length;
+    _chatSessionsCount = (await ChatHistoryService.getChatSessions()).length;
     notifyListeners();
   }
 
@@ -736,18 +794,14 @@ Is there something else I can help you with today?
     final todayKey = _dayKey(today.updatedAt);
     final previous = history
         .where((item) =>
-            _dayKey(item.updatedAt) != todayKey &&
-            item.stepsToday != null)
+            _dayKey(item.updatedAt) != todayKey && item.stepsToday != null)
         .toList();
     if (previous.isEmpty) return null;
 
-    final last7 = previous.length > 7
-        ? previous.sublist(previous.length - 7)
-        : previous;
-    final avg = last7
-            .map((e) => e.stepsToday!)
-            .reduce((a, b) => a + b) /
-        last7.length;
+    final last7 =
+        previous.length > 7 ? previous.sublist(previous.length - 7) : previous;
+    final avg =
+        last7.map((e) => e.stepsToday!).reduce((a, b) => a + b) / last7.length;
     if (avg == 0) return null;
 
     return ((today.stepsToday! - avg) / avg) * 100.0;
@@ -763,14 +817,12 @@ Is there something else I can help you with today?
     final todayKey = _dayKey(today.updatedAt);
     final previous = history
         .where((item) =>
-            _dayKey(item.updatedAt) != todayKey &&
-            item.sleepHours != null)
+            _dayKey(item.updatedAt) != todayKey && item.sleepHours != null)
         .toList();
     if (previous.isEmpty) return null;
 
-    final last7 = previous.length > 7
-        ? previous.sublist(previous.length - 7)
-        : previous;
+    final last7 =
+        previous.length > 7 ? previous.sublist(previous.length - 7) : previous;
     final avg =
         last7.map((e) => e.sleepHours!).reduce((a, b) => a + b) / last7.length;
     if (avg == 0) return null;
@@ -793,12 +845,9 @@ Is there something else I can help you with today?
         .toList();
     if (previous.isEmpty) return null;
 
-    final last7 = previous.length > 7
-        ? previous.sublist(previous.length - 7)
-        : previous;
-    final avg = last7
-            .map((e) => e.restingHeartRate!)
-            .reduce((a, b) => a + b) /
+    final last7 =
+        previous.length > 7 ? previous.sublist(previous.length - 7) : previous;
+    final avg = last7.map((e) => e.restingHeartRate!).reduce((a, b) => a + b) /
         last7.length;
     if (avg == 0) return null;
 
@@ -823,7 +872,8 @@ Is there something else I can help you with today?
       parts.add('avg HR: ${summary.avgHeartRate!.toStringAsFixed(0)} bpm');
     }
     if (summary.restingHeartRate != null) {
-      parts.add('resting HR: ${summary.restingHeartRate!.toStringAsFixed(0)} bpm');
+      parts.add(
+          'resting HR: ${summary.restingHeartRate!.toStringAsFixed(0)} bpm');
     }
     if (summary.sleepHours != null) {
       parts.add('sleep: ${summary.sleepHours!.toStringAsFixed(1)} hrs');
@@ -925,6 +975,7 @@ Is there something else I can help you with today?
     _userEmail = '';
     _userAge = 0;
     _userGender = '';
+    _themePreference = AppThemePreference.system;
     _medications.clear();
 
     // Cancel all notifications

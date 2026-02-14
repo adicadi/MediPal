@@ -61,100 +61,133 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Medications'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
-          child: Column(
-            children: [
-              // Simplified search bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search medications...',
-                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: Row(
+                children: [
+                  IconButton.filledTonal(
+                    onPressed: () => Navigator.maybePop(context),
+                    style: IconButton.styleFrom(
+                      shape: const CircleBorder(),
+                      backgroundColor:
+                          colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.9,
+                      ),
+                      foregroundColor: colorScheme.onSurface,
                     ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: colorScheme.onSurfaceVariant,
-                      size: 20,
-                    ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(
-                              Icons.clear,
-                              color: colorScheme.onSurfaceVariant,
-                              size: 20,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _searchController.clear();
-                                _searchQuery = '';
-                              });
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor:
-                        colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    tooltip: 'Back',
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value.toLowerCase();
-                    });
-                  },
-                ),
-              ),
-              // Minimal tabs
-              TabBar(
-                controller: _tabController,
-                indicatorColor: colorScheme.primary,
-                indicatorWeight: 2,
-                labelColor: colorScheme.primary,
-                unselectedLabelColor: colorScheme.onSurfaceVariant,
-                labelStyle: theme.textTheme.labelLarge,
-                tabs: const [
-                  Tab(text: 'All'),
-                  Tab(text: 'Active'),
-                  Tab(text: 'Refill'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Medications',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  IconButton.filledTonal(
+                    onPressed: () => _showAddMedicationDialog(context),
+                    style: IconButton.styleFrom(
+                      shape: const CircleBorder(),
+                      backgroundColor:
+                          colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.9,
+                      ),
+                      foregroundColor: colorScheme.onSurface,
+                    ),
+                    icon: const Icon(Icons.add_rounded),
+                    tooltip: 'Add medication',
+                  ),
                 ],
               ),
-            ],
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.add, color: colorScheme.onSurface),
-            onPressed: () => _showAddMedicationDialog(context),
-          ),
-        ],
-      ),
-      body: Consumer<AppState>(
-        builder: (context, appState, child) {
-          return RefreshIndicator(
-            onRefresh: () async {
-              await _reloadMedications();
-            },
-            color: colorScheme.primary,
-            child: TabBarView(
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search medications...',
+                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: colorScheme.onSurfaceVariant,
+                    size: 20,
+                  ),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: colorScheme.onSurfaceVariant,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _searchController.clear();
+                              _searchQuery = '';
+                            });
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor:
+                      colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                  });
+                },
+              ),
+            ),
+            TabBar(
               controller: _tabController,
-              children: [
-                _buildAllMedicationsTab(appState),
-                _buildActiveMedicationsTab(appState),
-                _buildRefillNeededTab(appState),
+              indicatorColor: colorScheme.primary,
+              indicatorWeight: 2,
+              labelColor: colorScheme.primary,
+              unselectedLabelColor: colorScheme.onSurfaceVariant,
+              labelStyle: theme.textTheme.labelLarge,
+              tabs: const [
+                Tab(text: 'All'),
+                Tab(text: 'Active'),
+                Tab(text: 'Refill'),
               ],
             ),
-          );
-        },
+            const SizedBox(height: 6),
+            Expanded(
+              child: Consumer<AppState>(
+                builder: (context, appState, child) {
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      await _reloadMedications();
+                    },
+                    color: colorScheme.primary,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildAllMedicationsTab(appState),
+                        _buildActiveMedicationsTab(appState),
+                        _buildRefillNeededTab(appState),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddMedicationDialog(context),
@@ -179,7 +212,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: medications.length,
       itemBuilder: (context, index) {
@@ -201,7 +234,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       physics: const AlwaysScrollableScrollPhysics(),
       itemCount: activeMeds.length,
       itemBuilder: (context, index) {
@@ -228,23 +261,36 @@ class _MedicationsScreenState extends State<MedicationsScreen>
         if (refillMeds.isNotEmpty)
           SliverToBoxAdapter(
             child: Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.amber.withAlpha(38),
+                color: Theme.of(context)
+                    .colorScheme
+                    .tertiaryContainer
+                    .withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: Colors.amber.withAlpha(128), width: 1),
+                border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .tertiary
+                      .withValues(alpha: 0.5),
+                  width: 1,
+                ),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.amber[800], size: 20),
+                  Icon(
+                    Icons.info_outline,
+                    color: Theme.of(context).colorScheme.onTertiaryContainer,
+                    size: 20,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       '${refillMeds.length} medication${refillMeds.length > 1 ? 's' : ''} need refilling',
                       style: TextStyle(
-                        color: Colors.amber[800],
+                        color:
+                            Theme.of(context).colorScheme.onTertiaryContainer,
                         fontWeight: FontWeight.w500,
                         fontSize: 14,
                       ),
@@ -255,7 +301,7 @@ class _MedicationsScreenState extends State<MedicationsScreen>
             ),
           ),
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
@@ -274,22 +320,24 @@ class _MedicationsScreenState extends State<MedicationsScreen>
   Widget _buildMedicationCard(Medication medication, AppState appState) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final index = appState.medications.indexOf(medication);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: colorScheme.surface,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         side: BorderSide(
           color: medication.needsRefill
-              ? colorScheme.tertiary
-              : colorScheme.outlineVariant,
-          width: 1,
+              ? colorScheme.tertiary.withValues(alpha: isDark ? 0.8 : 1)
+              : colorScheme.outlineVariant.withValues(alpha: isDark ? 0.9 : 1),
+          width: isDark ? 1.4 : 1.2,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -803,11 +851,13 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: colorScheme.surface,
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
             child: Column(
@@ -922,7 +972,8 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
+                        child:
+                            const Text('Cancel', maxLines: 1, softWrap: false),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -976,11 +1027,13 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: colorScheme.surface,
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1001,9 +1054,9 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
+                    border: Border.all(color: colorScheme.outlineVariant),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -1050,7 +1103,18 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Cancel',
+                          maxLines: 1,
+                          softWrap: false,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1081,7 +1145,18 @@ class _AddReminderDialogState extends State<_AddReminderDialog> {
 
                         Navigator.pop(context, reminder);
                       },
-                      child: const Text('Add Reminder'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Add Reminder',
+                          maxLines: 1,
+                          softWrap: false,
+                        ),
+                      ),
                     ),
                   ),
                 ],
