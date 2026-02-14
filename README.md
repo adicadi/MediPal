@@ -13,12 +13,13 @@ MediPal is an intelligent Flutter-based personal health assistant that combines 
 
 
 <div align="center">
-  <img src="Screenshots/FirstScreen.jpeg" alt="Onboarding Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
   <img src="Screenshots/HomeScreen.jpeg" alt="Home Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
-  <img src="Screenshots/Symptom_Checker.jpeg" alt="Symptom Checker" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
-  <img src="Screenshots/MedicationWarning.jpeg" alt="Medication Interaction" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
-  <img src="Screenshots/Medications.jpeg" alt="Medication Management" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
-  <img src="Screenshots/Chat.jpeg" alt="Chat Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/SymptomChecker_Screen.jpeg" alt="Symptom Checker" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/MedicationScreen.jpeg" alt="Medication Interaction" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/ChatScreen.jpeg" alt="Chat Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/SettingScreen.jpeg" alt="Settings Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/Wearables_Screen.jpeg" alt="Wearables Screen" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
+  <img src="Screenshots/AIHealthInsightsPopup.jpeg" alt="AI Health Insights Popup" style="width: 15%; max-width: 150px; min-width: 120px; margin: 3px;">
 </div>
 
 ---
